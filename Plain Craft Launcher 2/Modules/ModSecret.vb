@@ -40,16 +40,17 @@ Friend Module ModSecret
 
 #Region "主题"
 
-    'BRCL：配色对齐 zhushu.homes/BRS 的粉紫设计系统
-    Public Color1 As New MyColor(42, 35, 56)      '#2A2338 主文字
-    Public Color2 As New MyColor(184, 47, 134)    '#B82F86 品牌深色
-    Public Color3 As New MyColor(214, 70, 159)    '#D6469F 品牌主色
+    'BRCL：终末地式工业机能暗色（黑灰打底 + 粉紫品牌色 + 柠檬黄状态点）
+    Public Color1 As New MyColor(230, 233, 239)   '#E6E9EF 主文字
+    Public Color2 As New MyColor(196, 203, 214)   '#C4CBD6 次级文字
+    Public Color3 As New MyColor(228, 85, 159)    '#E4559F 品牌主色
     Public Color4 As New MyColor(139, 92, 246)    '#8B5CF6 紫色强调
     Public Color5 As New MyColor(167, 139, 250)   '#A78BFA 紫色浅调
-    Public Color6 As New MyColor(233, 213, 255)   '#E9D5FF 浅紫
-    Public Color7 As New MyColor(252, 245, 251)   '#FCF5FB 面板底
-    Public Color8 As New MyColor(253, 243, 248)   '#FDF3F8 页面底
-    Public ColorBg0 As New MyColor(244, 114, 182) '#F472B6
+    Public Color6 As New MyColor(26, 31, 40)      '#1A1F28 面板浅层
+    Public Color7 As New MyColor(20, 25, 34)      '#141922 卡片底
+    Public Color8 As New MyColor(14, 18, 24)      '#0E1218 页面底
+    Public ColorBg0 As New MyColor(232, 197, 71)  '#E8C547 柠檬黄（状态点心）
+    Public ColorAccent As New MyColor(232, 197, 71)
     Public ColorBg1 As New MyColor(190, Color7)
     Public ColorGray1 As New MyColor(64, 64, 64)
     Public ColorGray2 As New MyColor(115, 115, 115)
@@ -70,15 +71,15 @@ Friend Module ModSecret
             If ThemeNow = NewTheme AndAlso NewTheme >= 0 Then Return
             If NewTheme >= 0 Then ThemeNow = NewTheme
 
-            'BRCL：固定为 BRS 配色，不再按色相计算
-            Color1 = New MyColor(42, 35, 56)
-            Color2 = New MyColor(184, 47, 134)
-            Color3 = New MyColor(214, 70, 159)
+            'BRCL：固定为终末地式暗色，不再按色相计算
+            Color1 = New MyColor(230, 233, 239)
+            Color2 = New MyColor(196, 203, 214)
+            Color3 = New MyColor(228, 85, 159)
             Color4 = New MyColor(139, 92, 246)
             Color5 = New MyColor(167, 139, 250)
-            Color6 = New MyColor(233, 213, 255)
-            Color7 = New MyColor(252, 245, 251)
-            Color8 = New MyColor(253, 243, 248)
+            Color6 = New MyColor(26, 31, 40)
+            Color7 = New MyColor(20, 25, 34)
+            Color8 = New MyColor(14, 18, 24)
             ColorBg0 = Color4 * 0.4 + Color5 * 0.4 + ColorGray4 * 0.2
             ColorBg1 = New MyColor(190, Color7)
 
@@ -113,19 +114,19 @@ Friend Module ModSecret
         Sub()
             If Not FrmMain.IsLoaded Then Return
             '顶部条背景
-            'BRCL：顶栏使用 BRS 品牌渐变（品红 → 紫 → 品红）
+            'BRCL：顶栏改为近乎纯黑的机能条，只用一条极细的品牌色下边线
             Dim Brush = New LinearGradientBrush With {.EndPoint = New Point(1, 0), .StartPoint = New Point(0, 0)}
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 0, .Color = New MyColor(184, 47, 134)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 0.55, .Color = New MyColor(139, 63, 214)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 1, .Color = New MyColor(192, 38, 163)})
+            Brush.GradientStops.Add(New GradientStop With {.Offset = 0, .Color = New MyColor(16, 20, 27)})
+            Brush.GradientStops.Add(New GradientStop With {.Offset = 0.6, .Color = New MyColor(20, 24, 32)})
+            Brush.GradientStops.Add(New GradientStop With {.Offset = 1, .Color = New MyColor(16, 20, 27)})
             FrmMain.PanTitle.Background = Brush
             FrmMain.PanTitle.Background.Freeze()
             '主页面背景
-            'BRCL：页面底色对齐 BRS 的浅粉紫渐变
+            'BRCL：页面底色为深炭黑，带极轻的冷光过渡
             Brush = New LinearGradientBrush With {.EndPoint = New Point(0.15, 1), .StartPoint = New Point(0.85, 0)}
-            Brush.GradientStops.Add(New GradientStop With {.Offset = -0.1, .Color = New MyColor(253, 243, 248)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 0.45, .Color = New MyColor(251, 246, 252)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 1.1, .Color = New MyColor(243, 248, 255)})
+            Brush.GradientStops.Add(New GradientStop With {.Offset = -0.1, .Color = New MyColor(16, 21, 29)})
+            Brush.GradientStops.Add(New GradientStop With {.Offset = 0.45, .Color = New MyColor(13, 17, 23)})
+            Brush.GradientStops.Add(New GradientStop With {.Offset = 1.1, .Color = New MyColor(18, 23, 33)})
             FrmMain.PanForm.Background = Brush
             FrmMain.PanForm.Background.Freeze()
         End Sub)

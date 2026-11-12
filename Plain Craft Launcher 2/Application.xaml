@@ -1,4 +1,4 @@
-<Application x:Class="Application"
+﻿<Application x:Class="Application"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:behaviors="clr-namespace:PCL.Controls.Behaviors"
@@ -19,14 +19,14 @@
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
             <!-- 颜色表 -->
-            <SolidColorBrush x:Key="ColorBrush1">#343d4a</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush2">#0b5bcb</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush3">#1370f3</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush4">#4890f5</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush5">#96c0f9</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush6">#d5e6fd</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush7">#e0eafd</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush8">#eaf2fe</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush1">#E6E9EF</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush2">#C4CBD6</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush3">#E4559F</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush4">#8B5CF6</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush5">#A78BFA</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush6">#1A1F28</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush7">#141922</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush8">#0E1218</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushBg0">#96c0f9</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushBg1">#bee0eafd</SolidColorBrush>
             <Color x:Key="ColorObject1">#343d4a</Color>
@@ -58,12 +58,12 @@
             <SolidColorBrush x:Key="ColorBrushRedBack">#80fbdddd</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushRedLight">#ff4c4c</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushRedDark">#ce2111</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrushHalfWhite" Color="#55ffffff" />
-            <SolidColorBrush x:Key="ColorBrushSemiWhite" Color="#bbffffff" />
+            <SolidColorBrush x:Key="ColorBrushHalfWhite" Color="#18FFFFFF" />
+            <SolidColorBrush x:Key="ColorBrushSemiWhite" Color="#2AFFFFFF" />
             <SolidColorBrush x:Key="ColorBrushWhite" Color="#ffffff" />
             <SolidColorBrush x:Key="ColorBrushTransparent" Color="Transparent" />
             <SolidColorBrush x:Key="ColorBrushSemiTransparent">#01eaf2fe</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrushBackgroundTransparentSidebar" Color="#F1FFFFFF" />
+            <SolidColorBrush x:Key="ColorBrushBackgroundTransparentSidebar" Color="#0F131A" />
 
             <!-- Window -->
             <Style TargetType="{x:Type Window}" x:Key="MyWindow">
@@ -353,7 +353,7 @@
                                                   ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" />
                                 <Popup x:Name="PART_Popup" SnapsToDevicePixels="True" VerticalOffset="-1.5" AllowsTransparency="True" IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" Placement="Bottom" PopupAnimation="Fade">
                                     <Grid x:Name="PanPopup">
-                                        <Border Background="White" CornerRadius="3" />
+                                        <Border Background="{DynamicResource ColorBrush7}" CornerRadius="3" />
                                         <Border x:Name="dropDownBorder" CornerRadius="3" BorderBrush="{TemplateBinding Foreground}" BorderThickness="1" Width="{TemplateBinding Width}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                             <local:MyScrollViewer x:Name="DropDownScrollViewer" PanningMode="VerticalOnly" SnapsToDevicePixels="False" Style="{StaticResource ScrollViewerFullMargin}" ScrollViewer.CanContentScroll="False" VerticalScrollBarVisibility="Auto">
                                                 <ItemsPresenter x:Name="ItemsPresenter" KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -383,7 +383,7 @@
                                         <local:MyTextBox x:Name="PART_EditableTextBox" BorderThickness="0" Margin="1.5,0,21.5,0" Padding="0" Background="{x:Null}" />
                                         <Popup x:Name="PART_Popup" SnapsToDevicePixels="True" VerticalOffset="-1.5" AllowsTransparency="True" IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" Placement="Bottom" PopupAnimation="Fade">
                                             <Grid x:Name="PanPopup">
-                                                <Border Background="White" CornerRadius="3" />
+                                                <Border Background="{DynamicResource ColorBrush7}" CornerRadius="3" />
                                                 <Border x:Name="dropDownBorder" SnapsToDevicePixels="False" CornerRadius="3" BorderBrush="{TemplateBinding Foreground}" BorderThickness="1" Width="{TemplateBinding Width}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                                     <local:MyScrollViewer x:Name="DropDownScrollViewer" Style="{StaticResource ScrollViewerFullMargin}" ScrollViewer.CanContentScroll="False" VerticalScrollBarVisibility="Auto">
                                                         <ItemsPresenter x:Name="ItemsPresenter" KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -482,7 +482,7 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ContextMenu">
-                            <Border BorderBrush="{DynamicResource ColorBrush1}" BorderThickness="1" CornerRadius="3" Background="White" Margin="0,0,4,4" SnapsToDevicePixels="True">
+                            <Border BorderBrush="{DynamicResource ColorBrush1}" BorderThickness="1" CornerRadius="3" Background="{DynamicResource ColorBrush7}" Margin="0,0,4,4" SnapsToDevicePixels="True">
                                 <Border.Effect>
                                     <DropShadowEffect Opacity="0.4" BlurRadius="4" ShadowDepth="2" />
                                 </Border.Effect>

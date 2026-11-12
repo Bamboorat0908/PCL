@@ -327,6 +327,7 @@ Public Class FormMain
         Logger.Info($"第二阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
     End Sub
     Private Sub FormMain_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+        InitRail()
         ApplicationStartTick = GetTimeMs()
         Handle = New WindowInteropHelper(Me).Handle
         '读取设置
@@ -652,10 +653,63 @@ Public Class FormMain
         RectForm.Rect = New Rect(0, 0, BorderForm.ActualWidth, BorderForm.ActualHeight)
         PanForm.Width = BorderForm.ActualWidth + 0.001
         PanForm.Height = BorderForm.ActualHeight + 0.001
-        PanMain.Width = PanForm.Width
+        PanMain.Width = Math.Max(0, PanForm.Width - 76) '减去左侧导航栏宽度
         PanMain.Height = Math.Max(0, PanForm.Height - PanTitle.ActualHeight)
         If WindowState = WindowState.Maximized Then WindowState = WindowState.Normal '修复 #1938
     End Sub
+
+#Region "左侧导航栏"
+
+    Private Sub InitRail()
+        Try
+            For Each Item As Grid In {Rail0, Rail10, Rail11, Rail3}
+                AddHandler Item.MouseLeftButtonUp, AddressOf Rail_Click
+                AddHandler Item.MouseEnter, Sub(sender As Object, e As MouseEventArgs) CType(sender, Grid).Opacity = 0.82
+                AddHandler Item.MouseLeave, Sub(sender As Object, e As MouseEventArgs) CType(sender, Grid).Opacity = 1
+            Next
+            '旧的顶部胶囊导航隐藏（逻辑仍在，只是不再露出）
+            PanTitleSelect.Visibility = Visibility.Collapsed
+            UpdateRail()
+        Catch ex As Exception
+            Logger.Warn(ex, "初始化左侧导航栏失败")
+        End Try
+    End Sub
+
+    Private Sub Rail_Click(sender As Object, e As MouseButtonEventArgs)
+        Dim Taget As Integer
+        If Integer.TryParse(CStr(CType(sender, Grid).Tag), Taget) Then PageChange(Taget)
+    End Sub
+
+    Private Sub UpdateRail()
+        Try
+            Dim Cur As Integer = CInt(PageCurrent.Page)
+            SetRailItem(Rail0, RailBar0, RailIcon0, RailText0, Cur = CInt(PageType.Launch))
+            SetRailItem(Rail10, RailBar10, RailIcon10, RailText10, Cur = CInt(PageType.Brs))
+            SetRailItem(Rail11, RailBar11, RailIcon11, RailText11, Cur = CInt(PageType.Stock))
+            SetRailItem(Rail3, RailBar3, RailIcon3, RailText3, Cur = CInt(PageType.Setup))
+            LabTitlePage.Text = If(PageNameGet(PageCurrent) = "", RailNameOf(Cur), PageNameGet(PageCurrent))
+        Catch ex As Exception
+        End Try
+    End Sub
+
+    Private Shared Function RailNameOf(Page As Integer) As String
+        Select Case Page
+            Case CInt(PageType.Launch) : Return "启动"
+            Case CInt(PageType.Brs) : Return "BRS 服务器"
+            Case CInt(PageType.Stock) : Return "交易所"
+            Case CInt(PageType.Setup) : Return "设置"
+            Case Else : Return "BRCL"
+        End Select
+    End Function
+
+    Private Sub SetRailItem(Item As Grid, Bar As Shapes.Rectangle, Icon As Shapes.Path, Label As TextBlock, Selected As Boolean)
+        Bar.Visibility = If(Selected, Visibility.Visible, Visibility.Collapsed)
+        Item.Background = If(Selected, New SolidColorBrush(Color.FromRgb(&H17, &H1C, &H26)), Brushes.Transparent)
+        Icon.SetResourceReference(Shapes.Path.FillProperty, If(Selected, "ColorBrush3", "ColorBrush2"))
+        Label.SetResourceReference(TextBlock.ForegroundProperty, If(Selected, "ColorBrush1", "ColorBrush2"))
+    End Sub
+
+#End Region
 
     '最小化
     Private Sub BtnTitleMin_Click() Handles BtnTitleMin.Click
@@ -749,7 +803,7 @@ Public Class FormMain
             Case 1 '默认
                 ShapeTitleLogo.Visibility = Visibility.Collapsed
                 LabTitleLogo.Visibility = Visibility.Collapsed
-                ImageTitleLogo.Visibility = Visibility.Visible
+                ImageTitleLogo.Visibility = Visibility.Collapsed
                 Try
                     ImageTitleLogo.Source = "pack://application:,,,/BRCL;component/Images/TitleLogo.png"
                 Catch ex As Exception
@@ -762,7 +816,7 @@ Public Class FormMain
                 End If
             Case 2 '文本
                 ShapeTitleLogo.Visibility = Visibility.Collapsed
-                LabTitleLogo.Visibility = Visibility.Visible
+                LabTitleLogo.Visibility = Visibility.Collapsed
                 ImageTitleLogo.Visibility = Visibility.Collapsed
                 If Not IsNothing(FrmSetupUI) Then
                     FrmSetupUI.CheckLogoLeft.Visibility = Visibility.Collapsed
@@ -772,7 +826,7 @@ Public Class FormMain
             Case 3 '图片
                 ShapeTitleLogo.Visibility = Visibility.Collapsed
                 LabTitleLogo.Visibility = Visibility.Collapsed
-                ImageTitleLogo.Visibility = Visibility.Visible
+                ImageTitleLogo.Visibility = Visibility.Collapsed
                 If Not IsNothing(FrmSetupUI) Then
                     FrmSetupUI.CheckLogoLeft.Visibility = Visibility.Collapsed
                     FrmSetupUI.PanLogoText.Visibility = Visibility.Collapsed
@@ -1492,6 +1546,7 @@ Public Class FormMain
 #Region "实际更改页面框架 UI"
             PageLast = PageCurrent
             PageCurrent = Stack
+            UpdateRail()
             Select Case Stack.Page
                 Case PageType.Launch '启动
                     PageChangeAnim(FrmLaunchLeft, FrmLaunchRight)

@@ -431,10 +431,10 @@ Refresh:
             '顶部栏
             If Not HiddenForceShow AndAlso Settings.Get(Of Boolean)("UiHiddenPageSetup") Then
                 '顶部栏已被全部隐藏
-                FrmMain.PanTitleSelect.Visibility = Visibility.Collapsed
+                'BRCL：顶部胶囊导航已隐藏（改用左侧栏），不再切换', 0
             Else
                 '顶部栏未被全部隐藏
-                FrmMain.PanTitleSelect.Visibility = Visibility.Visible
+                'BRCL：顶部胶囊导航已隐藏（改用左侧栏），不再切换', 0
                 FrmMain.BtnTitleSelect2.Visibility = Visibility.Collapsed 'If(Not HiddenForceShow AndAlso Settings.Get(Of Boolean)("UiHiddenPageLink"), Visibility.Collapsed, Visibility.Visible)
                 FrmMain.BtnTitleSelect3.Visibility = If(Not HiddenForceShow AndAlso Settings.Get(Of Boolean)("UiHiddenPageSetup"), Visibility.Collapsed, Visibility.Visible)
             End If
