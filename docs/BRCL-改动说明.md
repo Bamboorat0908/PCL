@@ -36,7 +36,39 @@
 
 ### 3. 移除设置页「其他」栏
 
-设置左栏由「启动 / 个性化 / 其他」变为「启动 / 个性化 / 关于」。原「其他」栏下的系统设置页不再可达。
+设置左栏由「启动 / 个性化 / 其他」变为「启动 / 关于」。原「其他」栏下的系统设置页不再可达。
+
+### 3.1 移除「个性化」栏（第二轮）
+
+`PageSetupLeft.xaml` 删除 `ItemUI` 项；`PageSetupLeft.xaml.vb` 删除对应选中/切换/重置分支；`PageSetupUI.xaml.vb` 的可用性计算去掉该项，并把左栏「只剩一项就隐藏」的阈值由 2 改为 1。
+设置左栏现为 **启动 / 关于** 两项。`PageSetupUI` 页面类仍保留编译（其 `HiddenForceShow` 是全局静态属性，多个页面在引用），但已无入口。
+
+### 3.2 新增 BRS 页面（内嵌网页）
+
+- 导航栏中间新增 `BtnTitleSelectBrs`（Text=BRS，Tag=10），顺序为 启动 / BRS / 设置。
+- 新增 `PageType.Brs = 10`、`ModMain.FrmBrs`、`PageChangeActual` 分支与 `BtnTitleSelect_Click` 事件绑定。
+- 新增 `Pages/PageBRS/PageBRS.xaml(.vb)`：用 **WebView2** 内嵌 `https://zhushu.homes/BRS/`，带加载中/失败重试/在浏览器打开三个状态。
+- 依赖：`Resources/WebView2/` 下的 `Microsoft.Web.WebView2.Core.dll`、`Microsoft.Web.WebView2.Wpf.dll`、`WebView2Loader.dll`（SDK 1.0.4314.35，运行时用系统已装的 Edge WebView2 157）。
+- 网页缓存目录：`BRCL\WebView2\`（便携，随程序目录）。
+
+### 3.3 UI 风格改为 BRS 站点的设计系统
+
+对照 `zhushu.homes/BRS` 的 CSS 变量落地：
+
+| 设计令牌 | BRS 值 | 落地位置 |
+|---|---|---|
+| 主文字 | `#2A2338` | 主题 Color1 |
+| 品牌深色 | `#B82F86` | Color2 |
+| 品牌主色 | `#D6469F` | Color3 |
+| 紫色强调 | `#8B5CF6` / `#A78BFA` | Color4 / Color5 |
+| 浅紫 | `#E9D5FF` | Color6 |
+| 面板底 / 页面底 | `#FCF5FB` / `#FDF3F8` | Color7 / Color8 |
+| 顶栏渐变 | `#B82F86 → #8B3FD6 → #C026A3` | `ThemeRefreshMain` 顶栏画刷 |
+| 页面底色渐变 | `#FDF3F8 → #FBF6FC → #F3F8FF` | `ThemeRefreshMain` 的 PanForm 背景 |
+| 卡片圆角 | 14px | `MyCard` 的 `CornerRadius` |
+| 按钮圆角 | 8px | `MyButton.xaml` |
+
+配色已从 HSL 动态计算改为**固定值**（开源版主题切换本就不可用），避免运行时被重新计算覆盖。
 
 ### 4. 整体更名为 BRCL
 

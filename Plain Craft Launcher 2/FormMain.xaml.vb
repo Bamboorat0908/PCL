@@ -442,6 +442,8 @@ Public Class FormMain
                     PageChange(PageType.Setup, PageSubType.SetupLaunch)
                 Case "about"
                     PageChange(PageType.Setup, PageSubType.SetupAbout)
+                Case "brs"
+                    PageChange(PageType.Brs)
                 Case "ui"
                     PageChange(PageType.Setup, PageSubType.SetupUI)
             End Select
@@ -1214,6 +1216,10 @@ Public Class FormMain
         ''' 帮助详情。这是一个副页面。
         ''' </summary>
         HelpDetail = 9
+        ''' <summary>
+        ''' BRS 社区页。
+        ''' </summary>
+        Brs = 10
     End Enum
     ''' <summary>
     ''' 次要页面种类。其数值必须与 StackPanel 中的下标一致。
@@ -1391,7 +1397,7 @@ Public Class FormMain
     ''' <summary>
     ''' 通过点击导航栏改变页面。
     ''' </summary>
-    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check
+    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check, BtnTitleSelectBrs.Check
         If IsChangingPage Then Return
         PageChangeActual(Val(sender.Tag))
     End Sub
@@ -1465,6 +1471,9 @@ Public Class FormMain
                 Case PageType.Link '联机
                     If FrmLinkMain Is Nothing Then FrmLinkMain = New PageLinkMain
                     PageChangeAnim(New MyPageLeft, FrmLinkMain)
+                Case PageType.Brs 'BRS 社区
+                    If FrmBrs Is Nothing Then FrmBrs = New PageBRS
+                    PageChangeAnim(New MyPageLeft, FrmBrs)
                 Case PageType.Setup '设置
                     If FrmSetupLeft Is Nothing Then FrmSetupLeft = New PageSetupLeft
                     PageChangeAnim(FrmSetupLeft, FrmSetupLeft.PageGet(SubType))

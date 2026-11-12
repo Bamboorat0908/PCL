@@ -1,4 +1,4 @@
-Public Class PageSetupLeft
+﻿Public Class PageSetupLeft
 
     Private IsLoad As Boolean = False
     Private IsPageSwitched As Boolean = False '如果在 Loaded 前切换到其他页面，会导致触发 Loaded 时再次切换一次
@@ -6,7 +6,6 @@ Public Class PageSetupLeft
         '是否处于隐藏的子页面
         Dim IsHiddenPage As Boolean = False
         If ItemLaunch.Checked AndAlso Settings.Get(Of Boolean)("UiHiddenSetupLaunch") Then IsHiddenPage = True
-        If ItemUI.Checked AndAlso Settings.Get(Of Boolean)("UiHiddenSetupUi") Then IsHiddenPage = True
         If ItemLink.Checked AndAlso Settings.Get(Of Boolean)("UiHiddenSetupLink") Then IsHiddenPage = True
         If PageSetupUI.HiddenForceShow Then IsHiddenPage = False
         '若页面错误，或尚未加载，则继续
@@ -18,8 +17,6 @@ Public Class PageSetupLeft
         If IsPageSwitched Then Return
         If Not Settings.Get(Of Boolean)("UiHiddenSetupLaunch") Then
             ItemLaunch.SetChecked(True, False, False)
-        ElseIf Not Settings.Get(Of Boolean)("UiHiddenSetupUi") Then
-            ItemUI.SetChecked(True, False, False)
         ElseIf Not Settings.Get(Of Boolean)("UiHiddenSetupLink") Then
             ItemLink.SetChecked(True, False, False)
         Else
@@ -41,8 +38,6 @@ Public Class PageSetupLeft
         '选择第一个未被禁用的子页面
         If Not Settings.Get(Of Boolean)("UiHiddenSetupLaunch") Then
             PageID = FormMain.PageSubType.SetupLaunch
-        ElseIf Not Settings.Get(Of Boolean)("UiHiddenSetupUi") Then
-            PageID = FormMain.PageSubType.SetupUI
         ElseIf Not Settings.Get(Of Boolean)("UiHiddenSetupLink") Then
             PageID = FormMain.PageSubType.SetupLink
         Else
@@ -53,7 +48,7 @@ Public Class PageSetupLeft
     ''' <summary>
     ''' 勾选事件改变页面。
     ''' </summary>
-    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemAbout.Check, ItemUI.Check, ItemLink.Check
+    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemAbout.Check, ItemLink.Check
         '尚未初始化控件属性时，sender.Tag 为 Nothing，会跳过切换，且由于 PageID 默认为 0 而切换到第一个页面
         '若使用 IsLoaded，则会导致模拟点击不被执行（模拟点击切换页面时，控件的 IsLoaded 为 False）
         If sender.Tag IsNot Nothing Then PageChange(Val(sender.Tag))
@@ -68,9 +63,6 @@ Public Class PageSetupLeft
             Case FormMain.PageSubType.SetupLaunch
                 If FrmSetupLaunch Is Nothing Then FrmSetupLaunch = New PageSetupLaunch
                 Return FrmSetupLaunch
-            Case FormMain.PageSubType.SetupUI
-                If FrmSetupUI Is Nothing Then FrmSetupUI = New PageSetupUI
-                Return FrmSetupUI
             Case FormMain.PageSubType.SetupLink
                 If FrmSetupLink Is Nothing Then FrmSetupLink = New PageSetupLink
                 Return FrmSetupLink
@@ -95,9 +87,6 @@ Public Class PageSetupLeft
                 Case FormMain.PageSubType.SetupLaunch
                     If IsNothing(FrmSetupLaunch) Then FrmSetupLaunch = New PageSetupLaunch
                     PageChangeRun(FrmSetupLaunch)
-                Case FormMain.PageSubType.SetupUI
-                    If IsNothing(FrmSetupUI) Then FrmSetupUI = New PageSetupUI
-                    PageChangeRun(FrmSetupUI)
                 Case FormMain.PageSubType.SetupLink
                     If IsNothing(FrmSetupLink) Then FrmSetupLink = New PageSetupLink
                     PageChangeRun(FrmSetupLink)
@@ -145,12 +134,6 @@ Public Class PageSetupLeft
                     If IsNothing(FrmSetupLaunch) Then FrmSetupLaunch = New PageSetupLaunch
                     FrmSetupLaunch.Reset()
                     ItemLaunch.Checked = True
-                End If
-            Case FormMain.PageSubType.SetupUI
-                If MyMsgBox("是否要初始化 个性化 页面的所有设置？该操作不可撤销。" & vbCrLf & "（背景图片与音乐、主页等外部文件不会被删除）", "初始化确认",, "取消", IsWarn:=True) = 1 Then
-                    If IsNothing(FrmSetupUI) Then FrmSetupUI = New PageSetupUI
-                    FrmSetupUI.Reset()
-                    ItemUI.Checked = True
                 End If
             Case FormMain.PageSubType.SetupLink
                 If MyMsgBox("是否要初始化 联机 页面的所有设置？该操作不可撤销。", "初始化确认",, "取消", IsWarn:=True) = 1 Then
