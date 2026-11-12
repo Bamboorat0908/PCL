@@ -166,8 +166,21 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+            <!-- BRCL：键盘焦点环。PCL 原有样式把 FocusVisualStyle 全部置空，纯键盘操作看不到焦点；
+                 这里补一个 2px 品牌色描边，仅键盘导航时出现，鼠标操作不会闪现。 -->
+            <Style x:Key="BrclFocusVisual">
+                <Setter Property="Control.Template">
+                    <Setter.Value>
+                        <ControlTemplate>
+                            <Border BorderBrush="{DynamicResource ColorBrush3}" BorderThickness="2" CornerRadius="6"
+                                    Margin="-3" SnapsToDevicePixels="True" Opacity="0.9" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <Style TargetType="local:MyScrollBar">
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="Stylus.IsPressAndHoldEnabled" Value="False"/>
                 <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
                 <Setter Property="OverridesDefaultStyle" Value="True" />
@@ -204,7 +217,7 @@
                 <Setter Property="OverridesDefaultStyle" Value="True" />
                 <Setter Property="CanContentScroll" Value="False" />
                 <Setter Property="PanningMode" Value="VerticalOnly" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ScrollViewer">
@@ -221,7 +234,7 @@
                 <Setter Property="OverridesDefaultStyle" Value="True" />
                 <Setter Property="CanContentScroll" Value="False" />
                 <Setter Property="PanningMode" Value="VerticalOnly" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ScrollViewer">
@@ -241,7 +254,7 @@
                 <Setter Property="OverridesDefaultStyle" Value="True" />
                 <Setter Property="CanContentScroll" Value="False" />
                 <Setter Property="PanningMode" Value="VerticalOnly" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ScrollViewer">
@@ -271,7 +284,7 @@
                 <Setter Property="IsUndoEnabled" Value="True" />
                 <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
                 <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="AllowDrop" Value="True"/>
                 <Setter Property="ScrollViewer.PanningMode" Value="VerticalFirst"/>
                 <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
@@ -310,7 +323,7 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource ColorBrushBg0}" />
                 <Setter Property="KeyboardNavigation.TabNavigation" Value="None"/>
                 <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -359,7 +372,7 @@
                 <Setter Property="SnapsToDevicePixels" Value="True" />
                 <Setter Property="Foreground" Value="{DynamicResource ColorBrushBg0}" />
                 <Setter Property="Background" Value="{StaticResource ColorBrushHalfWhite}" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="FontSize" Value="13" />
                 <Setter Property="MaxDropDownHeight" Value="320" />
                 <Setter Property="Template">
@@ -467,7 +480,7 @@
             </Style>
             <Style TargetType="ComboBoxItem" x:Key="MyComboBoxItem">
                 <Setter Property="OverridesDefaultStyle" Value="True" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="Background" Value="{StaticResource ColorBrushTransparent}" />
                 <Setter Property="Template">
                     <Setter.Value>
@@ -481,7 +494,7 @@
             </Style>
             <Style TargetType="ComboBoxItem">
                 <Setter Property="OverridesDefaultStyle" Value="True" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                <Setter Property="FocusVisualStyle" Value="{StaticResource BrclFocusVisual}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ComboBoxItem">

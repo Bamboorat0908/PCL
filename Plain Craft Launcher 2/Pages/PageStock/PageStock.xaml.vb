@@ -17,6 +17,7 @@ Public Class PageStock
                 ViewWeb.CoreWebView2?.Resume()
             Catch ex As Exception
             End Try
+            ApplyWebTheme()
             Return
         End If
         IsInited = True
@@ -57,6 +58,7 @@ Public Class PageStock
                 ViewWeb.CoreWebView2.Settings.IsStatusBarEnabled = False
                 ViewWeb.CoreWebView2.Settings.AreDevToolsEnabled = False
             End If
+            ApplyWebTheme()
             ViewWeb.Source = New Uri(StockUrl)
         Catch ex As WebView2RuntimeNotFoundException
             ShowFail("本机没有安装 WebView2 运行时，无法内嵌显示交易所。" & vbCrLf & "可以点下面的按钮在浏览器中打开，或用 Microsoft 官网的 Evergreen 安装包补装后重试。")
@@ -69,6 +71,7 @@ Public Class PageStock
         RunInUi(
         Sub()
             If e.IsSuccess Then
+                InjectPageTheme()
                 CardLoad.Visibility = Visibility.Collapsed
                 CardFail.Visibility = Visibility.Collapsed
             Else
@@ -79,6 +82,28 @@ Public Class PageStock
 
     Private Sub OnProcessFailed(sender As Object, e As CoreWebView2ProcessFailedEventArgs)
         RunInUi(Sub() ShowFail("浏览器进程异常：" & e.ProcessFailedKind.ToString() & vbCrLf & "点「重试」可以重新拉起。"))
+    End Sub
+
+    ''' <summary>让网页跟随启动器深浅色：优先用系统级 color-scheme，站点自带的深色样式会生效。</summary>
+    Private Sub ApplyWebTheme()
+        Try
+            If ViewWeb.CoreWebView2 Is Nothing Then Return
+            Dim IsLight As Boolean = (Settings.Get(Of Integer)("UiThemeMode") = 1)
+            ViewWeb.DefaultBackgroundColor = If(IsLight, Global.System.Drawing.Color.FromArgb(&HF4, &HF3, &HF9), Global.System.Drawing.Color.FromArgb(&H13, &H11, &H20))
+            ViewWeb.CoreWebView2.Profile.PreferredColorScheme = If(IsLight, CoreWebView2PreferredColorScheme.Light, CoreWebView2PreferredColorScheme.Dark)
+        Catch ex As Exception
+            Logger.Warn(ex, "设置网页配色失败")
+        End Try
+    End Sub
+
+    ''' <summary>跟随主题：只切换 color-scheme，让站点用自己的深色样式，避免强行改色导致半深半浅。</summary>
+    Private Sub InjectPageTheme()
+        Try
+            If ViewWeb.CoreWebView2 Is Nothing Then Return
+            Dim IsLight As Boolean = (Settings.Get(Of Integer)("UiThemeMode") = 1)
+            ViewWeb.CoreWebView2.ExecuteScriptAsync("document.documentElement.style.colorScheme='" & If(IsLight, "light", "dark") & "'")
+        Catch ex As Exception
+        End Try
     End Sub
 
     Private Sub ShowFail(Message As String)

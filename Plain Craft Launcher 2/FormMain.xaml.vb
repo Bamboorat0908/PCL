@@ -653,17 +653,23 @@ Public Class FormMain
         RectForm.Rect = New Rect(0, 0, BorderForm.ActualWidth, BorderForm.ActualHeight)
         PanForm.Width = BorderForm.ActualWidth + 0.001
         PanForm.Height = BorderForm.ActualHeight + 0.001
-        PanMain.Width = Math.Max(0, PanForm.Width - 76) '减去左侧导航栏宽度
+        UpdateRailExpand(PanForm.Width)
+        PanMain.Width = Math.Max(0, PanForm.Width - RailWidthNow) '减去左侧导航栏宽度
         PanMain.Height = Math.Max(0, PanForm.Height - PanTitle.ActualHeight)
         If WindowState = WindowState.Maximized Then WindowState = WindowState.Normal '修复 #1938
     End Sub
 
 #Region "左侧导航栏"
 
+    Private Const RailCompact As Double = 76
+    Private Const RailWide As Double = 188
+    Private RailWidthNow As Double = RailCompact
+    Private RailIsWide As Boolean = False
+
     Private Sub InitRail()
         Try
             For Each Item As Grid In {Rail0, Rail10, Rail11, Rail3}
-                AddHandler Item.MouseLeftButtonUp, AddressOf Rail_Click
+                AddHandler Item.MouseUp, AddressOf Rail_Click
                 '悬停用短促的透明度过渡（110ms），接近终末地那种“设备回弹”手感
                 AddHandler Item.MouseEnter, Sub(sender As Object, e As MouseEventArgs)
                                                 Dim G As Grid = CType(sender, Grid)
@@ -674,16 +680,82 @@ Public Class FormMain
                                                 AniStart(AaOpacity(G, 1 - G.Opacity, 140), "RailHover " & G.Name)
                                             End Sub
             Next
+            AddHandler RailThemeBtn.MouseUp, AddressOf RailTheme_Click
+            AddHandler RailThemeBtn.MouseEnter, Sub() AniStart(AaOpacity(RailThemeBtn, 0.82 - RailThemeBtn.Opacity, 110), "RailThemeHover")
+            AddHandler RailThemeBtn.MouseLeave, Sub() AniStart(AaOpacity(RailThemeBtn, 1 - RailThemeBtn.Opacity, 140), "RailThemeHover")
             '旧的顶部胶囊导航隐藏（逻辑仍在，只是不再露出）
             PanTitleSelect.Visibility = Visibility.Collapsed
+            UpdateThemeIcon()
             UpdateRail()
         Catch ex As Exception
             Logger.Warn(ex, "初始化左侧导航栏失败")
         End Try
     End Sub
 
+    ''' <summary>
+    ''' 宽窗口时侧栏展开为图标 + 文字（Linear / Discord 的做法），窄窗口回收为纯图标。
+    ''' 用 1000 / 1080 两个阈值做滞回，避免在边界上反复抖动。
+    ''' </summary>
+    Private Sub UpdateRailExpand(FormWidth As Double)
+        Try
+            Dim ShouldWide As Boolean = If(RailIsWide, FormWidth >= 1000, FormWidth >= 1080)
+            If ShouldWide = RailIsWide Then Return
+            RailIsWide = ShouldWide
+            RailWidthNow = If(ShouldWide, RailWide, RailCompact)
+            ColRail.Width = New GridLength(RailWidthNow)
+            PanRail.Width = RailWidthNow
+            Dim Items = {(Rail0, RailInner0, RailIcon0, RailText0, RailNum0),
+                         (Rail10, RailInner10, RailIcon10, RailText10, RailNum10),
+                         (Rail11, RailInner11, RailIcon11, RailText11, RailNum11),
+                         (Rail3, RailInner3, RailIcon3, RailText3, RailNum3),
+                         (RailThemeBtn, RailThemeInner, RailThemeIcon, RailThemeText, RailNumTheme)}
+            For Each It In Items
+                Dim Item As Grid = It.Item1
+                Dim Inner As StackPanel = It.Item2
+                Dim Icon As Shapes.Path = It.Item3
+                Dim Label As TextBlock = It.Item4
+                Dim Num As TextBlock = It.Item5
+                If ShouldWide Then
+                    Item.Height = 44
+                    Item.Margin = New Thickness(8, 2, 8, 2)
+                    Inner.Orientation = Orientation.Horizontal
+                    Inner.HorizontalAlignment = HorizontalAlignment.Left
+                    Inner.Margin = New Thickness(26, 0, 0, 0)
+                    Icon.Margin = New Thickness(0, 0, 12, 0)
+                    Label.FontSize = 12.5
+                    Label.Margin = New Thickness(0)
+                    Label.VerticalAlignment = VerticalAlignment.Center
+                    Num.HorizontalAlignment = HorizontalAlignment.Left
+                    Num.VerticalAlignment = VerticalAlignment.Center
+                    Num.Margin = New Thickness(10, 0, 0, 0)
+                    Num.Opacity = 0.45
+                Else
+                    Item.Height = 56
+                    Item.Margin = New Thickness(6, 2, 6, 2)
+                    Inner.Orientation = Orientation.Vertical
+                    Inner.HorizontalAlignment = HorizontalAlignment.Center
+                    Inner.Margin = New Thickness(0)
+                    Icon.Margin = New Thickness(0)
+                    Label.FontSize = 10
+                    Label.Margin = New Thickness(0, 5, 0, 0)
+                    Label.VerticalAlignment = VerticalAlignment.Top
+                    Num.HorizontalAlignment = HorizontalAlignment.Right
+                    Num.VerticalAlignment = VerticalAlignment.Top
+                    Num.Margin = New Thickness(0, 4, 6, 0)
+                    Num.Opacity = 0.45
+                End If
+            Next
+            '主题按钮与其它项保持同样的间距节奏
+            RailThemeBtn.Margin = If(ShouldWide, New Thickness(8, 14, 8, 2), New Thickness(6, 12, 6, 2))
+        Catch ex As Exception
+            Logger.Warn(ex, "更新侧栏展开状态失败")
+        End Try
+    End Sub
+
     Private Sub Rail_Click(sender As Object, e As MouseButtonEventArgs)
+        If e.ChangedButton <> MouseButton.Left Then Return
         Dim Taget As Integer
+        Logger.Info($"BRCL 点击导航项 {Taget}")
         If Integer.TryParse(CStr(CType(sender, Grid).Tag), Taget) Then PageChange(Taget)
     End Sub
 
@@ -716,12 +788,45 @@ Public Class FormMain
             Bar.Opacity = 0
             AniStart(AaOpacity(Bar, 1, 160,, New AniEaseOutFluent), "RailBar " & Item.Name)
         End If
-        Item.Background = If(Selected, New SolidColorBrush(Color.FromRgb(&H17, &H1C, &H26)), Brushes.Transparent)
+        If Selected Then
+            Item.SetResourceReference(Panel.BackgroundProperty, "ColorBrushRailActive")
+        Else
+            Item.Background = Brushes.Transparent
+        End If
         Icon.SetResourceReference(Shapes.Path.FillProperty, If(Selected, "ColorBrush3", "ColorBrush2"))
         Label.SetResourceReference(TextBlock.ForegroundProperty, If(Selected, "ColorBrush1", "ColorBrush2"))
     End Sub
 
 #End Region
+
+    '主题切换
+    Private Sub RailTheme_Click(sender As Object, e As MouseButtonEventArgs)
+        If e.ChangedButton <> MouseButton.Left Then Return
+        Logger.Info("BRCL 点击主题按钮")
+        Try
+            Dim Mode As Integer = Settings.Get(Of Integer)("UiThemeMode")
+            Settings.Set("UiThemeMode", If(Mode = 1, 2, 1))
+            ThemeRefresh()
+            UpdateThemeIcon()
+            Hint(If(Settings.Get(Of Integer)("UiThemeMode") = 1, "已切换到浅色主题", "已切换到深色主题"), HintType.Green)
+        Catch ex As Exception
+            Logger.Warn(ex, "切换主题失败")
+        End Try
+    End Sub
+
+    ''' <summary>浅色时显示月亮（点击切到深色），深色时显示太阳。</summary>
+    Private Sub UpdateThemeIcon()
+        Try
+            If Settings.Get(Of Integer)("UiThemeMode") = 1 Then
+                RailThemeIcon.Data = (New GeometryConverter).ConvertFromString("M21.2 14.6A9 9 0 0 1 9.4 2.8a9 9 0 1 0 11.8 11.8z")
+                RailThemeBtn.ToolTip = "切换到深色"
+            Else
+                RailThemeIcon.Data = (New GeometryConverter).ConvertFromString("M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm0-13a5 5 0 1 0 0 10 5 5 0 0 0 0-10z")
+                RailThemeBtn.ToolTip = "切换到浅色"
+            End If
+        Catch ex As Exception
+        End Try
+    End Sub
 
     '最小化
     Private Sub BtnTitleMin_Click() Handles BtnTitleMin.Click

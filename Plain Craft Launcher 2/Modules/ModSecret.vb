@@ -71,15 +71,38 @@ Friend Module ModSecret
             If ThemeNow = NewTheme AndAlso NewTheme >= 0 Then Return
             If NewTheme >= 0 Then ThemeNow = NewTheme
 
-            'BRCL：固定为 BakaXL 紫罗兰暗色
-            Color1 = New MyColor(236, 235, 245)
-            Color2 = New MyColor(169, 164, 196)
-            Color3 = New MyColor(139, 108, 255)
-            Color4 = New MyColor(179, 157, 255)
-            Color5 = New MyColor(211, 199, 255)
-            Color6 = New MyColor(34, 30, 51)
-            Color7 = New MyColor(26, 23, 39)
-            Color8 = New MyColor(19, 17, 32)
+            'BRCL：浅色/深色双主题（1=浅色，2=深色）
+            Dim Mode As Integer = 2
+            Try
+                Mode = Settings.Get(Of Integer)("UiThemeMode")
+            Catch ex As Exception
+            End Try
+            Dim IsLight As Boolean = (Mode = 1)
+            Logger.Info($"BRCL 主题模式：{Mode}（{If(IsLight, "浅色", "深色")}）")
+            If IsLight Then
+                Color1 = New MyColor(29, 27, 38)
+                Color2 = New MyColor(107, 101, 127)
+                Color3 = New MyColor(124, 92, 255)
+                Color4 = New MyColor(167, 139, 250)
+                Color5 = New MyColor(216, 203, 255)
+                Color6 = New MyColor(255, 255, 255)
+                Color7 = New MyColor(255, 255, 255)
+                Color8 = New MyColor(244, 243, 249)
+            Else
+                Color1 = New MyColor(236, 235, 245)
+                Color2 = New MyColor(169, 164, 196)
+                Color3 = New MyColor(139, 108, 255)
+                Color4 = New MyColor(179, 157, 255)
+                Color5 = New MyColor(211, 199, 255)
+                Color6 = New MyColor(34, 30, 51)
+                Color7 = New MyColor(26, 23, 39)
+                Color8 = New MyColor(19, 17, 32)
+            End If
+            '主题附属资源：侧栏、卡片描边、铭牌线
+            Application.Current.Resources("ColorBrushRail") = New SolidColorBrush(If(IsLight, Color.FromRgb(&HF7, &HF5, &HFC), Color.FromRgb(&H15, &H12, &H1F)))
+            Application.Current.Resources("ColorBrushRailLine") = New SolidColorBrush(If(IsLight, Color.FromRgb(&HE0, &HD8, &HEE), Color.FromRgb(&H2A, &H25, &H40)))
+            Application.Current.Resources("ColorBrushRailActive") = New SolidColorBrush(If(IsLight, Color.FromRgb(&HE9, &HE3, &HFB), Color.FromRgb(&H23, &H1E, &H38)))
+            Application.Current.Resources("ColorBrushCardLine") = New SolidColorBrush(Color.FromArgb(If(IsLight, CByte(10), CByte(24)), If(IsLight, CByte(0), CByte(255)), If(IsLight, CByte(0), CByte(255)), If(IsLight, CByte(0), CByte(255))))
             ColorBg0 = Color4 * 0.4 + Color5 * 0.4 + ColorGray4 * 0.2
             ColorBg1 = New MyColor(190, Color7)
 
@@ -116,17 +139,30 @@ Friend Module ModSecret
             '顶部条背景
             'BRCL：顶栏改为近乎纯黑的机能条，只用一条极细的品牌色下边线
             Dim Brush = New LinearGradientBrush With {.EndPoint = New Point(1, 0), .StartPoint = New Point(0, 0)}
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 0, .Color = New MyColor(22, 19, 36)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 0.6, .Color = New MyColor(28, 24, 45)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 1, .Color = New MyColor(22, 19, 36)})
+            Dim LightBar As Boolean = (Color1.R = 29 AndAlso Color1.G = 27)
+            If LightBar Then
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 0, .Color = New MyColor(250, 249, 254)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 0.6, .Color = New MyColor(255, 255, 255)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 1, .Color = New MyColor(250, 249, 254)})
+            Else
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 0, .Color = New MyColor(22, 19, 36)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 0.6, .Color = New MyColor(28, 24, 45)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 1, .Color = New MyColor(22, 19, 36)})
+            End If
             FrmMain.PanTitle.Background = Brush
             FrmMain.PanTitle.Background.Freeze()
             '主页面背景
             'BRCL：页面底色为深炭黑，带极轻的冷光过渡
             Brush = New LinearGradientBrush With {.EndPoint = New Point(0.15, 1), .StartPoint = New Point(0.85, 0)}
-            Brush.GradientStops.Add(New GradientStop With {.Offset = -0.1, .Color = New MyColor(24, 21, 39)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 0.45, .Color = New MyColor(19, 17, 32)})
-            Brush.GradientStops.Add(New GradientStop With {.Offset = 1.1, .Color = New MyColor(27, 23, 45)})
+            If Color1.R = 29 AndAlso Color1.G = 27 Then
+                Brush.GradientStops.Add(New GradientStop With {.Offset = -0.1, .Color = New MyColor(244, 243, 251)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 0.45, .Color = New MyColor(238, 236, 246)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 1.1, .Color = New MyColor(243, 241, 251)})
+            Else
+                Brush.GradientStops.Add(New GradientStop With {.Offset = -0.1, .Color = New MyColor(24, 21, 39)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 0.45, .Color = New MyColor(19, 17, 32)})
+                Brush.GradientStops.Add(New GradientStop With {.Offset = 1.1, .Color = New MyColor(27, 23, 45)})
+            End If
             FrmMain.PanForm.Background = Brush
             FrmMain.PanForm.Background.Freeze()
         End Sub)

@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:PCL" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              mc:Ignorable="d" x:Class="PageBRS"
              d:DesignWidth="800" d:DesignHeight="800">
-    <Grid x:Name="PanBack" Margin="18,12,18,10">
+    <Grid x:Name="PanBack" Margin="22,16,22,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -13,7 +13,7 @@
 
         <!-- 顶部：服务器状态 -->
         <local:MyCard Grid.Row="0" UseAnimation="False">
-            <Grid Margin="14,12">
+            <Grid Margin="16,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
@@ -46,35 +46,35 @@
         </local:MyCard>
 
         <!-- 中部：指标 -->
-        <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,10,0,0">
+        <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,12,0,0">
             <local:MyCard Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="16,11">
-                    <TextBlock Text="TPS" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
+                <StackPanel Margin="18,13">
+                    <TextBlock Text="TPS" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" Opacity="0.85" />
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="LabTps" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="18" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="LabTps" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="tps" FontSize="10.5" Margin="3,0,0,3" VerticalAlignment="Bottom" Foreground="{DynamicResource ColorBrush2}" />
                     </StackPanel>
                     <TextBlock x:Name="LabMspt" Text="— ms/tick" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
             <local:MyCard Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="16,11">
+                <StackPanel Margin="18,13">
                     <TextBlock Text="运行时长" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabUptime" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="18" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="LabUptime" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="LabSeasonDay" Text="—" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
             <local:MyCard Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="16,11">
+                <StackPanel Margin="18,13">
                     <TextBlock Text="实体数" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabEntities" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="18" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="LabEntities" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="当前加载" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
             <local:MyCard UseAnimation="False">
-                <StackPanel Margin="16,11">
+                <StackPanel Margin="18,13">
                     <TextBlock Text="世界大小" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabWorld" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="18" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="LabWorld" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="LabCrash" Text="—" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>

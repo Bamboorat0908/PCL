@@ -92,7 +92,7 @@
             </Border.Clip>
             <Grid x:Name="PanForm" SnapsToDevicePixels="False" UseLayoutRounding="False">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="76" />
+                    <ColumnDefinition x:Name="ColRail" Width="76" />
                     <ColumnDefinition />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
@@ -100,42 +100,59 @@
                     <RowDefinition />
                 </Grid.RowDefinitions>
                 <!-- 左侧机能导航栏：编号 + 图标 + 标签，选中项带品牌色指示条 -->
-                <Border Grid.Column="0" Grid.RowSpan="2" Background="#15121F" BorderBrush="#2A2540" BorderThickness="0,0,1,0">
-                    <StackPanel Margin="0,14,0,12">
-                        <Border Width="34" Height="34" CornerRadius="17" HorizontalAlignment="Center" Margin="0,0,0,16">
+                <Border x:Name="PanRail" Grid.Column="0" Grid.RowSpan="2" Background="{DynamicResource ColorBrushRail}" BorderBrush="{DynamicResource ColorBrushRailLine}" BorderThickness="0,0,1,0">
+                    <Grid Margin="0,14,0,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Width="34" Height="34" CornerRadius="17" HorizontalAlignment="Center" Margin="0,0,0,18">
                             <Border.Background>
                                 <ImageBrush ImageSource="/BRCL;component/Images/Heads/Logo.png" Stretch="UniformToFill" />
                             </Border.Background>
                         </Border>
-                        <Grid x:Name="Rail0" Tag="0" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="启动（Ctrl+1）">
-                            <Rectangle x:Name="RailBar0" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
-                            <TextBlock Text="01" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" /><StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Path x:Name="RailIcon0" Data="M52.1,164.5c-1.4,0-3.1-0.5-4.2-1.3c-2.6-1.7-4-4.2-4-7V43.8c0-2.9,1.6-5.8,4.1-7c1.2-0.8,2.7-1.2,4.1-1.2c1.5,0,2.9,0.4,4.2,1.2L153.1,93c0,0,0.1,0,0.1,0.1c2.6,1.7,4,4.2,4,7c0,3-1.7,5.8-4.2,7.1l-96.8,56.2C55.1,164,53.5,164.5,52.1,164.5z M60.4,142.1l72.1-42.1L60.4,58.2V142.1z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
-                                <TextBlock x:Name="RailText0" Text="启动" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
-                            </StackPanel>
-                        </Grid>
-                        <Grid x:Name="Rail10" Tag="10" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="BRS（Ctrl+2）">
-                            <Rectangle x:Name="RailBar10" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
-                            <TextBlock Text="02" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" /><StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Path x:Name="RailIcon10" Data="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-2.4a15.6 15.6 0 0 0-1.3-3.6A8 8 0 0 1 18.9 8zM12 4.1c.8 1.1 1.5 2.5 1.9 3.9h-3.8c.4-1.4 1.1-2.8 1.9-3.9zM4.3 14A8 8 0 0 1 4 12c0-.7.1-1.4.3-2h2.8a17 17 0 0 0 0 4H4.3zm.8 2h2.4c.3 1.3.8 2.5 1.3 3.6A8 8 0 0 1 5.1 16zm2.4-8H5.1a8 8 0 0 1 3.7-3.6C8.3 5.5 7.8 6.7 7.5 8zM12 19.9c-.8-1.1-1.5-2.5-1.9-3.9h3.8c-.4 1.4-1.1 2.8-1.9 3.9zM14.2 14H9.8a15 15 0 0 1 0-4h4.4a15 15 0 0 1 0 4zm.3 5.6c.5-1.1 1-2.3 1.3-3.6h2.4a8 8 0 0 1-3.7 3.6zM16.8 14a17 17 0 0 0 0-4h2.8c.2.6.3 1.3.3 2s-.1 1.4-.3 2h-2.8z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
-                                <TextBlock x:Name="RailText10" Text="BRS" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
-                            </StackPanel>
-                        </Grid>
-                        <Grid x:Name="Rail11" Tag="11" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="交易所（Ctrl+3）">
-                            <Rectangle x:Name="RailBar11" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
-                            <TextBlock Text="03" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" /><StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Path x:Name="RailIcon11" Data="M4 20h16v2H4v-2zm1.2-3.1 3.6-6.3 3.1 3.3 4.2-7.4 3.2 8.1-2.1 1.4-1.4-3.5-3 5.2-3.3-3.4-2.6 4.5-1.7-1.9z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
-                                <TextBlock x:Name="RailText11" Text="交易所" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
-                            </StackPanel>
-                        </Grid>
-                        <Grid x:Name="Rail3" Tag="3" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="设置（Ctrl+4）">
-                            <Rectangle x:Name="RailBar3" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
-                            <TextBlock Text="04" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" /><StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Path x:Name="RailIcon3" Data="M512 256a256 256 0 1 0 0 512 256 256 0 0 0 0-512zm0 384a128 128 0 1 1 0-256 128 128 0 0 1 0 256z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
-                                <TextBlock x:Name="RailText3" Text="设置" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
-                            </StackPanel>
-                        </Grid>
-                    </StackPanel>
+                        <StackPanel Grid.Row="1" VerticalAlignment="Top">
+                            <Grid x:Name="Rail0" Tag="0" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="启动（Ctrl+1）">
+                                <Rectangle x:Name="RailBar0" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
+                                <TextBlock x:Name="RailNum0" Text="01" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" />
+                                <StackPanel x:Name="RailInner0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Path x:Name="RailIcon0" Data="M52.1,164.5c-1.4,0-3.1-0.5-4.2-1.3c-2.6-1.7-4-4.2-4-7V43.8c0-2.9,1.6-5.8,4.1-7c1.2-0.8,2.7-1.2,4.1-1.2c1.5,0,2.9,0.4,4.2,1.2L153.1,93c0,0,0.1,0,0.1,0.1c2.6,1.7,4,4.2,4,7c0,3-1.7,5.8-4.2,7.1l-96.8,56.2C55.1,164,53.5,164.5,52.1,164.5z M60.4,142.1l72.1-42.1L60.4,58.2V142.1z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
+                                    <TextBlock x:Name="RailText0" Text="启动" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid x:Name="Rail10" Tag="10" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="BRS（Ctrl+2）">
+                                <Rectangle x:Name="RailBar10" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
+                                <TextBlock x:Name="RailNum10" Text="02" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" />
+                                <StackPanel x:Name="RailInner10" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Path x:Name="RailIcon10" Data="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-2.4a15.6 15.6 0 0 0-1.3-3.6A8 8 0 0 1 18.9 8zM12 4.1c.8 1.1 1.5 2.5 1.9 3.9h-3.8c.4-1.4 1.1-2.8 1.9-3.9zM4.3 14A8 8 0 0 1 4 12c0-.7.1-1.4.3-2h2.8a17 17 0 0 0 0 4H4.3zm.8 2h2.4c.3 1.3.8 2.5 1.3 3.6A8 8 0 0 1 5.1 16zm2.4-8H5.1a8 8 0 0 1 3.7-3.6C8.3 5.5 7.8 6.7 7.5 8zM12 19.9c-.8-1.1-1.5-2.5-1.9-3.9h3.8c-.4 1.4-1.1 2.8-1.9 3.9zM14.2 14H9.8a15 15 0 0 1 0-4h4.4a15 15 0 0 1 0 4zm.3 5.6c.5-1.1 1-2.3 1.3-3.6h2.4a8 8 0 0 1-3.7 3.6zM16.8 14a17 17 0 0 0 0-4h2.8c.2.6.3 1.3.3 2s-.1 1.4-.3 2h-2.8z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
+                                    <TextBlock x:Name="RailText10" Text="BRS" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid x:Name="Rail11" Tag="11" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="交易所（Ctrl+3）">
+                                <Rectangle x:Name="RailBar11" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
+                                <TextBlock x:Name="RailNum11" Text="03" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" />
+                                <StackPanel x:Name="RailInner11" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Path x:Name="RailIcon11" Data="M4 20h16v2H4v-2zm1.2-3.1 3.6-6.3 3.1 3.3 4.2-7.4 3.2 8.1-2.1 1.4-1.4-3.5-3 5.2-3.3-3.4-2.6 4.5-1.7-1.9z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
+                                    <TextBlock x:Name="RailText11" Text="交易所" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid x:Name="Rail3" Tag="3" Height="56" Margin="6,2" Background="Transparent" Cursor="Hand" ToolTip="设置（Ctrl+4）">
+                                <Rectangle x:Name="RailBar3" Width="3" HorizontalAlignment="Left" Fill="{DynamicResource ColorBrush3}" Visibility="Collapsed" />
+                                <TextBlock x:Name="RailNum3" Text="04" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" />
+                                <StackPanel x:Name="RailInner3" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Path x:Name="RailIcon3" Data="M512 256a256 256 0 1 0 0 512 256 256 0 0 0 0-512zm0 384a128 128 0 1 1 0-256 128 128 0 0 1 0 256z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="16" Height="16" />
+                                    <TextBlock x:Name="RailText3" Text="设置" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid x:Name="RailThemeBtn" Height="56" Margin="6,14,6,2" Background="Transparent" Cursor="Hand" ToolTip="切换浅色 / 深色">
+                                <TextBlock x:Name="RailNumTheme" Text="" FontFamily="Consolas" FontSize="8" Foreground="{DynamicResource ColorBrush2}" Opacity="0.45" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,6,0" />
+                                <StackPanel x:Name="RailThemeInner" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <Path x:Name="RailThemeIcon" Data="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm0-13a5 5 0 1 0 0 10 5 5 0 0 0 0-10z" Fill="{DynamicResource ColorBrush2}" Stretch="Uniform" Width="14" Height="14" />
+                                    <TextBlock x:Name="RailThemeText" Text="主题" FontSize="10" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
                 </Border>
                 <Canvas x:Name="ImgBack" IsHitTestVisible="False" Grid.Row="1" Grid.Column="1" RenderOptions.BitmapScalingMode="LowQuality"
                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />

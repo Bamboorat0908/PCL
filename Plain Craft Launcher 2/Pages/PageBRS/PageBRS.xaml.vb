@@ -171,7 +171,7 @@ Public Class PageBRS
             Return
         End If
         LabState.Text = "连接失败"
-        BadgeState.Background = New SolidColorBrush(Color.FromRgb(&HC9, &H20, &H3F))
+        BadgeState.Background = New SolidColorBrush(Color.FromRgb(&HD9, &H53, &H6A))
         LabUpdated.Text = "刷新失败，将自动重试"
         LabMotd.Text = "无法获取服务器状态：" & Message
     End Sub
@@ -183,7 +183,7 @@ Public Class PageBRS
             '状态徽章
             If Alive Then
                 LabState.Text = "运行中"
-                BadgeState.Background = New SolidColorBrush(Color.FromRgb(&H0B, &H73, &H50))
+                BadgeState.Background = New SolidColorBrush(Color.FromRgb(&H1F, &HA8, &H96)) '冷调青，与紫罗兰同为冷色系
             Else
                 LabState.Text = "离线"
                 BadgeState.Background = New SolidColorBrush(Color.FromRgb(&HC9, &H20, &H3F))
@@ -380,12 +380,14 @@ Public Class PageBRS
 
     Private Function CreatePlayerChip(Name As String) As FrameworkElement
         Dim B As New Border With {
-            .Background = CType(Application.Current.Resources("ColorBrush6"), Brush),
             .CornerRadius = New CornerRadius(9),
             .Padding = New Thickness(9, 3, 9, 4),
             .Margin = New Thickness(0, 0, 6, 6)
         }
-        B.Child = New TextBlock With {.Text = Name, .FontSize = 12, .Foreground = CType(Application.Current.Resources("ColorBrush1"), Brush)}
+        B.SetResourceReference(Border.BackgroundProperty, "ColorBrush6")
+        Dim T As New TextBlock With {.Text = Name, .FontSize = 12}
+        T.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrush1")
+        B.Child = T
         Return B
     End Function
 
@@ -437,23 +439,23 @@ Public Class PageBRS
             Cell.RowDefinitions.Add(New RowDefinition With {.Height = New GridLength(1, GridUnitType.Star)})
             '底槽
             Dim Track As New Border With {
-                .Background = CType(Application.Current.Resources("ColorBrush6"), Brush),
-                .Opacity = 0.55,
+                .Opacity = 0.42,
                 .CornerRadius = New CornerRadius(4),
                 .VerticalAlignment = VerticalAlignment.Bottom,
                 .Height = TrackH
             }
+            Track.SetResourceReference(Border.BackgroundProperty, "ColorBrush6")
             Grid.SetRowSpan(Track, 2)
             Cell.Children.Add(Track)
             '柱
             Dim BarH As Double = Math.Max(4, TrackH * It.Value / MaxV)
             Dim Bar As New Border With {
-                .Background = CType(Application.Current.Resources("ColorBrush3"), Brush),
                 .CornerRadius = New CornerRadius(4),
                 .VerticalAlignment = VerticalAlignment.Bottom,
                 .Height = BarH,
                 .ToolTip = It.Key.Substring(5) & " · " & It.Value.ToString() & " 人"
             }
+            Bar.SetResourceReference(Border.BackgroundProperty, "ColorBrush3")
             Grid.SetRowSpan(Bar, 2)
             Bar.Opacity = 0
             Cell.Children.Add(Bar)
