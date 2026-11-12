@@ -1,4 +1,4 @@
-Public Class ExportOption
+﻿Public Class ExportOption
     Public Property Title As String
     Public Property Description As String
     Public Property Rules As String
@@ -569,13 +569,13 @@ Public Class PageInstanceExport
             If BuildType = BuildTypes.Release AndAlso IncludePCL Then FileUtils.Copy(PathExe, CacheFolder & "Plain Craft Launcher.exe")
             '复制 PCL 个性化内容
             If IncludePCLCustom Then
-                If DirectoryUtils.Exists(Paths.Base & "PCL\Pictures\") Then DirectoryUtils.Copy(Paths.Base & "PCL\Pictures\", CacheFolder & "PCL\Pictures\")
-                If DirectoryUtils.Exists(Paths.Base & "PCL\Musics\") Then DirectoryUtils.Copy(Paths.Base & "PCL\Musics\", CacheFolder & "PCL\Musics\")
-                If DirectoryUtils.Exists(Paths.Base & "PCL\Help\") Then DirectoryUtils.Copy(Paths.Base & "PCL\Help\", CacheFolder & "PCL\Help\")
-                If FileUtils.Exists(Paths.Base & "PCL\Custom.xaml") Then FileUtils.Copy(Paths.Base & "PCL\Custom.xaml", CacheFolder & "PCL\Custom.xaml")
-                If FileUtils.Exists(Paths.Base & "PCL\Setup.ini") Then FileUtils.Copy(Paths.Base & "PCL\Setup.ini", CacheFolder & "PCL\Setup.ini")
-                If FileUtils.Exists(Paths.Base & "PCL\hints.txt") Then FileUtils.Copy(Paths.Base & "PCL\hints.txt", CacheFolder & "PCL\hints.txt")
-                If FileUtils.Exists(Paths.Base & "PCL\Logo.png") Then FileUtils.Copy(Paths.Base & "PCL\Logo.png", CacheFolder & "PCL\Logo.png")
+                If DirectoryUtils.Exists(Paths.Base & "BRCL\Pictures\") Then DirectoryUtils.Copy(Paths.Base & "BRCL\Pictures\", CacheFolder & "PCL\Pictures\")
+                If DirectoryUtils.Exists(Paths.Base & "BRCL\Musics\") Then DirectoryUtils.Copy(Paths.Base & "BRCL\Musics\", CacheFolder & "PCL\Musics\")
+                If DirectoryUtils.Exists(Paths.Base & "BRCL\Help\") Then DirectoryUtils.Copy(Paths.Base & "BRCL\Help\", CacheFolder & "PCL\Help\")
+                If FileUtils.Exists(Paths.Base & "BRCL\Custom.xaml") Then FileUtils.Copy(Paths.Base & "BRCL\Custom.xaml", CacheFolder & "PCL\Custom.xaml")
+                If FileUtils.Exists(Paths.Base & "BRCL\Setup.ini") Then FileUtils.Copy(Paths.Base & "BRCL\Setup.ini", CacheFolder & "PCL\Setup.ini")
+                If FileUtils.Exists(Paths.Base & "BRCL\hints.txt") Then FileUtils.Copy(Paths.Base & "BRCL\hints.txt", CacheFolder & "PCL\hints.txt")
+                If FileUtils.Exists(Paths.Base & "BRCL\Logo.png") Then FileUtils.Copy(Paths.Base & "BRCL\Logo.png", CacheFolder & "PCL\Logo.png")
             End If
         End Sub) With {.ProgressWeight = 5})
 

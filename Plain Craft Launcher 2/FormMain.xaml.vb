@@ -1,4 +1,4 @@
-Imports System.ComponentModel
+﻿Imports System.ComponentModel
 Imports System.Windows.Interop
 
 Public Class FormMain
@@ -223,7 +223,7 @@ Public Class FormMain
                 '    FeatureList.Add(New KeyValuePair(Of Integer, String)(3, "优化：使用离线登录也可以直接加入联机房间了"))
                 '    FeatureList.Add(New KeyValuePair(Of Integer, String)(3, "优化：会从所有共享节点中自动选择负载最低的进行中继连接"))
                 '    FeatureList.Add(New KeyValuePair(Of Integer, String)(2, "优化：若复制了邀请码，则可以直接快速加入房间"))
-                '    FeatureList.Add(New KeyValuePair(Of Integer, String)(2, "优化：关闭 PCL 时总是会提示是否退出联机，防止在关闭 PCL 时无意地关闭或退出了房间"))
+                '    FeatureList.Add(New KeyValuePair(Of Integer, String)(2, "优化：关闭 BRCL 时总是会提示是否退出联机，防止在关闭 BRCL 时无意地关闭或退出了房间"))
                 '    FeatureList.Add(New KeyValuePair(Of Integer, String)(2, "新增：允许自定义要连接的节点"))
                 'End If
                 FeatureCount += 9
@@ -253,7 +253,7 @@ Public Class FormMain
         '输出更新日志
         RunInNewThread(
         Sub()
-            If MyMsgBox(Content, "PCL 已更新至" & VersionDisplay, "确定", "完整更新日志") = 2 Then
+            If MyMsgBox(Content, "BRCL 已更新至" & VersionDisplay, "确定", "完整更新日志") = 2 Then
                 OpenWebsite("https://meloong.com/afd/a/LTCat?tab=feed")
             End If
         End Sub, "UpdateLog Output")
@@ -279,10 +279,10 @@ Public Class FormMain
         '版本隔离设置迁移
         If Not Settings.HasSaved("LaunchArgumentIndieV2") Then
             If Settings.HasSaved("LaunchArgumentIndie") Then
-                Logger.Info("从老 PCL 迁移版本隔离")
+                Logger.Info("从老 BRCL 迁移版本隔离")
                 Settings.Set("LaunchArgumentIndieV2", Settings.Get(Of Integer)("LaunchArgumentIndie"))
             ElseIf HasIniKey("Setup", "LaunchVersionSelect") Then
-                Logger.Info("从老 PCL 升级，但此前未调整版本隔离，使用老的版本隔离默认值")
+                Logger.Info("从老 BRCL 升级，但此前未调整版本隔离，使用老的版本隔离默认值")
                 Settings.Set("LaunchArgumentIndieV2", Settings.GetDefault("LaunchArgumentIndie"))
             Else
                 Logger.Info("全新的 PCL，使用新的版本隔离默认值")
@@ -319,8 +319,8 @@ Public Class FormMain
         PageRight = FrmLaunchRight
         FrmLaunchRight.PageState = MyPageRight.PageStates.ContentStay
         '模式提醒
-        If BuildType = BuildTypes.Debug Then Hint("[开发者模式] PCL 正以开发者模式运行，这可能会造成严重的性能下降，请务必立即向开发者反馈此问题！", HintType.Red)
-        If ModeDebug Then Hint("[调试模式] PCL 正以调试模式运行，这可能会导致性能下降，若无必要请不要开启！")
+        If BuildType = BuildTypes.Debug Then Hint("[开发者模式] BRCL 正以开发者模式运行，这可能会造成严重的性能下降，请务必立即向开发者反馈此问题！", HintType.Red)
+        If ModeDebug Then Hint("[调试模式] BRCL 正以调试模式运行，这可能会导致性能下降，若无必要请不要开启！")
         '尽早执行的加载池
         McFolderListLoader.Start(0) '为了让下载已存在文件检测可以正常运行，必须跑一次；为了让启动按钮尽快可用，需要尽早执行；为了与 PageLaunchLeft 联动，需要为 0 而不是 GetUuid
 
@@ -384,7 +384,7 @@ Public Class FormMain
             Sub()
                 PanBack.RenderTransform = Nothing
                 IsWindowLoadFinished = True
-                Logger.Info($"DPI：{DPI}，系统版本：{Environment.OSVersion.VersionString}，PCL 位置：{PathExe}")
+                Logger.Info($"DPI：{DPI}，系统版本：{Environment.OSVersion.VersionString}，BRCL 位置：{PathExe}")
             End Sub, , True)
         }, "Form Show")
         'Timer 启动
@@ -398,8 +398,8 @@ Public Class FormMain
             If Settings.Get(Of Integer)("SystemEulaVersion") < EulaVersion Then
                 Select Case MyMsgBox(
                     If(Settings.Get(Of Integer)("SystemEulaVersion") = 0,
-                        "在使用 PCL 前，请先阅读用户协议与免责声明。",
-                        $"PCL 的用户协议与免责声明已更新。{vbCrLf}请阅读更新后的用户协议与免责声明。"),
+                        "在使用 BRCL 前，请先阅读用户协议与免责声明。",
+                        $"BRCL 的用户协议与免责声明已更新。{vbCrLf}请阅读更新后的用户协议与免责声明。"),
                         "协议授权", "同意", "拒绝", "查看用户协议与免责声明",
                         Button3Action:=Sub() OpenWebsite("https://shimo.im/docs/rGrd8pY8xWkt6ryW"))
                     Case 1
@@ -412,7 +412,7 @@ Public Class FormMain
             Try
                 JavaInit() '延后到同意协议后再执行，避免在初次启动时进行进程操作
                 Thread.Sleep(100)
-                DlClientListMojangLoader.Start(1) 'PCL 会同时根据这里的加载结果决定是否使用官方源进行下载
+                DlClientListMojangLoader.Start(1) 'BRCL 会同时根据这里的加载结果决定是否使用官方源进行下载
                 RunCountSub()
                 ServerLoader.Start()
                 RunInNewThread(AddressOf TryClearTaskTemp, "TryClearTaskTemp", ThreadPriority.BelowNormal)
@@ -421,7 +421,7 @@ Public Class FormMain
             End Try
             '清理自动更新文件
             Try
-                FileUtils.Delete(Paths.Base & "PCL\Plain Craft Launcher 2.exe")
+                FileUtils.Delete(Paths.Base & "BRCL\Plain Craft Launcher 2.exe")
             Catch ex As Exception
                 Logger.Warn(ex, "清理自动更新文件失败")
             End Try
@@ -434,6 +434,20 @@ Public Class FormMain
         End Sub, "初始化", ThreadPriority.Lowest)
 
         Logger.Info($"第三阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
+
+        '调试钩子：设置环境变量 BRCL_START_PAGE 时直接进入指定页面，便于界面自检
+        Try
+            Select Case Environment.GetEnvironmentVariable("BRCL_START_PAGE")
+                Case "setup"
+                    PageChange(PageType.Setup, PageSubType.SetupLaunch)
+                Case "about"
+                    PageChange(PageType.Setup, PageSubType.SetupAbout)
+                Case "ui"
+                    PageChange(PageType.Setup, PageSubType.SetupUI)
+            End Select
+        Catch ex As Exception
+            Logger.Warn(ex, "调试钩子执行失败")
+        End Try
     End Sub
     '根据打开次数触发的事件
     Private Sub RunCountSub()
@@ -441,13 +455,13 @@ Public Class FormMain
         If BuildType = BuildTypes.Snapshot Then
             Select Case Settings.Get(Of Integer)("SystemCount")
                 Case 1
-                    MyMsgBox("欢迎使用 PCL 快照版！" & vbCrLf &
+                    MyMsgBox("欢迎使用 BRCL 快照版！" & vbCrLf &
                              "快照版包含尚未在正式版发布的测试性功能，仅用于赞助者本人尝鲜。所以请不要发给其他人或者用于制作整合包哦！" & vbCrLf &
                              "如果你并非通过赞助或赞助者本人邀请进群获得的本程序，那么可能是有人在违规传播，记得提醒他一下啦。", "快照版使用说明")
             End Select
             If Settings.Get(Of Integer)("SystemCount") >= 99 Then
                 If ThemeUnlock(6, False) Then
-                    MyMsgBox("你已经使用了 99 次 PCL 啦，感谢你长期以来的支持！" & vbCrLf &
+                    MyMsgBox("你已经使用了 99 次 BRCL 啦，感谢你长期以来的支持！" & vbCrLf &
                              "隐藏主题 铁杆粉 已解锁！", "提示")
                 End If
             End If
@@ -479,7 +493,7 @@ Public Class FormMain
             Dim UnlockedTheme As New List(Of String)(Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"))
             UnlockedTheme.Remove("13")
             Settings.Set("UiLauncherThemeHide2", UnlockedTheme.Join("|"c))
-            MyMsgBox("由于新版 PCL 修改了欧皇彩的解锁方式，你需要重新解锁欧皇彩。" & vbCrLf &
+            MyMsgBox("由于新版 BRCL 修改了欧皇彩的解锁方式，你需要重新解锁欧皇彩。" & vbCrLf &
                      "多谢各位的理解啦！", "重新解锁提醒")
         End If
         '重置滑稽彩
@@ -487,12 +501,12 @@ Public Class FormMain
             Dim UnlockedTheme As New List(Of String)(Settings.Get(Of String)("UiLauncherThemeHide2").ToString.Split("|"))
             UnlockedTheme.Remove("12")
             Settings.Set("UiLauncherThemeHide2", UnlockedTheme.Join("|"c))
-            MyMsgBox("由于新版 PCL 修改了滑稽彩的解锁方式，你需要重新解锁滑稽彩。" & vbCrLf &
+            MyMsgBox("由于新版 BRCL 修改了滑稽彩的解锁方式，你需要重新解锁滑稽彩。" & vbCrLf &
                      "多谢各位的理解啦！", "重新解锁提醒")
         End If
         '移动自定义皮肤
-        If LastVersionCode <= 161 AndAlso FileUtils.Exists(Paths.Base & "PCL\CustomSkin.png") AndAlso Not FileUtils.Exists(Paths.AppDataThenName & "CustomSkin.png") Then
-            FileUtils.Copy(Paths.Base & "PCL\CustomSkin.png", Paths.AppDataThenName & "CustomSkin.png")
+        If LastVersionCode <= 161 AndAlso FileUtils.Exists(Paths.Base & "BRCL\CustomSkin.png") AndAlso Not FileUtils.Exists(Paths.AppDataThenName & "CustomSkin.png") Then
+            FileUtils.Copy(Paths.Base & "BRCL\CustomSkin.png", Paths.AppDataThenName & "CustomSkin.png")
             Logger.Info("已移动离线自定义皮肤 (162)")
         End If
         If LastVersionCode <= 263 AndAlso FileUtils.Exists(PathTemp & "CustomSkin.png") AndAlso Not FileUtils.Exists(Paths.AppDataThenName & "CustomSkin.png") Then
@@ -605,9 +619,9 @@ Public Class FormMain
                 FeedbackInfo()
                 Logger.Info("请在 https://github.com/Meloong-Git/PCL/issues 提交错误报告，以便于作者解决此问题！")
                 IsLogShown = True
-                StartProcess(Paths.Base & "PCL\Log1.txt")
+                StartProcess(Paths.Base & "BRCL\Log1.txt")
             End If
-            Thread.Sleep(500) '防止 PCL 在记事本打开前就被掐掉
+            Thread.Sleep(500) '防止 BRCL 在记事本打开前就被掐掉
         End If
         Logger.Info($"程序已退出，返回值：{ReturnCode}")
         ConfigUtils.SaveAll()
@@ -733,9 +747,14 @@ Public Class FormMain
                     FrmSetupUI.PanLogoChange.Visibility = Visibility.Collapsed
                 End If
             Case 1 '默认
-                ShapeTitleLogo.Visibility = Visibility.Visible
+                ShapeTitleLogo.Visibility = Visibility.Collapsed
                 LabTitleLogo.Visibility = Visibility.Collapsed
-                ImageTitleLogo.Visibility = Visibility.Collapsed
+                ImageTitleLogo.Visibility = Visibility.Visible
+                Try
+                    ImageTitleLogo.Source = "pack://application:,,,/BRCL;component/Images/TitleLogo.png"
+                Catch ex As Exception
+                    ImageTitleLogo.Source = Nothing
+                End Try
                 If Not IsNothing(FrmSetupUI) Then
                     FrmSetupUI.CheckLogoLeft.Visibility = Visibility.Collapsed
                     FrmSetupUI.PanLogoText.Visibility = Visibility.Collapsed
@@ -760,7 +779,7 @@ Public Class FormMain
                     FrmSetupUI.PanLogoChange.Visibility = Visibility.Visible
                 End If
                 Try
-                    ImageTitleLogo.Source = Paths.Base & "PCL\Logo.png"
+                    ImageTitleLogo.Source = Paths.Base & "BRCL\Logo.png"
                 Catch ex As Exception
                     ImageTitleLogo.Source = Nothing
                     Logger.Error(ex, "显示标题栏图片失败", LogBehavior.Alert)
@@ -1030,12 +1049,12 @@ Public Class FormMain
             Dim Extension As String = FilePath.AfterLast(".").Lower
             If Extension = "xaml" Then
                 Logger.Info("文件后缀为 XAML，作为主页加载")
-                If FileUtils.Exists(Paths.Base & "PCL\Custom.xaml") Then
+                If FileUtils.Exists(Paths.Base & "BRCL\Custom.xaml") Then
                     If MyMsgBox("已存在一个主页文件，是否要将它覆盖？", "覆盖确认", "覆盖", "取消") = 2 Then
                         Return
                     End If
                 End If
-                FileUtils.Copy(FilePath, Paths.Base & "PCL\Custom.xaml")
+                FileUtils.Copy(FilePath, Paths.Base & "BRCL\Custom.xaml")
                 RunInUi(
                 Sub()
                     Settings.Set("UiCustomType", 1)
@@ -1060,7 +1079,7 @@ Public Class FormMain
             End If
             'RAR 处理
             If Extension = "rar" Then
-                Hint("PCL 无法处理 rar 格式的压缩包，请在解压后重新压缩为 zip 格式再试！")
+                Hint("BRCL 无法处理 rar 格式的压缩包，请在解压后重新压缩为 zip 格式再试！")
                 Return
             End If
             '错误报告分析
@@ -1076,7 +1095,7 @@ Public Class FormMain
                 Logger.Error(ex, "自主错误报告分析失败")
             End Try
             '未知操作
-            Hint("PCL 无法确定应当执行的文件拖拽操作……")
+            Hint("BRCL 无法确定应当执行的文件拖拽操作……")
         End Sub, "文件拖拽")
     End Sub
 
@@ -1211,7 +1230,7 @@ Public Class FormMain
         SetupLaunch = 0
         SetupLink = 1
         SetupUI = 2
-        SetupSystem = 3
+        SetupAbout = 3
         LinkMain = 0
         OtherHelp = 0
         OtherAbout = 1
@@ -1333,11 +1352,19 @@ Public Class FormMain
     ''' 切换页面，并引起对应选择 UI 的改变。
     ''' </summary>
     Public Sub PageChange(Stack As PageStackData, Optional SubType As PageSubType = PageSubType.Default)
+        'BRCL：下载页与更多页已被移除，任何指向它们的跳转都直接忽略
+        If Stack.Page = PageType.Download OrElse Stack.Page = PageType.Other Then Return
         If PageNameGet(Stack) = "" Then
             '切换到主页面
             PageChangeExit()
             IsChangingPage = True '防止下面的勾选直接触发了 PageChangeActual
-            CType(PanTitleSelect.Children(Stack), MyRadioButton).SetChecked(True, True, PageNameGet(PageCurrent) = "")
+            'BRCL：导航按钮已不连续，按 Tag 查找对应按钮，不能再按索引取
+            For Each Child As Object In PanTitleSelect.Children
+                If TypeOf Child Is MyRadioButton AndAlso CStr(CType(Child, MyRadioButton).Tag) = CStr(Stack.Page) Then
+                    CType(Child, MyRadioButton).SetChecked(True, True, PageNameGet(PageCurrent) = "")
+                    Exit For
+                End If
+            Next
             IsChangingPage = False
             Select Case Stack.Page
                 Case PageType.Download
@@ -1364,7 +1391,7 @@ Public Class FormMain
     ''' <summary>
     ''' 通过点击导航栏改变页面。
     ''' </summary>
-    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect1.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check, BtnTitleSelect4.Check
+    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check
         If IsChangingPage Then Return
         PageChangeActual(Val(sender.Tag))
     End Sub
@@ -1435,19 +1462,12 @@ Public Class FormMain
             Select Case Stack.Page
                 Case PageType.Launch '启动
                     PageChangeAnim(FrmLaunchLeft, FrmLaunchRight)
-                Case PageType.Download '下载
-                    If FrmDownloadLeft Is Nothing Then FrmDownloadLeft = New PageDownloadLeft
-                    'PageGet 方法会在未设置 SubType 时指定默认值，并建立相关页面的实例
-                    PageChangeAnim(FrmDownloadLeft, FrmDownloadLeft.PageGet(SubType))
                 Case PageType.Link '联机
                     If FrmLinkMain Is Nothing Then FrmLinkMain = New PageLinkMain
                     PageChangeAnim(New MyPageLeft, FrmLinkMain)
                 Case PageType.Setup '设置
                     If FrmSetupLeft Is Nothing Then FrmSetupLeft = New PageSetupLeft
                     PageChangeAnim(FrmSetupLeft, FrmSetupLeft.PageGet(SubType))
-                Case PageType.Other '更多
-                    If FrmOtherLeft Is Nothing Then FrmOtherLeft = New PageOtherLeft
-                    PageChangeAnim(FrmOtherLeft, FrmOtherLeft.PageGet(SubType))
                 Case PageType.InstanceSelect '版本选择
                     If FrmSelectLeft Is Nothing Then FrmSelectLeft = New PageSelectLeft
                     If FrmSelectRight Is Nothing Then FrmSelectRight = New PageSelectRight

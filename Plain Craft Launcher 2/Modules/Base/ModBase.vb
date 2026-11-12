@@ -1,4 +1,4 @@
-Imports System.Runtime.CompilerServices
+﻿Imports System.Runtime.CompilerServices
 Imports System.Xaml
 
 Public Module ModBase
@@ -43,11 +43,11 @@ Public Module ModBase
     ''' <summary>
     ''' 程序内嵌图片文件夹路径，以 / 结尾。
     ''' </summary>
-    Public PathImage As String = "pack://application:,,,/Plain Craft Launcher 2;component/Images/"
+    Public PathImage As String = "pack://application:,,,/BRCL;component/Images/"
     ''' <summary>
     ''' 程序的缓存文件夹路径，以 \ 结尾。
     ''' </summary>
-    Public PathTemp As String = If(Settings.Get(Of String)("SystemSystemCache") = "", Path.GetTempPath() & "PCL\", Settings.Get(Of String)("SystemSystemCache")).ToString.Replace("/", "\").TrimEnd("\") & "\"
+    Public PathTemp As String = If(Settings.Get(Of String)("SystemSystemCache") = "", Path.GetTempPath() & "BRCL\", Settings.Get(Of String)("SystemSystemCache")).ToString.Replace("/", "\").TrimEnd("\") & "\"
     ''' <summary>
     ''' 当前程序的语言。
     ''' </summary>
@@ -791,7 +791,7 @@ Public Module ModBase
     Public PathPure As Lazy(Of String) = New Lazy(Of String)(
     Function()
         If Paths.Base.IsAsciiOnly() Then
-            Return Paths.Base & "PCL\"
+            Return Paths.Base & "BRCL\"
         ElseIf Paths.AppDataThenName.IsAsciiOnly() Then
             Return Paths.AppDataThenName
         ElseIf PathTemp.IsAsciiOnly() Then

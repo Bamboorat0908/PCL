@@ -639,11 +639,8 @@ Finish:
             CurrentState = 0
         Else
             If McInstanceSelected Is Nothing Then
-                If Settings.Get(Of Boolean)("UiHiddenPageDownload") AndAlso Not PageSetupUI.HiddenForceShow Then
-                    CurrentState = 1
-                Else
-                    CurrentState = 2
-                End If
+                'BRCL：下载功能已移除，无版本时固定为“下载已禁用”状态
+                CurrentState = 1
             Else
                 CurrentState = 3
             End If

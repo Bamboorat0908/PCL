@@ -9,9 +9,9 @@ Public Class PageInstanceModDisabled
     End Sub
 
     Public Sub BtnDownload_Loaded() Handles BtnDownload.Loaded
-        Dim NewVisibility = If((Settings.Get(Of Boolean)("UiHiddenPageDownload") AndAlso Not PageSetupUI.HiddenForceShow) OrElse If(FrmSelectRight Is Nothing, False, FrmSelectRight.ShowHidden), Visibility.Collapsed, Visibility.Visible)
-        If BtnDownload.Visibility <> NewVisibility Then
-            BtnDownload.Visibility = NewVisibility
+        'BRCL：下载功能已移除
+        If BtnDownload.Visibility <> Visibility.Collapsed Then
+            BtnDownload.Visibility = Visibility.Collapsed
             PanMain.TriggerForceResize()
         End If
     End Sub

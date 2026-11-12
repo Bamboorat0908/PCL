@@ -101,8 +101,8 @@ Public Class PageSelectRight
                     BtnEmptyDownload.Visibility = Visibility.Collapsed
                 Else
                     LabEmptyTitle.Text = "无可用版本"
-                    LabEmptyContent.Text = "未找到任何版本的游戏，请先下载任意版本的游戏。" & vbCrLf & "若有已存在的游戏，请在左边的列表中选择添加文件夹，选择 .minecraft 文件夹将其导入。"
-                    BtnEmptyDownload.Visibility = If(Settings.Get(Of Boolean)("UiHiddenPageDownload") AndAlso Not PageSetupUI.HiddenForceShow, Visibility.Collapsed, Visibility.Visible)
+                    LabEmptyContent.Text = "未找到任何版本的游戏。" & vbCrLf & "请在左边的列表中选择添加文件夹，选择 .minecraft 文件夹将其导入。"
+                    BtnEmptyDownload.Visibility = Visibility.Collapsed
                 End If
             Else
                 PanBack.Visibility = Visibility.Visible
@@ -228,9 +228,9 @@ Public Class PageSelectRight
     End Sub
 
     Public Sub BtnEmptyDownload_Loaded() Handles BtnEmptyDownload.Loaded
-        Dim NewVisibility = If((Settings.Get(Of Boolean)("UiHiddenPageDownload") AndAlso Not PageSetupUI.HiddenForceShow) OrElse ShowHidden, Visibility.Collapsed, Visibility.Visible)
-        If BtnEmptyDownload.Visibility <> NewVisibility Then
-            BtnEmptyDownload.Visibility = NewVisibility
+        'BRCL：下载功能已移除
+        If BtnEmptyDownload.Visibility <> Visibility.Collapsed Then
+            BtnEmptyDownload.Visibility = Visibility.Collapsed
             PanLoad.TriggerForceResize()
         End If
     End Sub
