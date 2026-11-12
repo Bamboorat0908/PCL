@@ -10,15 +10,26 @@ Public Class PageStock
     Private IsLoadFailed As Boolean = False
 
     Private Sub PageStock_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        If IsInited Then Return
+        If IsInited Then
+            '回到页面时恢复被挂起的渲染进程
+            Try
+                ViewWeb.CoreWebView2?.Resume()
+            Catch ex As Exception
+            End Try
+            Return
+        End If
         IsInited = True
         StartLoad()
     End Sub
 
     Private Sub PageStock_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
-        '离开页面后停止播放网页音频，避免后台占用
+        '离开页面：暂停网页音视频并挂起渲染进程，避免后台占用 CPU/内存
         Try
             ViewWeb.CoreWebView2?.ExecuteScriptAsync("document.querySelectorAll('audio,video').forEach(function(m){try{m.pause()}catch(e){}})")
+        Catch ex As Exception
+        End Try
+        Try
+            ViewWeb.CoreWebView2?.TrySuspendAsync()
         Catch ex As Exception
         End Try
     End Sub

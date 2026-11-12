@@ -165,3 +165,18 @@ export DOTNET_HOST_PATH="C:\\works\\BRCL\\tools\\dotnet8\\dotnet.exe"
 4. `Pages/PageDownload`、`PageOtherHelp`、`PageOtherTest` 等源文件仍在工程内编译，只是无入口；彻底删除需逐个清理交叉引用，本次未做。
 5. 「更多」页删除后，**帮助文档（Help.zip）**不再有界面入口。
 6. 许可证：PCL 的「分发有限许可」要求二次创作版本名称以 `Plain Craft Launcher (PCL)` 开头、界面主色相为蓝色。本改版改名 + 换图标**仅限自用**；若对外分发需重新评估许可合规。
+
+---
+
+## 五、迭代优化记录
+
+### 第 1 轮（对标 HMCL / Prism Launcher）
+
+| 问题 | 处理 |
+|---|---|
+| 离开 BRS 页后 60s 自动刷新永久失效（`Unloaded` 停表、`Loaded` 未重建） | `StartTimer/StopTimer` 成对封装，每次进入页面重建 |
+| 网络抖动一次就整页变「—」，无兜底 | 新增 `BRCL\BrsCache.json` 本地缓存：进入页面先渲染缓存，请求成功再覆盖；失败时保留旧数据只降级提示 |
+| 每次刷新 new HttpClient，连接池反复重建 | 改为进程级共享 `HttpClient`，UA/超时在 `Shared Sub New` 里配置一次 |
+| 拖动窗口时趋势图按像素变化重建可视化树 | `SizeChanged` 加 6px 阈值节流 |
+| 交易所页离开后 WebView2 继续占 CPU/内存 | `Unloaded` 调 `TrySuspendAsync`，回到页面 `Resume` |
+| 玩家卡大片空白 | 底部补「上限 N 人 · 近 14 天峰值 M 人」统计行 |

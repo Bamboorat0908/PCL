@@ -89,6 +89,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="在线玩家" FontSize="12.5" FontWeight="Bold" />
@@ -97,6 +98,8 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Margin="0,6,0,0">
                         <WrapPanel x:Name="PanPlayers" />
                     </ScrollViewer>
+                    <TextBlock x:Name="LabPlayerFoot" Grid.Row="2" Text="" FontSize="10.5" Margin="0,4,0,0"
+                               Foreground="{DynamicResource ColorBrush2}" TextTrimming="CharacterEllipsis" />
                 </Grid>
             </local:MyCard>
             <local:MyCard Grid.Column="2" UseAnimation="False">

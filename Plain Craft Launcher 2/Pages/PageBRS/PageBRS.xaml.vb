@@ -1,4 +1,5 @@
-﻿Imports System.Net.Http
+﻿Imports System.IO
+Imports System.Net.Http
 Imports System.Windows.Documents
 Imports System.Windows.Media
 Imports Newtonsoft.Json.Linq
@@ -11,9 +12,25 @@ Public Class PageBRS
     Private Const ApiUrl As String = "https://zhushu.homes/BRS/api/status"
     Private Const UserAgent As String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36"
 
+    Private Shared ReadOnly CachePath As String = Paths.Base & "BRCL\BrsCache.json"
+
+    '全进程复用同一个 HttpClient，避免每次刷新重建连接池（借鉴 HttpClient 使用规范）
+    Private Shared ReadOnly Http As New HttpClient()
+
     Private IsInited As Boolean = False
     Private IsLoading As Boolean = False
     Private TimerRefresh As Threading.DispatcherTimer
+    Private _LastSizeH As Double = 0
+
+    Shared Sub New()
+        Try
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 Or SecurityProtocolType.Tls11 Or SecurityProtocolType.Tls
+            Http.Timeout = TimeSpan.FromSeconds(12)
+            Http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent)
+            Http.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*")
+        Catch ex As Exception
+        End Try
+    End Sub
 
     'MC 颜色码 → 浅色背景可读的近似色（白/浅灰在浅色卡片上不可读，统一压深）
     Private Shared ReadOnly MotdColors As New Dictionary(Of Char, String) From {
@@ -25,21 +42,34 @@ Public Class PageBRS
     }
 
     Private Sub PageBRS_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        If IsInited Then
-            LoadData()
-            Return
+        If Not IsInited Then
+            IsInited = True
+            '先渲染上次缓存，避免首屏空白或断网时一片“—”
+            TryRenderCache()
         End If
-        IsInited = True
         LoadData()
-        '60 秒自动刷新
+        StartTimer()
+    End Sub
+
+    Private Sub PageBRS_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
+        StopTimer()
+    End Sub
+
+    Private Sub StartTimer()
+        StopTimer()
+        '60 秒自动刷新（离开页面时停、回来时重建，修复返回后不再自动刷新的问题）
         TimerRefresh = New Threading.DispatcherTimer With {.Interval = TimeSpan.FromSeconds(60)}
         AddHandler TimerRefresh.Tick, Sub() LoadData()
         TimerRefresh.Start()
     End Sub
 
-    Private Sub PageBRS_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
+    Private Sub StopTimer()
         Try
-            TimerRefresh?.Stop()
+            If TimerRefresh IsNot Nothing Then
+                TimerRefresh.Stop()
+                RemoveHandler TimerRefresh.Tick, Sub() LoadData()
+                TimerRefresh = Nothing
+            End If
         Catch ex As Exception
         End Try
     End Sub
@@ -63,14 +93,14 @@ Public Class PageBRS
             Dim Result As JObject = Nothing
             Dim [Error] As String = Nothing
             Try
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 Or SecurityProtocolType.Tls11 Or SecurityProtocolType.Tls
-                Using Client As New HttpClient()
-                    Client.Timeout = TimeSpan.FromSeconds(12)
-                    Client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent)
-                    Client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/plain, */*")
-                    Dim Body As String = Client.GetStringAsync(ApiUrl).GetAwaiter().GetResult()
-                    Result = JObject.Parse(Body)
-                End Using
+                Dim Body As String = Http.GetStringAsync(ApiUrl).GetAwaiter().GetResult()
+                Result = JObject.Parse(Body)
+                '写缓存，供下次启动或断网时兜底
+                Try
+                    DirectoryUtils.Create(Path.GetDirectoryName(CachePath))
+                    File.WriteAllText(CachePath, Body)
+                Catch ex As Exception
+                End Try
             Catch ex As Exception
                 [Error] = ex.Message
             End Try
@@ -90,14 +120,34 @@ Public Class PageBRS
         End Sub, "BRS 状态加载")
     End Sub
 
+    ''' <summary>
+    ''' 用本地缓存先渲染一次，保证首屏不空白、断网也有内容（参考 Prism 的新闻缓存兜底）。
+    ''' </summary>
+    Private Sub TryRenderCache()
+        Try
+            If Not File.Exists(CachePath) Then Return
+            Dim Body As String = File.ReadAllText(CachePath)
+            If String.IsNullOrWhiteSpace(Body) Then Return
+            ApplyData(JObject.Parse(Body), True)
+            Logger.Info("BRS 状态：已使用本地缓存渲染首屏")
+        Catch ex As Exception
+            Logger.Warn(ex, "读取 BRS 缓存失败")
+        End Try
+    End Sub
+
     Private Sub ApplyError(Message As String)
+        '已有数据（内存或缓存）时不清屏，只降级提示，避免一次网络抖动把整页打成空白
+        If LabTps.Text <> "—" Then
+            LabUpdated.Text = "刷新失败，展示的是上次数据"
+            Return
+        End If
         LabState.Text = "连接失败"
         BadgeState.Background = New SolidColorBrush(Color.FromRgb(&HC9, &H20, &H3F))
         LabUpdated.Text = "刷新失败，将自动重试"
-        If LabTps.Text = "—" Then LabMotd.Text = "无法获取服务器状态：" & Message
+        LabMotd.Text = "无法获取服务器状态：" & Message
     End Sub
 
-    Private Sub ApplyData(Json As JObject)
+    Private Sub ApplyData(Json As JObject, Optional FromCache As Boolean = False)
         Try
             Dim Status As JObject = TryCast(Json("status"), JObject)
             Dim Alive As Boolean = Status IsNot Nothing AndAlso CBool(Status("alive"))
@@ -175,22 +225,31 @@ Public Class PageBRS
                 Dim Empty As New TextBlock With {.Text = "服务器当前没有玩家在线", .FontSize = 12, .Opacity = 0.6, .Margin = New Thickness(0, 4, 0, 0)}
                 PanPlayers.Children.Add(Empty)
             End If
+            If LabPlayerFoot IsNot Nothing Then
+                LabPlayerFoot.Text = "上限 " & MaxPlayers.ToString() & " 人 · 数据来自 zhushu.homes/BRS"
+            End If
 
             '趋势
             RenderTrend(TryCast(Json("history"), JObject))
 
             '更新时间
             Dim Updated As String = If(Json("updated_at") Is Nothing, "", Json("updated_at").ToString())
-            LabUpdated.Text = "更新于 " & If(Updated.Length >= 16, Updated.Substring(11, 5), "—") & If(CBooLOr(Json, "stale"), "（数据可能过期）", "")
+            Dim TimeText As String = "更新于 " & If(Updated.Length >= 16, Updated.Substring(11, 5), "—")
+            If FromCache Then
+                TimeText &= "（本地缓存）"
+            ElseIf IsStale(Json) Then
+                TimeText &= "（源站数据滞后）"
+            End If
+            LabUpdated.Text = TimeText
         Catch ex As Exception
             Logger.Warn(ex, "解析 BRS 状态数据失败")
             ApplyError(ex.Message)
         End Try
     End Sub
 
-    Private Shared Function CBooLOr(Json As JObject, Key As String) As Boolean
+    Private Shared Function IsStale(Json As JObject) As Boolean
         Try
-            Return Json(Key) IsNot Nothing AndAlso CBool(Json(Key))
+            Return Json("stale") IsNot Nothing AndAlso CBool(Json("stale"))
         Catch
             Return False
         End Try
@@ -262,7 +321,11 @@ Public Class PageBRS
     Private _LastHistory As JObject
 
     Private Sub PanTrend_SizeChanged(sender As Object, e As SizeChangedEventArgs) Handles PanTrend.SizeChanged
-        If _LastHistory IsNot Nothing Then RenderTrend(_LastHistory)
+        '只有高度变化超过 6px 才重绘，避免拖拽窗口时高频重建可视化树
+        If _LastHistory Is Nothing Then Return
+        If Math.Abs(PanTrend.ActualHeight - _LastSizeH) < 6 Then Return
+        _LastSizeH = PanTrend.ActualHeight
+        RenderTrend(_LastHistory)
     End Sub
 
     Private Sub RenderTrend(History As JObject)
@@ -287,6 +350,9 @@ Public Class PageBRS
             If It.Value > MaxV Then MaxV = It.Value
         Next
         LabTrendInfo.Text = "峰值 " & MaxV.ToString() & " 人 · " & Items(0).Key.Substring(5) & " ~ " & Items(Items.Count - 1).Key.Substring(5)
+        If LabPlayerFoot IsNot Nothing Then
+            LabPlayerFoot.Text = "上限 " & LabPlayersMax.Text.TrimStart("/"c) & " 人 · 近 14 天峰值 " & MaxV.ToString() & " 人"
+        End If
 
         Dim TrackH As Double = If(PanTrend.ActualHeight > 40, PanTrend.ActualHeight - 2, 62)
         For i As Integer = 0 To Items.Count - 1
