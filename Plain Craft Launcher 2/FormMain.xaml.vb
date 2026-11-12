@@ -427,10 +427,6 @@ Public Class FormMain
             End Try
             '上报
             Telemetry("启动")
-            '开源版本提示
-            If VersionBranchMain = "OpenSource" Then
-                MyMsgBox($"该版本中无法使用以下特性：{vbCrLf}- CurseForge API 调用：需要自行申请 API Key，然后添加到 ModSecret.vb 的开头{vbCrLf}- 正版登录：需要自行向微软申请 Client ID，然后添加到 ModSecret.vb 的开头{vbCrLf}- 更新与联网通知：避免滥用隐患{vbCrLf}- 主题切换：这是需要赞助解锁的纪念性质的功能，别让赞助者太伤心啦……{vbCrLf}- 百宝箱：开发早期往里面塞了些开发工具，整理起来太麻烦了……", "开源版本说明")
-            End If
         End Sub, "初始化", ThreadPriority.Lowest)
 
         Logger.Info($"第三阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
@@ -444,6 +440,8 @@ Public Class FormMain
                     PageChange(PageType.Setup, PageSubType.SetupAbout)
                 Case "brs"
                     PageChange(PageType.Brs)
+                Case "stock"
+                    PageChange(PageType.Stock)
                 Case "ui"
                     PageChange(PageType.Setup, PageSubType.SetupUI)
             End Select
@@ -1220,6 +1218,10 @@ Public Class FormMain
         ''' BRS 社区页。
         ''' </summary>
         Brs = 10
+        ''' <summary>
+        ''' 交易所页。
+        ''' </summary>
+        Stock = 11
     End Enum
     ''' <summary>
     ''' 次要页面种类。其数值必须与 StackPanel 中的下标一致。
@@ -1366,7 +1368,8 @@ Public Class FormMain
             IsChangingPage = True '防止下面的勾选直接触发了 PageChangeActual
             'BRCL：导航按钮已不连续，按 Tag 查找对应按钮，不能再按索引取
             For Each Child As Object In PanTitleSelect.Children
-                If TypeOf Child Is MyRadioButton AndAlso CStr(CType(Child, MyRadioButton).Tag) = CStr(Stack.Page) Then
+                Dim Target As Integer
+                If TypeOf Child Is MyRadioButton AndAlso Integer.TryParse(CStr(CType(Child, MyRadioButton).Tag), Target) AndAlso Target = CInt(Stack.Page) Then
                     CType(Child, MyRadioButton).SetChecked(True, True, PageNameGet(PageCurrent) = "")
                     Exit For
                 End If
@@ -1378,7 +1381,14 @@ Public Class FormMain
                     CType(FrmDownloadLeft.PanItem.Children(SubType), MyListItem).SetChecked(True, True, Stack = PageCurrent)
                 Case PageType.Setup
                     If FrmSetupLeft Is Nothing Then FrmSetupLeft = New PageSetupLeft
-                    CType(FrmSetupLeft.PanItem.Children(SubType), MyListItem).SetChecked(True, True, Stack = PageCurrent)
+                    'BRCL：左栏项目已不连续，按 Tag 查找，不能再按索引取
+                    For Each Child As Object In FrmSetupLeft.PanItem.Children
+                        Dim Target As Integer
+                        If TypeOf Child Is MyListItem AndAlso Integer.TryParse(CStr(CType(Child, MyListItem).Tag), Target) AndAlso Target = CInt(SubType) Then
+                            CType(Child, MyListItem).SetChecked(True, True, Stack = PageCurrent)
+                            Exit For
+                        End If
+                    Next
                 Case PageType.Other
                     If FrmOtherLeft Is Nothing Then FrmOtherLeft = New PageOtherLeft
                     CType(FrmOtherLeft.PanItem.Children(SubType), MyListItem).SetChecked(True, True, Stack = PageCurrent)
@@ -1397,7 +1407,7 @@ Public Class FormMain
     ''' <summary>
     ''' 通过点击导航栏改变页面。
     ''' </summary>
-    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check, BtnTitleSelectBrs.Check
+    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check, BtnTitleSelectBrs.Check, BtnTitleSelectStock.Check
         If IsChangingPage Then Return
         PageChangeActual(Val(sender.Tag))
     End Sub
@@ -1474,6 +1484,9 @@ Public Class FormMain
                 Case PageType.Brs 'BRS 社区
                     If FrmBrs Is Nothing Then FrmBrs = New PageBRS
                     PageChangeAnim(New MyPageLeft, FrmBrs)
+                Case PageType.Stock '交易所
+                    If FrmStock Is Nothing Then FrmStock = New PageStock
+                    PageChangeAnim(New MyPageLeft, FrmStock)
                 Case PageType.Setup '设置
                     If FrmSetupLeft Is Nothing Then FrmSetupLeft = New PageSetupLeft
                     PageChangeAnim(FrmSetupLeft, FrmSetupLeft.PageGet(SubType))

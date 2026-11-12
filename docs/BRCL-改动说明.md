@@ -1,4 +1,4 @@
-# BRCL 修改版说明
+﻿# BRCL 修改版说明
 
 基线：Plain Craft Launcher 2（PCL2）`2.13.1.1`，开源版源码 `C:\works\BRCL\PCL-2.13.1.1`。
 本文件记录本次改造的**全部落地内容**与**构建方式**，供后续继续修改时查阅。
@@ -43,15 +43,30 @@
 `PageSetupLeft.xaml` 删除 `ItemUI` 项；`PageSetupLeft.xaml.vb` 删除对应选中/切换/重置分支；`PageSetupUI.xaml.vb` 的可用性计算去掉该项，并把左栏「只剩一项就隐藏」的阈值由 2 改为 1。
 设置左栏现为 **启动 / 关于** 两项。`PageSetupUI` 页面类仍保留编译（其 `HiddenForceShow` 是全局静态属性，多个页面在引用），但已无入口。
 
-### 3.2 新增 BRS 页面（内嵌网页）
+### 3.2 新增 BRS 页面（原生单页，读接口）
 
-- 导航栏中间新增 `BtnTitleSelectBrs`（Text=BRS，Tag=10），顺序为 启动 / BRS / 设置。
-- 新增 `PageType.Brs = 10`、`ModMain.FrmBrs`、`PageChangeActual` 分支与 `BtnTitleSelect_Click` 事件绑定。
-- 新增 `Pages/PageBRS/PageBRS.xaml(.vb)`：用 **WebView2** 内嵌 `https://zhushu.homes/BRS/`，带加载中/失败重试/在浏览器打开三个状态。
-- 依赖：`Resources/WebView2/` 下的 `Microsoft.Web.WebView2.Core.dll`、`Microsoft.Web.WebView2.Wpf.dll`、`WebView2Loader.dll`（SDK 1.0.4314.35，运行时用系统已装的 Edge WebView2 157）。
-- 网页缓存目录：`BRCL\WebView2\`（便携，随程序目录）。
+- 导航栏顺序：**启动 / BRS / 交易所 / 设置**。
+- `PageType.Brs = 10`；`Pages/PageBRS/PageBRS.xaml(.vb)`。
+- **不再内嵌网页**：直接请求 `https://zhushu.homes/BRS/api/status`（带浏览器 UA，站点对无 UA 请求回 403），用启动器自带控件渲染，一屏不滚动：
+  - 顶部：Logo、运行状态徽章、赛季天数 + QQ 群、MOTD（解析 `§` 颜色码，转成浅色背景可读色）、在线人数 `n/100`、更新时间、刷新按钮
+  - 中部四指标：TPS（由 `tps_overall_ms` 换算，封顶 20）、运行时长、实体数、世界大小 + 崩溃报告数
+  - 底部左：在线玩家列表；底部右：近 14 天在线柱状图（随容器高度自适应，悬停显示当天人数）
+  - 60 秒自动刷新；失败时保留旧数据并提示
 
-### 3.3 UI 风格改为 BRS 站点的设计系统
+> MOTD 里的换行是**字面量 `\n`**（反斜杠+n）而非真实换行，已做还原处理；否则会挤成一行并出现多余字符。
+
+### 3.3 新增交易所页面（内嵌网页）
+
+- `PageType.Stock = 11`；`Pages/PageStock/PageStock.xaml(.vb)`，WebView2 内嵌 `https://zhushu.homes/stock/`。
+- 沿用加载中 / 失败重试 / 在浏览器打开三态；缓存目录 `BRCL\WebView2\`。
+
+### 3.4 启动弹窗与关于页精简
+
+- 删除启动时必弹的「开源版本说明」对话框（`FormMain` 初始化线程内）。
+- `PageOtherAbout` 只保留首张「BRCL」声明卡；关于/特别鸣谢/赞助者/法律信息/许可与版权声明四张卡全部删除，`PageOtherAbout.xaml.vb` 相应精简。
+- 因赞助入口随之移除，`PageSetupSystem` 的识别码按钮改为直接复制识别码（该类目前已无界面入口，仅为保持可编译）。
+
+### 3.5 UI 风格改为 BRS 站点的设计系统
 
 对照 `zhushu.homes/BRS` 的 CSS 变量落地：
 

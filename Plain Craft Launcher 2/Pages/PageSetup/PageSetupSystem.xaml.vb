@@ -67,7 +67,12 @@ Public Class PageSetupSystem
 
     '识别码/土豆码替代入口
     Private Sub BtnSystemIdentify_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSystemIdentify.Click
-        PageOtherAbout.CopyIdentify()
+        'BRCL：关于页已精简，识别码入口改为直接复制
+        Try
+            ClipboardSet(Identify)
+        Catch ex As Exception
+            Hint("复制识别码失败：" & ex.Message)
+        End Try
     End Sub
     Private Sub BtnSystemUnlock_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSystemUnlock.Click
         InputPotatoCode(False)

@@ -376,6 +376,7 @@ EndHint:
     '联机页面声明
     Public FrmLinkMain As PageLinkMain
     Public FrmBrs As PageBRS
+    Public FrmStock As PageStock
 
     '下载页面声明
     Public FrmDownloadLeft As PageDownloadLeft

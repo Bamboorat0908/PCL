@@ -1,0 +1,27 @@
+﻿<local:MyPageRight
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:PCL" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             mc:Ignorable="d" x:Class="PageStock"
+             d:DesignWidth="800" d:DesignHeight="800">
+    <Grid x:Name="PanBack">
+        <wv2:WebView2 x:Name="ViewWeb" Margin="0" DefaultBackgroundColor="White" />
+        <local:MyCard x:Name="CardLoad" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="260" UseAnimation="False">
+            <StackPanel Margin="24,20" Orientation="Horizontal">
+                <local:MyLoading Margin="0,0,12,0" />
+                <TextBlock x:Name="LabLoad" Text="正在加载 交易所页面" VerticalAlignment="Center" />
+            </StackPanel>
+        </local:MyCard>
+        <local:MyCard x:Name="CardFail" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="320" Visibility="Collapsed">
+            <StackPanel Margin="24,20">
+                <TextBlock Text="交易所页面加载失败" FontSize="15" Margin="0,0,0,6" />
+                <TextBlock x:Name="LabFail" TextWrapping="Wrap" MaxWidth="360" Margin="0,0,0,12" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <local:MyButton Text="重试" MinWidth="110" Margin="0,0,10,0" Padding="13,0" ColorType="Highlight" x:Name="BtnRetry" />
+                    <local:MyButton Text="在浏览器中打开" MinWidth="130" Padding="13,0" x:Name="BtnBrowser" />
+                </StackPanel>
+            </StackPanel>
+        </local:MyCard>
+    </Grid>
+</local:MyPageRight>
