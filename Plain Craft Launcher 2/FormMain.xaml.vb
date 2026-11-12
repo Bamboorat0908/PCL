@@ -664,8 +664,15 @@ Public Class FormMain
         Try
             For Each Item As Grid In {Rail0, Rail10, Rail11, Rail3}
                 AddHandler Item.MouseLeftButtonUp, AddressOf Rail_Click
-                AddHandler Item.MouseEnter, Sub(sender As Object, e As MouseEventArgs) CType(sender, Grid).Opacity = 0.82
-                AddHandler Item.MouseLeave, Sub(sender As Object, e As MouseEventArgs) CType(sender, Grid).Opacity = 1
+                '悬停用短促的透明度过渡（110ms），接近终末地那种“设备回弹”手感
+                AddHandler Item.MouseEnter, Sub(sender As Object, e As MouseEventArgs)
+                                                Dim G As Grid = CType(sender, Grid)
+                                                AniStart(AaOpacity(G, 0.82 - G.Opacity, 110), "RailHover " & G.Name)
+                                            End Sub
+                AddHandler Item.MouseLeave, Sub(sender As Object, e As MouseEventArgs)
+                                                Dim G As Grid = CType(sender, Grid)
+                                                AniStart(AaOpacity(G, 1 - G.Opacity, 140), "RailHover " & G.Name)
+                                            End Sub
             Next
             '旧的顶部胶囊导航隐藏（逻辑仍在，只是不再露出）
             PanTitleSelect.Visibility = Visibility.Collapsed
@@ -704,6 +711,11 @@ Public Class FormMain
 
     Private Sub SetRailItem(Item As Grid, Bar As Shapes.Rectangle, Icon As Shapes.Path, Label As TextBlock, Selected As Boolean)
         Bar.Visibility = If(Selected, Visibility.Visible, Visibility.Collapsed)
+        If Selected Then
+            '选中指示条做一次“落位”动画
+            Bar.Opacity = 0
+            AniStart(AaOpacity(Bar, 1, 160,, New AniEaseOutFluent), "RailBar " & Item.Name)
+        End If
         Item.Background = If(Selected, New SolidColorBrush(Color.FromRgb(&H17, &H1C, &H26)), Brushes.Transparent)
         Icon.SetResourceReference(Shapes.Path.FillProperty, If(Selected, "ColorBrush3", "ColorBrush2"))
         Label.SetResourceReference(TextBlock.ForegroundProperty, If(Selected, "ColorBrush1", "ColorBrush2"))
