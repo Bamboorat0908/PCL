@@ -55,7 +55,7 @@ Friend Module ModSecret
     Public ColorGray1 As New MyColor(64, 64, 64)
     Public ColorGray2 As New MyColor(115, 115, 115)
     Public ColorGray3 As New MyColor(140, 140, 140)
-    Public ColorGray4 As New MyColor(166, 166, 166)
+    Public ColorGray4 As New MyColor(146, 146, 146)
     Public ColorGray5 As New MyColor(204, 204, 204)
     Public ColorGray6 As New MyColor(235, 235, 235)
     Public ColorGray7 As New MyColor(240, 240, 240)
@@ -99,10 +99,12 @@ Friend Module ModSecret
                 Color8 = New MyColor(19, 17, 32)
             End If
             '主题附属资源：侧栏、卡片描边、铭牌线
+            '左侧面板底（启动页账号区）：浅色下不能沿用原来的深色半透明，否则输入框会变成黑底黑字
+            Application.Current.Resources("ColorBrushBackgroundTransparentSidebar") = New SolidColorBrush(If(IsLight, Color.FromRgb(&HF7, &HF5, &HFC), Color.FromRgb(&H17, &H15, &H23)))
             Application.Current.Resources("ColorBrushRail") = New SolidColorBrush(If(IsLight, Color.FromRgb(&HF7, &HF5, &HFC), Color.FromRgb(&H15, &H12, &H1F)))
             Application.Current.Resources("ColorBrushRailLine") = New SolidColorBrush(If(IsLight, Color.FromRgb(&HE0, &HD8, &HEE), Color.FromRgb(&H2A, &H25, &H40)))
             Application.Current.Resources("ColorBrushRailActive") = New SolidColorBrush(If(IsLight, Color.FromRgb(&HE9, &HE3, &HFB), Color.FromRgb(&H23, &H1E, &H38)))
-            Application.Current.Resources("ColorBrushCardLine") = New SolidColorBrush(Color.FromArgb(If(IsLight, CByte(10), CByte(24)), If(IsLight, CByte(0), CByte(255)), If(IsLight, CByte(0), CByte(255)), If(IsLight, CByte(0), CByte(255))))
+            Application.Current.Resources("ColorBrushCardLine") = New SolidColorBrush(Color.FromArgb(If(IsLight, CByte(20), CByte(26)), If(IsLight, CByte(0), CByte(255)), If(IsLight, CByte(0), CByte(255)), If(IsLight, CByte(0), CByte(255))))
             ColorBg0 = Color4 * 0.4 + Color5 * 0.4 + ColorGray4 * 0.2
             ColorBg1 = New MyColor(190, Color7)
 

@@ -12,7 +12,7 @@
         </Grid.RowDefinitions>
 
         <!-- 顶部：服务器状态 -->
-        <local:MyCard Grid.Row="0" UseAnimation="False">
+        <local:MyCard x:Name="CardHead" Grid.Row="0" UseAnimation="False">
             <Grid Margin="16,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -47,9 +47,9 @@
 
         <!-- 中部：指标 -->
         <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,12,0,0">
-            <local:MyCard Margin="0,0,8,0" UseAnimation="False">
+            <local:MyCard x:Name="CardTps" Margin="0,0,8,0" UseAnimation="False">
                 <StackPanel Margin="18,13">
-                    <TextBlock Text="TPS" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" Opacity="0.85" />
+                    <TextBlock Text="TPS" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="LabTps" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="tps" FontSize="10.5" Margin="3,0,0,3" VerticalAlignment="Bottom" Foreground="{DynamicResource ColorBrush2}" />
@@ -57,21 +57,21 @@
                     <TextBlock x:Name="LabMspt" Text="— ms/tick" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
-            <local:MyCard Margin="0,0,8,0" UseAnimation="False">
+            <local:MyCard x:Name="CardUptime" Margin="0,0,8,0" UseAnimation="False">
                 <StackPanel Margin="18,13">
                     <TextBlock Text="运行时长" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
                     <TextBlock x:Name="LabUptime" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="LabSeasonDay" Text="—" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
-            <local:MyCard Margin="0,0,8,0" UseAnimation="False">
+            <local:MyCard x:Name="CardEnt" Margin="0,0,8,0" UseAnimation="False">
                 <StackPanel Margin="18,13">
                     <TextBlock Text="实体数" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
                     <TextBlock x:Name="LabEntities" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="当前加载" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
-            <local:MyCard UseAnimation="False">
+            <local:MyCard x:Name="CardWorld" UseAnimation="False">
                 <StackPanel Margin="18,13">
                     <TextBlock Text="世界大小" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
                     <TextBlock x:Name="LabWorld" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
@@ -80,15 +80,17 @@
             </local:MyCard>
         </UniformGrid>
 
-        <!-- 底部：玩家 与 趋势 -->
-        <Grid Grid.Row="2" Margin="0,10,0,0">
+        <!-- 底部：玩家 / 服务器信息 与 趋势 -->
+        <Grid Grid.Row="2" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*" />
                 <ColumnDefinition Width="10" />
                 <ColumnDefinition Width="1.35*" />
             </Grid.ColumnDefinitions>
-            <local:MyCard Grid.Column="0" UseAnimation="False">
-                <Grid Margin="16,11">
+
+            <!-- 在线玩家：列表式，底部固定信息条，随列高自适应 -->
+            <local:MyCard x:Name="CardPlayers" Grid.Column="0" UseAnimation="False">
+                <Grid Margin="16,12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -98,15 +100,27 @@
                         <TextBlock Text="在线玩家" FontSize="13" FontWeight="SemiBold" />
                         <TextBlock x:Name="LabPlayerCount" Text="" FontSize="11" Margin="6,1,0,0" Foreground="{DynamicResource ColorBrush2}" />
                     </StackPanel>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Margin="0,6,0,0">
-                        <WrapPanel x:Name="PanPlayers" />
-                    </ScrollViewer>
-                    <TextBlock x:Name="LabPlayerFoot" Grid.Row="2" Text="" FontSize="10.5" Margin="0,4,0,0"
-                               Foreground="{DynamicResource ColorBrush2}" TextTrimming="CharacterEllipsis" />
+                    <local:MyScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,8,0,0">
+                        <StackPanel x:Name="PanPlayers" Margin="0,0,8,0" />
+                    </local:MyScrollViewer>
+                    <StackPanel Grid.Row="2" Margin="0,8,0,0">
+                        <Rectangle Height="1" Fill="{DynamicResource ColorBrushCardLine}" Margin="0,0,0,7" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="LabPlayerFoot" Text="" FontSize="10" Foreground="{DynamicResource ColorBrush2}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock x:Name="LabInfoStrip" Grid.Column="1" Text="zhushu.homes · 60 秒刷新" FontSize="10"
+                                       Foreground="{DynamicResource ColorBrush2}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </Grid>
+                    </StackPanel>
                 </Grid>
             </local:MyCard>
-            <local:MyCard Grid.Column="2" UseAnimation="False">
-                <Grid Margin="16,11">
+
+            <!-- 趋势 -->
+            <local:MyCard x:Name="CardTrend" Grid.Column="2" UseAnimation="False">
+                <Grid Margin="16,12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -116,8 +130,10 @@
                         <TextBlock Text="近 14 天在线" FontSize="13" FontWeight="SemiBold" />
                         <TextBlock x:Name="LabTrendInfo" Text="" FontSize="11" Margin="6,1,0,0" Foreground="{DynamicResource ColorBrush2}" />
                     </StackPanel>
-                    <Grid Grid.Row="1" x:Name="PanTrend" Margin="0,8,0,0" MinHeight="60" />
-                    <Grid Grid.Row="2" Margin="2,4,2,0">
+                    <Grid Grid.Row="1" x:Name="PanTrend" Margin="0,12,0,10" MinHeight="60" />
+                    <Rectangle Grid.Row="1" Height="1" VerticalAlignment="Bottom" Margin="0,0,0,9" IsHitTestVisible="False"
+                               Fill="{DynamicResource ColorBrushCardLine}" />
+                    <Grid Grid.Row="2" Margin="2,2,2,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />

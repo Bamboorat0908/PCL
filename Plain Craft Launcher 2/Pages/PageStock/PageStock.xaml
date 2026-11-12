@@ -23,7 +23,11 @@
         </Grid>
 
         <Grid Grid.Row="1">
-            <wv2:WebView2 x:Name="ViewWeb" Margin="0" DefaultBackgroundColor="White" />
+            <!-- 主题色底衬：WebView 初始化或站点空白时不会露出刺眼白块 -->
+            <Border Background="{DynamicResource ColorBrush8}" />
+            <wv2:WebView2 x:Name="ViewWeb" Margin="0" />
+            <!-- 加载/失败时的整幅遮罩，杜绝白屏刺眼 -->
+            <Border x:Name="PanCover" Background="{DynamicResource ColorBrush8}" />
             <local:MyCard x:Name="CardLoad" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="260" UseAnimation="False">
                 <StackPanel Margin="24,20">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">

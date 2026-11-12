@@ -9,6 +9,7 @@ Public Class PageStock
     Private Const StockUrl As String = "https://zhushu.homes/stock/"
     Private IsInited As Boolean = False
     Private IsLoadFailed As Boolean = False
+    Private TimeoutTimer As Threading.DispatcherTimer
 
     Private Sub PageStock_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         If IsInited Then
@@ -37,11 +38,13 @@ Public Class PageStock
     End Sub
 
     Private Sub StartLoad()
+        PanCover.Visibility = Visibility.Visible
         CardFail.Visibility = Visibility.Collapsed
         CardLoad.Visibility = Visibility.Visible
         LabLoad.Text = "正在加载交易所页面"
         LabLoadSub.Text = "首次打开需要几秒"
         IsLoadFailed = False
+        StartTimeout()
         InitWebView()
     End Sub
 
@@ -71,9 +74,9 @@ Public Class PageStock
         RunInUi(
         Sub()
             If e.IsSuccess Then
+                StopTimeout()
                 InjectPageTheme()
-                CardLoad.Visibility = Visibility.Collapsed
-                CardFail.Visibility = Visibility.Collapsed
+                VerifyPageContent()
             Else
                 ShowFail("加载失败：" & e.WebErrorStatus.ToString() & vbCrLf & "请检查网络后重试。")
             End If
@@ -106,7 +109,52 @@ Public Class PageStock
         End Try
     End Sub
 
+    ''' <summary>15 秒未完成导航就降级为失败卡，避免一直停在加载态。</summary>
+    Private Sub StartTimeout()
+        StopTimeout()
+        TimeoutTimer = New Threading.DispatcherTimer With {.Interval = TimeSpan.FromSeconds(15)}
+        AddHandler TimeoutTimer.Tick,
+            Sub()
+                StopTimeout()
+                If CardLoad.Visibility = Visibility.Visible Then
+                    ShowFail("加载超时：15 秒内没有收到页面响应。" & vbCrLf & "可能是网络波动或站点暂时不可用，可以重试，或在浏览器中打开。")
+                End If
+            End Sub
+        TimeoutTimer.Start()
+    End Sub
+
+    ''' <summary>导航完成不代表画出来了：等 1.2 秒检查正文，空页面直接降级为失败卡，避免停在白屏。</summary>
+    Private Async Sub VerifyPageContent()
+        Try
+            Await Task.Delay(1200)
+            If ViewWeb.CoreWebView2 Is Nothing Then Return
+            Dim Raw As String = Await ViewWeb.CoreWebView2.ExecuteScriptAsync(
+                "(document.body ? document.body.innerText.trim().length : 0)")
+            Dim Len As Integer = 0
+            Integer.TryParse(Raw, Len)
+            If Len < 20 Then
+                ShowFail("页面已连通但没有渲染出内容。" & vbCrLf & "可能是网络较慢或站点资源加载失败，可以重试，或在浏览器中打开。")
+                Return
+            End If
+            PanCover.Visibility = Visibility.Collapsed
+            CardLoad.Visibility = Visibility.Collapsed
+            CardFail.Visibility = Visibility.Collapsed
+        Catch ex As Exception
+            PanCover.Visibility = Visibility.Collapsed
+            CardLoad.Visibility = Visibility.Collapsed
+        End Try
+    End Sub
+
+    Private Sub StopTimeout()
+        Try
+            TimeoutTimer?.Stop()
+        Catch ex As Exception
+        End Try
+    End Sub
+
     Private Sub ShowFail(Message As String)
+        StopTimeout()
+        PanCover.Visibility = Visibility.Visible
         IsLoadFailed = True
         LabFail.Text = Message
         CardLoad.Visibility = Visibility.Collapsed
@@ -116,6 +164,7 @@ Public Class PageStock
     Public Sub BtnRetry_Click() Handles BtnRetry.Click
         IsLoadFailed = False
         If ViewWeb.CoreWebView2 IsNot Nothing Then
+            PanCover.Visibility = Visibility.Visible
             CardFail.Visibility = Visibility.Collapsed
             CardLoad.Visibility = Visibility.Visible
             Try

@@ -49,6 +49,7 @@ Public Class PageBRS
     Private Sub PageBRS_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         If Not IsInited Then
             IsInited = True
+            PlayEnterAnimation()
             '首次进入先放占位，避免几秒的“空卡片”像是坏了
             ShowPlaceholders()
             '先渲染上次缓存，避免首屏空白或断网时一片“—”
@@ -56,6 +57,23 @@ Public Class PageBRS
         End If
         LoadData()
         StartTimer()
+    End Sub
+
+    ''' <summary>首屏入场：6 张卡依次淡入并上浮 6px（Material 3 emphasized decelerate，45ms 错峰）。</summary>
+    Private Sub PlayEnterAnimation()
+        Try
+            Dim Cards = {CardHead, CardTps, CardUptime, CardEnt, CardWorld, CardPlayers, CardTrend}
+            For i As Integer = 0 To Cards.Length - 1
+                Dim C As FrameworkElement = Cards(i)
+                C.Opacity = 0
+                C.RenderTransform = New TranslateTransform(0, 6)
+                AniStart({
+                    AaOpacity(C, 1, 300, i * 45, New AniEaseOutFluent),
+                    AaTranslateY(C, -6, 300, i * 45, New AniEaseOutFluent)
+                }, "BrsEnter " & i)
+            Next
+        Catch ex As Exception
+        End Try
     End Sub
 
     Private Sub PageBRS_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
@@ -168,10 +186,11 @@ Public Class PageBRS
         '已有数据（内存或缓存）时不清屏，只降级提示，避免一次网络抖动把整页打成空白
         If LabTps.Text <> "—" Then
             LabUpdated.Text = "刷新失败，展示的是上次数据"
+            LabInfoStrip.Text = "zhushu.homes · 刷新失败"
             Return
         End If
         LabState.Text = "连接失败"
-        BadgeState.Background = New SolidColorBrush(Color.FromRgb(&HD9, &H53, &H6A))
+        BadgeState.Background = StateBrush(False)
         LabUpdated.Text = "刷新失败，将自动重试"
         LabMotd.Text = "无法获取服务器状态：" & Message
     End Sub
@@ -183,10 +202,10 @@ Public Class PageBRS
             '状态徽章
             If Alive Then
                 LabState.Text = "运行中"
-                BadgeState.Background = New SolidColorBrush(Color.FromRgb(&H1F, &HA8, &H96)) '冷调青，与紫罗兰同为冷色系
+                BadgeState.Background = StateBrush(True)
             Else
                 LabState.Text = "离线"
-                BadgeState.Background = New SolidColorBrush(Color.FromRgb(&HC9, &H20, &H3F))
+                BadgeState.Background = StateBrush(False)
             End If
 
             Dim MaxPlayers As Integer = If(Status Is Nothing, 0, CInt(Status("max_players")))
@@ -262,7 +281,7 @@ Public Class PageBRS
                 PanPlayers.Children.Add(BtnRetryPlayers)
             End If
             If LabPlayerFoot IsNot Nothing Then
-                LabPlayerFoot.Text = "上限 " & MaxPlayers.ToString() & " 人 · 数据来自 zhushu.homes/BRS"
+                LabPlayerFoot.Text = "上限 " & MaxPlayers.ToString() & " 人"
             End If
 
             '趋势
@@ -277,11 +296,21 @@ Public Class PageBRS
                 TimeText &= "（源站数据滞后）"
             End If
             LabUpdated.Text = TimeText
+            LabInfoStrip.Text = "zhushu.homes · " & TimeText.Replace("更新于 ", "更新 ")
         Catch ex As Exception
             Logger.Warn(ex, "解析 BRS 状态数据失败")
             ApplyError(ex.Message)
         End Try
     End Sub
+
+    ''' <summary>状态徽章配色：浅色主题用更深的青/红，保证白字对比度 ≥4.5:1。</summary>
+    Private Shared Function StateBrush(Alive As Boolean) As Brush
+        Dim IsLight As Boolean = (Settings.Get(Of Integer)("UiThemeMode") = 1)
+        If Alive Then
+            Return New SolidColorBrush(If(IsLight, Color.FromRgb(&H12, &H80, &H6F), Color.FromRgb(&H1F, &HA8, &H96)))
+        End If
+        Return New SolidColorBrush(If(IsLight, Color.FromRgb(&HBE, &H2A, &H45), Color.FromRgb(&HD9, &H53, &H6A)))
+    End Function
 
     Private Shared Function IsStale(Json As JObject) As Boolean
         Try
@@ -378,17 +407,27 @@ Public Class PageBRS
         Return Brush
     End Function
 
+    '玩家行：小圆点 + 名字 + 右侧“在线”，比胶囊更省空间、更易读
     Private Function CreatePlayerChip(Name As String) As FrameworkElement
-        Dim B As New Border With {
-            .CornerRadius = New CornerRadius(9),
-            .Padding = New Thickness(9, 3, 9, 4),
-            .Margin = New Thickness(0, 0, 6, 6)
+        Dim Row As New Grid With {.Height = 30, .Margin = New Thickness(0, 0, 0, 2)}
+        Row.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto})
+        Row.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
+        Row.ColumnDefinitions.Add(New ColumnDefinition With {.Width = GridLength.Auto})
+        Dim Dot As New Border With {
+            .Width = 6, .Height = 6, .CornerRadius = New CornerRadius(3),
+            .VerticalAlignment = VerticalAlignment.Center, .Margin = New Thickness(0, 0, 9, 0)
         }
-        B.SetResourceReference(Border.BackgroundProperty, "ColorBrush6")
-        Dim T As New TextBlock With {.Text = Name, .FontSize = 12}
+        Dot.SetResourceReference(Border.BackgroundProperty, "ColorBrush3")
+        Row.Children.Add(Dot)
+        Dim T As New TextBlock With {.Text = Name, .FontSize = 12.5, .VerticalAlignment = VerticalAlignment.Center, .TextTrimming = TextTrimming.CharacterEllipsis}
         T.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrush1")
-        B.Child = T
-        Return B
+        Grid.SetColumn(T, 1)
+        Row.Children.Add(T)
+        Dim State As New TextBlock With {.Text = "在线", .FontSize = 10, .VerticalAlignment = VerticalAlignment.Center, .Opacity = 0.55}
+        State.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrush2")
+        Grid.SetColumn(State, 2)
+        Row.Children.Add(State)
+        Return Row
     End Function
 
     Private _LastHistory As JObject
@@ -427,7 +466,7 @@ Public Class PageBRS
         LabAxisMid.Text = Items(Items.Count \ 2).Key.Substring(5)
         LabAxisEnd.Text = Items(Items.Count - 1).Key.Substring(5)
         If LabPlayerFoot IsNot Nothing Then
-            LabPlayerFoot.Text = "上限 " & LabPlayersMax.Text.TrimStart("/"c) & " 人 · 近 14 天峰值 " & MaxV.ToString() & " 人"
+            LabPlayerFoot.Text = "上限 " & LabPlayersMax.Text.TrimStart("/"c) & " 人 · 峰值 " & MaxV.ToString() & " 人"
         End If
 
         Dim TrackH As Double = If(PanTrend.ActualHeight > 40, PanTrend.ActualHeight - 2, 62)

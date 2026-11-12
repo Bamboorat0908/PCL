@@ -215,13 +215,14 @@ Public Class PageLaunchRight
     ''' <summary>
     ''' 无自定义主页时显示的引导卡片（纯本地，不联网）。
     ''' </summary>
-    Private Function CreateWelcomeCard() As MyCard
-        Dim Card As New MyCard With {.Title = "开始游戏", .Margin = New Thickness(0, 0, 0, 15)}
+    Private Function CreateWelcomeCards() As FrameworkElement
+        Dim Root As New StackPanel With {.Margin = New Thickness(0)}
+        Dim Card As New MyCard With {.Title = "开始游戏", .Margin = New Thickness(0, 0, 0, 12)}
         Dim Pan As New StackPanel With {.Margin = New Thickness(20, 38, 20, 18)}
         Dim Lines As New List(Of Tuple(Of String, Double, Boolean))
         Lines.Add(New Tuple(Of String, Double, Boolean)("在左侧选择一个游戏版本，点「启动游戏」即可开始。", 13, True))
         Lines.Add(New Tuple(Of String, Double, Boolean)("还没有版本？点左下角「版本选择」→「添加已有文件夹」，选中 .minecraft 目录即可导入现有游戏。", 12, False))
-        Lines.Add(New Tuple(Of String, Double, Boolean)("想看看服务器动态？顶部「BRS」页可以查看在线人数、TPS 与近两周趋势。", 12, False))
+        Lines.Add(New Tuple(Of String, Double, Boolean)("想看看服务器动态？左侧「BRS」可以查看在线人数、TPS 与近两周趋势。", 12, False))
         For Each Line In Lines
             Pan.Children.Add(New TextBlock With {
                 .Text = Line.Item1,
@@ -234,7 +235,40 @@ Public Class PageLaunchRight
             CType(Pan.Children(Pan.Children.Count - 1), TextBlock).SetResourceReference(TextBlock.ForegroundProperty, If(Line.Item3, "ColorBrush1", "ColorBrush2"))
         Next
         Card.BorderChild = Pan
-        Return Card
+        Root.Children.Add(Card)
+
+        '快捷键卡：把新增的导航键位说清楚，同时填充右侧留白
+        Dim KeyCard As New MyCard With {.Title = "快捷键", .Margin = New Thickness(0, 0, 0, 15)}
+        Dim KeyPan As New StackPanel With {.Margin = New Thickness(20, 38, 20, 16)}
+        Dim Keys As New List(Of Tuple(Of String, String))
+        Keys.Add(New Tuple(Of String, String)("Ctrl + 1", "启动"))
+        Keys.Add(New Tuple(Of String, String)("Ctrl + 2", "BRS 服务器"))
+        Keys.Add(New Tuple(Of String, String)("Ctrl + 3", "交易所"))
+        Keys.Add(New Tuple(Of String, String)("Ctrl + 4", "设置"))
+        Keys.Add(New Tuple(Of String, String)("F5", "刷新当前页"))
+        For Each K In Keys
+            Dim Row As New Grid With {.Margin = New Thickness(0, 0, 0, 7)}
+            Row.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(96)})
+            Row.ColumnDefinitions.Add(New ColumnDefinition With {.Width = New GridLength(1, GridUnitType.Star)})
+            Dim Cap As New Border With {
+                .CornerRadius = New CornerRadius(5),
+                .Padding = New Thickness(7, 2, 7, 3),
+                .HorizontalAlignment = HorizontalAlignment.Left
+            }
+            Cap.SetResourceReference(Border.BackgroundProperty, "ColorBrush6")
+            Dim CapText As New TextBlock With {.Text = K.Item1, .FontFamily = New FontFamily("Consolas, Microsoft YaHei UI"), .FontSize = 11}
+            CapText.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrush2")
+            Cap.Child = CapText
+            Row.Children.Add(Cap)
+            Dim Desc As New TextBlock With {.Text = K.Item2, .FontSize = 12, .VerticalAlignment = VerticalAlignment.Center}
+            Desc.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrush1")
+            Grid.SetColumn(Desc, 1)
+            Row.Children.Add(Desc)
+            KeyPan.Children.Add(Row)
+        Next
+        KeyCard.BorderChild = KeyPan
+        Root.Children.Add(KeyCard)
+        Return Root
     End Function
 
     ''' <summary>
@@ -253,7 +287,7 @@ Public Class PageLaunchRight
                 If String.IsNullOrWhiteSpace(Content) Then
                     Logger.Info($"实例化：清空主页 UI，来源为空")
                     'BRCL：主页为空时给引导卡片，避免右侧一大片空白
-                    PanCustom.Children.Add(CreateWelcomeCard())
+                    PanCustom.Children.Add(CreateWelcomeCards())
                     Return
                 End If
                 Dim LoadStartTime As Date = Date.Now

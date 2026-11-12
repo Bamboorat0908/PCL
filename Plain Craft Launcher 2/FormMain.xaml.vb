@@ -686,6 +686,7 @@ Public Class FormMain
             '旧的顶部胶囊导航隐藏（逻辑仍在，只是不再露出）
             PanTitleSelect.Visibility = Visibility.Collapsed
             UpdateThemeIcon()
+            ApplyChromeTheme()
             UpdateRail()
         Catch ex As Exception
             Logger.Warn(ex, "初始化左侧导航栏失败")
@@ -701,9 +702,7 @@ Public Class FormMain
             Dim ShouldWide As Boolean = If(RailIsWide, FormWidth >= 1000, FormWidth >= 1080)
             If ShouldWide = RailIsWide Then Return
             RailIsWide = ShouldWide
-            RailWidthNow = If(ShouldWide, RailWide, RailCompact)
-            ColRail.Width = New GridLength(RailWidthNow)
-            PanRail.Width = RailWidthNow
+            AnimateRailWidth(If(ShouldWide, RailWide, RailCompact))
             Dim Items = {(Rail0, RailInner0, RailIcon0, RailText0, RailNum0),
                          (Rail10, RailInner10, RailIcon10, RailText10, RailNum10),
                          (Rail11, RailInner11, RailIcon11, RailText11, RailNum11),
@@ -781,6 +780,53 @@ Public Class FormMain
         End Select
     End Function
 
+    ''' <summary>侧栏宽度过渡：Linear / Discord 式 160ms ease-out，替代瞬变。</summary>
+    Private Sub AnimateRailWidth(Target As Double)
+        Try
+            Dim From As Double = RailWidthNow
+            If Math.Abs(Target - From) < 0.5 Then
+                RailWidthNow = Target
+                ColRail.Width = New GridLength(Target)
+                PanRail.Width = Target
+                Return
+            End If
+            Dim Sw As New System.Diagnostics.Stopwatch()
+            Sw.Start()
+            Dim Timer As New Threading.DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(16)}
+            AddHandler Timer.Tick,
+                Sub()
+                    Dim P As Double = Math.Min(1, Sw.Elapsed.TotalMilliseconds / 160)
+                    Dim E As Double = 1 - Math.Pow(1 - P, 3)
+                    RailWidthNow = From + (Target - From) * E
+                    ColRail.Width = New GridLength(RailWidthNow)
+                    PanRail.Width = RailWidthNow
+                    PanMain.Width = Math.Max(0, PanForm.Width - RailWidthNow)
+                    If P >= 1 Then
+                        Timer.Stop()
+                        RailWidthNow = Target
+                        ColRail.Width = New GridLength(Target)
+                        PanRail.Width = Target
+                        PanMain.Width = Math.Max(0, PanForm.Width - Target)
+                    End If
+                End Sub
+            Timer.Start()
+        Catch ex As Exception
+            RailWidthNow = Target
+            ColRail.Width = New GridLength(Target)
+            PanRail.Width = Target
+        End Try
+    End Sub
+
+    ''' <summary>窗口按钮等原生控件跟随主题：浅色用深色图标，深色用白色图标。</summary>
+    Private Sub ApplyChromeTheme()
+        Try
+            Dim IsLight As Boolean = (Settings.Get(Of Integer)("UiThemeMode") = 1)
+            BtnTitleClose.Theme = If(IsLight, MyIconButton.Themes.Black, MyIconButton.Themes.White)
+            BtnTitleMin.Theme = If(IsLight, MyIconButton.Themes.Black, MyIconButton.Themes.White)
+        Catch ex As Exception
+        End Try
+    End Sub
+
     Private Sub SetRailItem(Item As Grid, Bar As Shapes.Rectangle, Icon As Shapes.Path, Label As TextBlock, Selected As Boolean)
         Bar.Visibility = If(Selected, Visibility.Visible, Visibility.Collapsed)
         If Selected Then
@@ -808,6 +854,7 @@ Public Class FormMain
             Settings.Set("UiThemeMode", If(Mode = 1, 2, 1))
             ThemeRefresh()
             UpdateThemeIcon()
+            ApplyChromeTheme()
             Hint(If(Settings.Get(Of Integer)("UiThemeMode") = 1, "已切换到浅色主题", "已切换到深色主题"), HintType.Green)
         Catch ex As Exception
             Logger.Warn(ex, "切换主题失败")
