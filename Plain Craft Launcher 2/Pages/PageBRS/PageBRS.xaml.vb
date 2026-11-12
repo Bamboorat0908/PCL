@@ -8,6 +8,7 @@ Imports Newtonsoft.Json.Linq
 ''' BRS 页面：读取 zhushu.homes/BRS 的状态接口，用启动器自带 UI 单页展示服务器信息。
 ''' </summary>
 Public Class PageBRS
+    Implements IRefreshable
 
     Private Const ApiUrl As String = "https://zhushu.homes/BRS/api/status"
     Private Const UserAgent As String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36"
@@ -21,6 +22,9 @@ Public Class PageBRS
     Private IsLoading As Boolean = False
     Private TimerRefresh As Threading.DispatcherTimer
     Private _LastSizeH As Double = 0
+    Private _LastFetchTick As Integer = -100000
+    '同一份数据 30 秒内不重复请求，避免来回切页把接口打爆
+    Private Const MinFetchIntervalMs As Integer = 30000
 
     Shared Sub New()
         Try
@@ -44,6 +48,8 @@ Public Class PageBRS
     Private Sub PageBRS_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         If Not IsInited Then
             IsInited = True
+            '首次进入先放占位，避免几秒的“空卡片”像是坏了
+            ShowPlaceholders()
             '先渲染上次缓存，避免首屏空白或断网时一片“—”
             TryRenderCache()
         End If
@@ -77,11 +83,19 @@ Public Class PageBRS
 #Region "数据加载"
 
     Public Sub BtnRefresh_Click() Handles BtnRefresh.Click
-        LoadData()
+        LoadData(True)
     End Sub
 
-    Private Sub LoadData()
+    ''' <summary>
+    ''' F5 刷新（实现 IRefreshable）。
+    ''' </summary>
+    Public Sub RefreshPage() Implements IRefreshable.Refresh
+        LoadData(True)
+    End Sub
+
+    Private Sub LoadData(Optional Force As Boolean = False)
         If IsLoading Then Return
+        If Not Force AndAlso Environment.TickCount - _LastFetchTick < MinFetchIntervalMs AndAlso LabTps.Text <> "—" Then Return
         IsLoading = True
         Try
             BtnRefresh.IsEnabled = False
@@ -114,10 +128,24 @@ Public Class PageBRS
                 If Result Is Nothing Then
                     ApplyError([Error])
                 Else
+                    _LastFetchTick = Environment.TickCount
                     ApplyData(Result)
                 End If
             End Sub)
         End Sub, "BRS 状态加载")
+    End Sub
+
+    ''' <summary>
+    ''' 首次加载时的占位文案（拿到数据后会被 Clear 掉）。
+    ''' </summary>
+    Private Sub ShowPlaceholders()
+        PanPlayers.Children.Clear()
+        PanPlayers.Children.Add(New TextBlock With {
+            .Text = "正在获取在线玩家…", .FontSize = 12, .Opacity = 0.55, .Margin = New Thickness(0, 2, 0, 0)})
+        PanTrend.Children.Clear()
+        PanTrend.Children.Add(New TextBlock With {
+            .Text = "正在获取近 14 天数据…", .FontSize = 12, .Opacity = 0.55,
+            .VerticalAlignment = VerticalAlignment.Center, .HorizontalAlignment = HorizontalAlignment.Center})
     End Sub
 
     ''' <summary>
@@ -154,7 +182,7 @@ Public Class PageBRS
             '状态徽章
             If Alive Then
                 LabState.Text = "运行中"
-                BadgeState.Background = New SolidColorBrush(Color.FromRgb(&H14, &H9B, &H62))
+                BadgeState.Background = New SolidColorBrush(Color.FromRgb(&H0B, &H73, &H50))
             Else
                 LabState.Text = "离线"
                 BadgeState.Background = New SolidColorBrush(Color.FromRgb(&HC9, &H20, &H3F))

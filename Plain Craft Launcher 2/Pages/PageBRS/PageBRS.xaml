@@ -27,7 +27,7 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="BRS" FontSize="17" FontWeight="Bold" VerticalAlignment="Center" />
-                        <Border x:Name="BadgeState" Background="{DynamicResource ColorBrush3}" CornerRadius="6" Margin="8,0,0,0" Padding="7,1" VerticalAlignment="Center">
+                        <Border x:Name="BadgeState" Background="{DynamicResource ColorBrush2}" CornerRadius="6" Margin="8,0,0,0" Padding="7,1" VerticalAlignment="Center">
                             <TextBlock x:Name="LabState" Text="读取中" Foreground="White" FontSize="11" />
                         </Border>
                         <TextBlock x:Name="LabSeason" Text="" FontSize="11" Margin="8,2,0,0" Foreground="{DynamicResource ColorBrush2}" VerticalAlignment="Center" />

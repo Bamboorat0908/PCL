@@ -1,11 +1,12 @@
 ﻿Imports Microsoft.Web.WebView2.Core
 
 ''' <summary>
-''' 交易所页面：内嵌浏览器显示 zhushu.homes/BRS。
+''' 交易所页面：内嵌浏览器显示 zhushu.homes/stock。
 ''' </summary>
 Public Class PageStock
+    Implements IRefreshable
 
-    Private Const BrsUrl As String = "https://zhushu.homes/stock/"
+    Private Const StockUrl As String = "https://zhushu.homes/stock/"
     Private IsInited As Boolean = False
     Private IsLoadFailed As Boolean = False
 
@@ -37,7 +38,8 @@ Public Class PageStock
     Private Sub StartLoad()
         CardFail.Visibility = Visibility.Collapsed
         CardLoad.Visibility = Visibility.Visible
-        LabLoad.Text = "正在加载 交易所页面"
+        LabLoad.Text = "正在加载交易所页面"
+        LabLoadSub.Text = "首次打开需要几秒"
         IsLoadFailed = False
         InitWebView()
     End Sub
@@ -55,7 +57,9 @@ Public Class PageStock
                 ViewWeb.CoreWebView2.Settings.IsStatusBarEnabled = False
                 ViewWeb.CoreWebView2.Settings.AreDevToolsEnabled = False
             End If
-            ViewWeb.Source = New Uri(BrsUrl)
+            ViewWeb.Source = New Uri(StockUrl)
+        Catch ex As WebView2RuntimeNotFoundException
+            ShowFail("本机没有安装 WebView2 运行时，无法内嵌显示交易所。" & vbCrLf & "可以点下面的按钮在浏览器中打开，或用 Microsoft 官网的 Evergreen 安装包补装后重试。")
         Catch ex As Exception
             ShowFail(ex.Message)
         End Try
@@ -68,17 +72,16 @@ Public Class PageStock
                 CardLoad.Visibility = Visibility.Collapsed
                 CardFail.Visibility = Visibility.Collapsed
             Else
-                ShowFail("错误代码：" & e.WebErrorStatus.ToString())
+                ShowFail("加载失败：" & e.WebErrorStatus.ToString() & vbCrLf & "请检查网络后重试。")
             End If
         End Sub)
     End Sub
 
     Private Sub OnProcessFailed(sender As Object, e As CoreWebView2ProcessFailedEventArgs)
-        RunInUi(Sub() ShowFail("浏览器进程异常：" & e.ProcessFailedKind.ToString()))
+        RunInUi(Sub() ShowFail("浏览器进程异常：" & e.ProcessFailedKind.ToString() & vbCrLf & "点「重试」可以重新拉起。"))
     End Sub
 
     Private Sub ShowFail(Message As String)
-        If IsLoadFailed Then Return
         IsLoadFailed = True
         LabFail.Text = Message
         CardLoad.Visibility = Visibility.Collapsed
@@ -90,15 +93,50 @@ Public Class PageStock
         If ViewWeb.CoreWebView2 IsNot Nothing Then
             CardFail.Visibility = Visibility.Collapsed
             CardLoad.Visibility = Visibility.Visible
-            ViewWeb.Source = New Uri(BrsUrl)
+            Try
+                ViewWeb.CoreWebView2.Navigate(StockUrl)
+            Catch ex As Exception
+                StartLoad()
+            End Try
         Else
             StartLoad()
         End If
     End Sub
 
-    Public Sub BtnBrowser_Click() Handles BtnBrowser.Click
+    ''' <summary>
+    ''' F5 刷新（实现 IRefreshable）。
+    ''' </summary>
+    Public Sub RefreshPage() Implements IRefreshable.Refresh
+        BtnReload_Click()
+    End Sub
+
+    Public Sub BtnReload_Click() Handles BtnReload.Click
         Try
-            OpenWebsite(BrsUrl)
+            If ViewWeb.CoreWebView2 Is Nothing Then
+                StartLoad()
+            Else
+                ViewWeb.CoreWebView2.Reload()
+            End If
+        Catch ex As Exception
+            Hint("刷新失败：" & ex.Message)
+        End Try
+    End Sub
+
+    Public Sub BtnHome_Click() Handles BtnHome.Click
+        Try
+            If ViewWeb.CoreWebView2 Is Nothing Then
+                StartLoad()
+            Else
+                ViewWeb.CoreWebView2.Navigate(StockUrl)
+            End If
+        Catch ex As Exception
+            Hint("返回首页失败：" & ex.Message)
+        End Try
+    End Sub
+
+    Public Sub BtnBrowser_Click() Handles BtnBrowser.Click, BtnBrowserTop.Click
+        Try
+            OpenWebsite(StockUrl)
         Catch ex As Exception
             Hint("打开浏览器失败：" & ex.Message)
         End Try

@@ -1,4 +1,4 @@
-Public Module ModMinecraft
+﻿Public Module ModMinecraft
 
 #Region "文件夹"
 
@@ -1688,7 +1688,7 @@ OnLoaded:
         '获取皮肤种类
         Dim IsSlim As Integer = MyMsgBox("此皮肤为 Steve 模型（粗手臂）还是 Alex 模型（细手臂）？", "选择皮肤种类", "Steve 模型", "Alex 模型", "我不知道", HighLight:=False)
         If IsSlim = 3 Then
-            Hint("请在皮肤下载页面确认皮肤种类后再使用此皮肤！")
+            Hint("请先在皮肤设置中确认皮肤种类。")
             Return New McSkinInfo With {.IsVaild = False}
         End If
 

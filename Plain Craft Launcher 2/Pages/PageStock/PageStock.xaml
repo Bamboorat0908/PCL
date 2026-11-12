@@ -5,23 +5,45 @@
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              mc:Ignorable="d" x:Class="PageStock"
              d:DesignWidth="800" d:DesignHeight="800">
-    <Grid x:Name="PanBack">
-        <wv2:WebView2 x:Name="ViewWeb" Margin="0" DefaultBackgroundColor="White" />
-        <local:MyCard x:Name="CardLoad" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="260" UseAnimation="False">
-            <StackPanel Margin="24,20" Orientation="Horizontal">
-                <local:MyLoading Margin="0,0,12,0" />
-                <TextBlock x:Name="LabLoad" Text="正在加载 交易所页面" VerticalAlignment="Center" />
+    <Grid x:Name="PanBack" Margin="10,8,10,10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 工具条：参照内嵌浏览器惯例，提供最小必要的导航动作 -->
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <local:MyButton x:Name="BtnHome" Text="交易所首页" Height="26" MinWidth="90" Padding="10,0" Margin="0,0,8,0" />
+                <local:MyButton x:Name="BtnReload" Text="刷新" Height="26" MinWidth="60" Padding="10,0" />
             </StackPanel>
-        </local:MyCard>
-        <local:MyCard x:Name="CardFail" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="320" Visibility="Collapsed">
-            <StackPanel Margin="24,20">
-                <TextBlock Text="交易所页面加载失败" FontSize="15" Margin="0,0,0,6" />
-                <TextBlock x:Name="LabFail" TextWrapping="Wrap" MaxWidth="360" Margin="0,0,0,12" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <local:MyButton Text="重试" MinWidth="110" Margin="0,0,10,0" Padding="13,0" ColorType="Highlight" x:Name="BtnRetry" />
-                    <local:MyButton Text="在浏览器中打开" MinWidth="130" Padding="13,0" x:Name="BtnBrowser" />
+            <TextBlock x:Name="LabStockTip" Text="行情来自 zhushu.homes/stock" FontSize="10.5" VerticalAlignment="Center"
+                       HorizontalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" />
+            <local:MyButton x:Name="BtnBrowserTop" Text="在浏览器打开" Height="26" MinWidth="100" Padding="10,0" HorizontalAlignment="Right" />
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <wv2:WebView2 x:Name="ViewWeb" Margin="0" DefaultBackgroundColor="White" />
+            <local:MyCard x:Name="CardLoad" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="260" UseAnimation="False">
+                <StackPanel Margin="24,20">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <local:MyLoading Margin="0,0,12,0" />
+                        <TextBlock x:Name="LabLoad" Text="正在加载交易所页面" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock x:Name="LabLoadSub" Text="首次打开需要几秒" FontSize="10.5" HorizontalAlignment="Center"
+                               Margin="0,8,0,0" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
-            </StackPanel>
-        </local:MyCard>
+            </local:MyCard>
+            <local:MyCard x:Name="CardFail" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="340" Visibility="Collapsed">
+                <StackPanel Margin="24,20">
+                    <TextBlock Text="交易所页面加载失败" FontSize="15" Margin="0,0,0,6" />
+                    <TextBlock x:Name="LabFail" TextWrapping="Wrap" MaxWidth="380" Margin="0,0,0,12" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <local:MyButton Text="重试" MinWidth="110" Margin="0,0,10,0" Padding="13,0" ColorType="Highlight" x:Name="BtnRetry" />
+                        <local:MyButton Text="在浏览器中打开" MinWidth="130" Padding="13,0" x:Name="BtnBrowser" />
+                    </StackPanel>
+                </StackPanel>
+            </local:MyCard>
+        </Grid>
     </Grid>
 </local:MyPageRight>

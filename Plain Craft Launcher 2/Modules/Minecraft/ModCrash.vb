@@ -1,4 +1,4 @@
-Public Class CrashAnalyzer
+﻿Public Class CrashAnalyzer
 
     '构造函数
     Private TempFolder As String
@@ -1116,7 +1116,7 @@ NextStack:
                 If(Not Results.Any(Function(r) r.EndsWithF("\h")) OrElse IsHandAnalyze, "",
                     vbCrLf & "如果要寻求帮助，请把错误报告文件发给对方，而不是发送这个窗口的照片或者截图。" &
                     If(If(PageSetupSystem.IsLauncherNewest(), True), "",
-                    vbCrLf & vbCrLf & "此外，你正在使用老版本 PCL，更新 PCL 或许也能解决这个问题。" & vbCrLf & "你可以点击 [设置 → 其他 → 启动器 → 检查更新] 更新 PCL。"))
+                    vbCrLf & vbCrLf & "此外，你正在使用老版本 PCL，更新 PCL 或许也能解决这个问题。" & vbCrLf & "本版本已移除更新功能，如需新版本请手动替换程序文件。"))
     End Function
 
 End Class

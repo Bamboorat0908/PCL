@@ -822,6 +822,23 @@ Public Class FormMain
         ' 在没有弹窗时：继续检查……
         '==========================
 
+        'Ctrl + 1~4 快速切换主页面（与导航按钮顺序一致；输入框内不抢键）
+        If Keyboard.Modifiers.HasFlag(ModifierKeys.Control) AndAlso TypeOf Keyboard.FocusedElement IsNot TextBox Then
+            Select Case e.Key
+                Case Key.D1, Key.NumPad1
+                    PageChange(PageType.Launch)
+                    Return
+                Case Key.D2, Key.NumPad2
+                    PageChange(PageType.Brs)
+                    Return
+                Case Key.D3, Key.NumPad3
+                    PageChange(PageType.Stock)
+                    Return
+                Case Key.D4, Key.NumPad4
+                    PageChange(PageType.Setup)
+                    Return
+            End Select
+        End If
         '按 ESC 返回上一级
         If e.Key = Key.Escape Then TriggerPageBack()
         '更改隐藏版本可见性
