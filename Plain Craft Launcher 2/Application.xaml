@@ -19,14 +19,14 @@
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
             <!-- 颜色表 -->
-            <SolidColorBrush x:Key="ColorBrush1">#E6E9EF</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush2">#C4CBD6</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush3">#E4559F</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush4">#8B5CF6</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush5">#A78BFA</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush6">#1A1F28</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush7">#141922</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush8">#0E1218</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush1">#ECEBF5</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush2">#A9A4C4</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush3">#8B6CFF</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush4">#B39DFF</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush5">#D3C7FF</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush6">#221E33</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush7">#1A1727</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush8">#131120</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushBg0">#96c0f9</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushBg1">#bee0eafd</SolidColorBrush>
             <Color x:Key="ColorObject1">#343d4a</Color>

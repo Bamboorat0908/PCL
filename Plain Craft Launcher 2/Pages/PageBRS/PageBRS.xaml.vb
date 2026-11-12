@@ -1,4 +1,5 @@
-﻿Imports System.IO
+﻿Imports System.Diagnostics
+Imports System.IO
 Imports System.Net.Http
 Imports System.Windows.Documents
 Imports System.Windows.Media
@@ -190,7 +191,9 @@ Public Class PageBRS
 
             Dim MaxPlayers As Integer = If(Status Is Nothing, 0, CInt(Status("max_players")))
             Dim Count As Integer = If(Status Is Nothing, 0, CInt(Status("player_count")))
-            LabPlayers.Text = Count.ToString()
+            Dim OldPlayers As Double
+            Double.TryParse(LabPlayers.Text, OldPlayers)
+            AnimateNumber(LabPlayers, OldPlayers, Count, "0")
             LabPlayersMax.Text = "/" & MaxPlayers.ToString()
 
             'MOTD
@@ -217,7 +220,9 @@ Public Class PageBRS
             If Status IsNot Nothing AndAlso Status("tps_overall_ms") IsNot Nothing Then
                 Dim Mspt As Double = CDbl(Status("tps_overall_ms"))
                 Dim Tps As Double = Math.Min(20.0, 1000.0 / Math.Max(Mspt, 0.1))
-                LabTps.Text = Tps.ToString("0.0")
+                Dim OldTps As Double
+                Double.TryParse(LabTps.Text, OldTps)
+                AnimateNumber(LabTps, OldTps, Tps, "0.0")
                 LabMspt.Text = Mspt.ToString("0.0") & " ms/tick"
             Else
                 LabTps.Text = "—"
@@ -285,6 +290,41 @@ Public Class PageBRS
             Return False
         End Try
     End Function
+
+#End Region
+
+#Region "数值动画"
+
+    Private Const NumAnimMs As Integer = 420
+
+    ''' <summary>
+    ''' 数值滚动：参考 Grafana 数字面板，刷新时给一次短暂的 count-up，避免数字瞬间跳变。
+    ''' </summary>
+    Private Sub AnimateNumber(Target As TextBlock, FromValue As Double, ToValue As Double, Format As String)
+        Try
+            AniStop("NumAnim " & Target.Name)
+            If Math.Abs(ToValue - FromValue) < 0.001 Then
+                Target.Text = ToValue.ToString(Format)
+                Return
+            End If
+            Dim Sw As New Stopwatch()
+            Sw.Start()
+            Dim Timer As New Threading.DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(16)}
+            AddHandler Timer.Tick,
+                Sub()
+                    Dim P As Double = Math.Min(1, Sw.ElapsedMilliseconds / NumAnimMs)
+                    Dim E As Double = 1 - Math.Pow(1 - P, 3) 'ease-out cubic
+                    Target.Text = (FromValue + (ToValue - FromValue) * E).ToString(Format)
+                    If P >= 1 Then
+                        Timer.Stop()
+                        Target.Text = ToValue.ToString(Format)
+                    End If
+                End Sub
+            Timer.Start()
+        Catch ex As Exception
+            Target.Text = ToValue.ToString(Format)
+        End Try
+    End Sub
 
 #End Region
 
@@ -415,7 +455,9 @@ Public Class PageBRS
                 .ToolTip = It.Key.Substring(5) & " · " & It.Value.ToString() & " 人"
             }
             Grid.SetRowSpan(Bar, 2)
+            Bar.Opacity = 0
             Cell.Children.Add(Bar)
+            AniStart(AaOpacity(Bar, 1, 240, i * 32, New AniEaseOutFluent), "TrendBar " & i)
             Grid.SetColumn(Cell, i)
             PanTrend.Children.Add(Cell)
         Next

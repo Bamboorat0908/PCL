@@ -64,10 +64,15 @@
     'UI 建立
     Public Sub New()
         MainChrome = New MyDropShadow With {
-            .Margin = New Thickness(-3, -3, -3, -3 - GetWPFSize(1)), .ShadowRadius = 10, .Opacity = DropShadowIdleOpacity, .CornerRadius = New CornerRadius(10)}
+            .Margin = New Thickness(-3, -3, -3, -3 - GetWPFSize(1)), .ShadowRadius = 10, .Opacity = DropShadowIdleOpacity, .CornerRadius = New CornerRadius(12)}
         MainChrome.SetResourceReference(MyDropShadow.ColorProperty, "ColorObject1")
         Children.Insert(0, MainChrome)
-        MainBorder = New Border With {.Background = New SolidColorBrush(Color.FromArgb(250, 20, 25, 34)), .CornerRadius = New CornerRadius(10), .IsHitTestVisible = False}
+        MainBorder = New Border With {
+            .Background = New SolidColorBrush(Color.FromArgb(255, 26, 23, 39)),
+            .CornerRadius = New CornerRadius(12),
+            .BorderBrush = New SolidColorBrush(Color.FromArgb(38, 255, 255, 255)),
+            .BorderThickness = New Thickness(1),
+            .IsHitTestVisible = False}
         Children.Insert(1, MainBorder)
         MainGrid = New Grid
         Children.Add(MainGrid)
