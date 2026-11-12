@@ -222,8 +222,11 @@ Public Class PageBRS
                 Next
             Else
                 LabPlayerCount.Text = "无人在线"
-                Dim Empty As New TextBlock With {.Text = "服务器当前没有玩家在线", .FontSize = 12, .Opacity = 0.6, .Margin = New Thickness(0, 4, 0, 0)}
+                Dim Empty As New TextBlock With {.Text = "当前没有玩家在线，晚点再来看看～", .FontSize = 12, .Opacity = 0.6, .Margin = New Thickness(0, 2, 0, 6)}
                 PanPlayers.Children.Add(Empty)
+                Dim BtnRetryPlayers As New MyButton With {.Text = "重新检测", .Height = 22, .MinWidth = 66, .Padding = New Thickness(8, 0, 8, 0), .HorizontalAlignment = HorizontalAlignment.Left}
+                AddHandler BtnRetryPlayers.Click, Sub(sender2, e2) LoadData()
+                PanPlayers.Children.Add(BtnRetryPlayers)
             End If
             If LabPlayerFoot IsNot Nothing Then
                 LabPlayerFoot.Text = "上限 " & MaxPlayers.ToString() & " 人 · 数据来自 zhushu.homes/BRS"
@@ -349,7 +352,10 @@ Public Class PageBRS
         For Each It In Items
             If It.Value > MaxV Then MaxV = It.Value
         Next
-        LabTrendInfo.Text = "峰值 " & MaxV.ToString() & " 人 · " & Items(0).Key.Substring(5) & " ~ " & Items(Items.Count - 1).Key.Substring(5)
+        LabTrendInfo.Text = "峰值 " & MaxV.ToString() & " 人"
+        LabAxisStart.Text = Items(0).Key.Substring(5)
+        LabAxisMid.Text = Items(Items.Count \ 2).Key.Substring(5)
+        LabAxisEnd.Text = Items(Items.Count - 1).Key.Substring(5)
         If LabPlayerFoot IsNot Nothing Then
             LabPlayerFoot.Text = "上限 " & LabPlayersMax.Text.TrimStart("/"c) & " 人 · 近 14 天峰值 " & MaxV.ToString() & " 人"
         End If

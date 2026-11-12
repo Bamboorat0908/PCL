@@ -213,6 +213,31 @@ Public Class PageLaunchRight
     End Sub
 
     ''' <summary>
+    ''' 无自定义主页时显示的引导卡片（纯本地，不联网）。
+    ''' </summary>
+    Private Function CreateWelcomeCard() As MyCard
+        Dim Card As New MyCard With {.Title = "开始游戏", .Margin = New Thickness(0, 0, 0, 15)}
+        Dim Pan As New StackPanel With {.Margin = New Thickness(20, 38, 20, 18)}
+        Dim Lines As New List(Of Tuple(Of String, Double, Boolean))
+        Lines.Add(New Tuple(Of String, Double, Boolean)("在左侧选择一个游戏版本，点「启动游戏」即可开始。", 13, True))
+        Lines.Add(New Tuple(Of String, Double, Boolean)("还没有版本？点左下角「版本选择」→「添加已有文件夹」，选中 .minecraft 目录即可导入现有游戏。", 12, False))
+        Lines.Add(New Tuple(Of String, Double, Boolean)("想看看服务器动态？顶部「BRS」页可以查看在线人数、TPS 与近两周趋势。", 12, False))
+        For Each Line In Lines
+            Pan.Children.Add(New TextBlock With {
+                .Text = Line.Item1,
+                .FontSize = Line.Item2,
+                .FontWeight = If(Line.Item3, FontWeights.Bold, FontWeights.Normal),
+                .TextWrapping = TextWrapping.Wrap,
+                .LineHeight = 21,
+                .Margin = New Thickness(0, If(Line.Item3, 0, 10), 0, 0)
+            })
+            CType(Pan.Children(Pan.Children.Count - 1), TextBlock).SetResourceReference(TextBlock.ForegroundProperty, If(Line.Item3, "ColorBrush1", "ColorBrush2"))
+        Next
+        Card.BorderChild = Pan
+        Return Card
+    End Function
+
+    ''' <summary>
     ''' 从文本内容中加载主页。
     ''' 必须在 UI 线程调用。
     ''' </summary>
@@ -227,6 +252,8 @@ Public Class PageLaunchRight
                 PanCustom.Children.Clear()
                 If String.IsNullOrWhiteSpace(Content) Then
                     Logger.Info($"实例化：清空主页 UI，来源为空")
+                    'BRCL：主页为空时给引导卡片，避免右侧一大片空白
+                    PanCustom.Children.Add(CreateWelcomeCard())
                     Return
                 End If
                 Dim LoadStartTime As Date = Date.Now

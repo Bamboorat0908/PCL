@@ -1,4 +1,4 @@
-<local:MyPageRight
+﻿<local:MyPageRight
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:PCL" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -48,30 +48,33 @@
         <!-- 中部：指标 -->
         <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,10,0,0">
             <local:MyCard Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="14,10">
+                <StackPanel Margin="16,11">
                     <TextBlock Text="TPS" FontSize="11" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabTps" Text="—" FontSize="19" FontWeight="Bold" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="LabTps" Text="—" FontSize="20" FontWeight="Bold" />
+                        <TextBlock Text="tps" FontSize="10.5" Margin="3,0,0,3" VerticalAlignment="Bottom" Foreground="{DynamicResource ColorBrush2}" />
+                    </StackPanel>
                     <TextBlock x:Name="LabMspt" Text="— ms/tick" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
             <local:MyCard Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="14,10">
+                <StackPanel Margin="16,11">
                     <TextBlock Text="运行时长" FontSize="11" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabUptime" Text="—" FontSize="19" FontWeight="Bold" />
+                    <TextBlock x:Name="LabUptime" Text="—" FontSize="20" FontWeight="Bold" />
                     <TextBlock x:Name="LabSeasonDay" Text="—" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
             <local:MyCard Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="14,10">
+                <StackPanel Margin="16,11">
                     <TextBlock Text="实体数" FontSize="11" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabEntities" Text="—" FontSize="19" FontWeight="Bold" />
+                    <TextBlock x:Name="LabEntities" Text="—" FontSize="20" FontWeight="Bold" />
                     <TextBlock Text="当前加载" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
             <local:MyCard UseAnimation="False">
-                <StackPanel Margin="14,10">
+                <StackPanel Margin="16,11">
                     <TextBlock Text="世界大小" FontSize="11" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabWorld" Text="—" FontSize="19" FontWeight="Bold" />
+                    <TextBlock x:Name="LabWorld" Text="—" FontSize="20" FontWeight="Bold" />
                     <TextBlock x:Name="LabCrash" Text="—" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
                 </StackPanel>
             </local:MyCard>
@@ -85,7 +88,7 @@
                 <ColumnDefinition Width="1.35*" />
             </Grid.ColumnDefinitions>
             <local:MyCard Grid.Column="0" UseAnimation="False">
-                <Grid Margin="14,10">
+                <Grid Margin="16,11">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -103,16 +106,27 @@
                 </Grid>
             </local:MyCard>
             <local:MyCard Grid.Column="2" UseAnimation="False">
-                <Grid Margin="14,10">
+                <Grid Margin="16,11">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="近 14 天在线" FontSize="12.5" FontWeight="Bold" />
                         <TextBlock x:Name="LabTrendInfo" Text="" FontSize="11" Margin="6,1,0,0" Foreground="{DynamicResource ColorBrush2}" />
                     </StackPanel>
                     <Grid Grid.Row="1" x:Name="PanTrend" Margin="0,8,0,0" MinHeight="60" />
+                    <Grid Grid.Row="2" Margin="2,4,2,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="LabAxisStart" Grid.Column="0" FontSize="9.5" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Left" />
+                        <TextBlock x:Name="LabAxisMid" Grid.Column="1" FontSize="9.5" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="LabAxisEnd" Grid.Column="2" FontSize="9.5" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Right" />
+                    </Grid>
                 </Grid>
             </local:MyCard>
         </Grid>
