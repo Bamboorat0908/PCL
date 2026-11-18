@@ -1,0 +1,113 @@
+{
+  "website": {
+    "url": "https://zhushu.homes/BRCL/",
+    "changelog_items_verified": 4,
+    "public_checks": [
+      "canonical 308 preserves query",
+      "HTML and referenced local assets load over verified TLS",
+      "public release metadata matches verified file",
+      "full HTTPS executable matches exact size and SHA-256",
+      "download supports exact byte ranges and rejects invalid ranges",
+      "missing paths and download directory do not expose a listing",
+      "blog, BRS, stock and news baseline routes remain 200"
+    ],
+    "origin_checks": 7
+  },
+  "primary_https_update": {
+    "Version": "1.0.2.11",
+    "Revision": "2026.11.19.2",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.19.2.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.19.2.zip",
+    "UpdatePackageBytes": 6096743,
+    "UpdatePackageSHA256": "c30892d496e4e153b8a1f4ae8c86f8b51d6723dcc31c7294af99977d442a3aed",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.19.2.exe",
+    "DirectExeBytes": 7558656,
+    "DirectExeSHA256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+    "Bytes": 7558656,
+    "SHA256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-18T18:11:43.8511203Z"
+  },
+  "secondary_https_update": {
+    "Version": "1.0.2.11",
+    "Revision": "2026.11.19.2",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.19.2.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.19.2.zip",
+    "UpdatePackageBytes": 6096743,
+    "UpdatePackageSHA256": "c30892d496e4e153b8a1f4ae8c86f8b51d6723dcc31c7294af99977d442a3aed",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.19.2.exe",
+    "DirectExeBytes": 7558656,
+    "DirectExeSHA256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+    "Bytes": 7558656,
+    "SHA256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-18T18:11:29.0149038Z"
+  },
+  "legacy_update_bridge": {
+    "Version": "1.0.2.11",
+    "Revision": "2026.11.19.2",
+    "DownloadUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.19.2.exe",
+    "UpdatePackageUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.19.2.zip",
+    "UpdatePackageBytes": 6096743,
+    "UpdatePackageSHA256": "c30892d496e4e153b8a1f4ae8c86f8b51d6723dcc31c7294af99977d442a3aed",
+    "DirectExeUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.19.2.exe",
+    "DirectExeBytes": 7558656,
+    "DirectExeSHA256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+    "Bytes": 7558656,
+    "SHA256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-18T18:11:22.4784746Z"
+  },
+  "legacy_install_restarts": [
+    {
+      "old_version": "1.0.2.8",
+      "new_version": "1.0.2.11",
+      "revision": "2026.11.19.2",
+      "legacy_endpoint": "http://t42.sjcmc.cn:25261/",
+      "legacy_signature_verified": true,
+      "legacy_bounded_download_verified": true,
+      "embedded_installer_verified": true,
+      "new_exe_sha256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+      "restarted": true,
+      "original_exe_backed_up": true,
+      "old_instance_save_verified": true
+    },
+    {
+      "old_version": "1.0.2.10",
+      "new_version": "1.0.2.11",
+      "revision": "2026.11.19.2",
+      "legacy_endpoint": "http://t42.sjcmc.cn:25261/",
+      "legacy_signature_verified": true,
+      "legacy_bounded_download_verified": true,
+      "embedded_installer_verified": true,
+      "new_exe_sha256": "fe5c1640b573f6654ba9112a3017bba5e35e7336e6878860609c2e31243f0d1e",
+      "restarted": true,
+      "original_exe_backed_up": true,
+      "old_instance_save_verified": true
+    }
+  ],
+  "https_integrated_pack_range_tests": [
+    {
+      "filename": "TRM-1.11-high.zip",
+      "size": 164408085,
+      "sha256": "408a5201984a03dea09cc9a475186af56a5b350fa6860707774e2e823cf403fe",
+      "range_segments": 12,
+      "switch_offset": 82204042,
+      "primary": "https://zhushu.homes/BRCL/transfer/",
+      "mirror": "https://zhushu.homes/BRCL/transfer-mirror/"
+    },
+    {
+      "filename": "TRM-1.11-low.zip",
+      "size": 164806392,
+      "sha256": "77ae44973a087a767bf64ce927dcae66595a330d7d8e77e2b48ad3c900d369fd",
+      "range_segments": 12,
+      "switch_offset": 82403196,
+      "primary": "https://zhushu.homes/BRCL/transfer/",
+      "mirror": "https://zhushu.homes/BRCL/transfer-mirror/"
+    }
+  ],
+  "live_signed_manifest_fallback_verified": true
+}

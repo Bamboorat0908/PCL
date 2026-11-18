@@ -63,3 +63,5 @@
 #*.RTF   diff=astextplain
 /scripts/fixtures/signed-update/latest.json binary
 /scripts/fixtures/signed-update/latest.sig binary
+/releases/*/tests/results.json binary
+/releases/*/meloongcore-tests.txt binary
