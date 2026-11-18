@@ -123,6 +123,7 @@ Public Class PageInstanceOverall
                 JsonObject = PageInstanceLeft.Instance.JsonObject
             End Try
             '重命名主文件夹
+            PreserveBrsMetadataBeforeRename(PageInstanceLeft.Instance)
             DirectoryUtils.Move(OldPath, NewPath)
             '清理 ini 缓存
             PageInstanceLeft.Instance.ResetSettingsCache()
@@ -138,6 +139,7 @@ Public Class PageInstanceOverall
             If ReadIni(McFolderSelected & "PCL.ini", "Version") = OldName Then
                 WriteIni(McFolderSelected & "PCL.ini", "Version", NewName)
             End If
+            RenameBrsSelection(McFolderSelected, OldName, NewName)
             '更新版本 Json
             Try
                 JsonObject("id") = NewName

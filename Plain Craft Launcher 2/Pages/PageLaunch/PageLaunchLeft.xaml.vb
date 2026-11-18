@@ -6,12 +6,14 @@ Public Class PageLaunchLeft
     Private IsLoad As Boolean = False
     Private IsLoadFinished As Boolean = False
     Public Sub PageLaunchLeft_Loaded() Handles Me.Loaded
-        If IsLoad Then RefreshPage(True, False)
-
         AprilPosTrans.X = 0
         AprilPosTrans.Y = 0
 
-        If IsLoad Then Return
+        If IsLoad Then
+            RefreshButtonsUI()
+            RefreshPage(True, False)
+            Return
+        End If
         IsLoad = True
         AniControlEnabled += 1
 
@@ -62,24 +64,12 @@ Public Class PageLaunchLeft
                     End If
                 End Try
             End If
-            '确认 Minecraft 版本存在
-            Dim Selection As String = ReadIni(McFolderSelected & "PCL.ini", "Version")
-            Dim Instance As McInstance = If(Selection = "", Nothing, New McInstance(Selection))
-            If Instance Is Nothing OrElse Not Instance.PathVersion.StartsWithF(McFolderSelected) OrElse Not Instance.Check() Then
-                '无效的版本
-                Logger.Info($"当前选择的 Minecraft 版本无效：{If(Instance Is Nothing, "null", Instance.PathVersion)}", If(IsNothing(Instance), LogBehavior.None, LogBehavior.ToastIfDebug))
-                If Not McInstanceListLoader.State = LoadState.Finished Then LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\", WaitForExit:=True)
-                If Not McInstanceList.Any() OrElse McInstanceList.First.Value(0).Logo.Contains("RedstoneBlock") Then
-                    Instance = Nothing
-                    Logger.Info("无可用 Minecraft 版本")
-                Else
-                    Instance = McInstanceList.First.Value(0)
-                    Logger.Info($"自动选择 Minecraft 版本：{Instance.PathVersion}")
-                End If
+            '即使旧的通用版本仍然有效，也要先读取当前游戏目录里的全部 TRM 实例。
+            If McInstanceListLoader.State <> LoadState.Finished OrElse McInstanceListLoader.Input <> McFolderSelected Then
+                LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\", WaitForExit:=True)
             End If
             RunInUi(
             Sub()
-                McInstanceSelected = Instance '绕这一圈是为了避免 McVersionCheck 触发第二次版本改变
                 IsLoadFinished = True
                 RefreshButtonsUI()
                 RefreshPage(False, False) '有可能选择的版本变化了，需要重新刷新
@@ -610,6 +600,7 @@ Finish:
     '启动按钮
     Public Sub LaunchButtonClick() Handles BtnLaunch.Click
         If McLaunchLoader.State = LoadState.Loading OrElse Not BtnLaunch.IsEnabled OrElse
+            McInstanceListLoader.State = LoadState.Loading OrElse McFolderListLoader.State = LoadState.Loading OrElse IsBrsPackInstalling OrElse
             (FrmMain.PageRight IsNot Nothing AndAlso FrmMain.PageRight.PageState <> MyPageRight.PageStates.ContentStay AndAlso FrmMain.PageRight.PageState <> MyPageRight.PageStates.ContentEnter) Then Return
         '愚人节处理
         If IsAprilEnabled AndAlso Not IsAprilGiveup Then
@@ -622,86 +613,99 @@ Finish:
             FrmLaunchLeft.AprilPosTrans.Y = 0
             FrmMain.BtnExtraApril.ShowRefresh()
         End If
-        '实际的启动
-        If BtnLaunch.Text = "启动 BRS" Then
-            Dim BrsInstance = FindBrsInstance()
-            If BrsInstance Is Nothing Then
-                RefreshButtonsUI()
-                Return
-            End If
-            McInstanceSelected = BrsInstance
-            McLaunchStart()
-        ElseIf BtnLaunch.Text = "下载服务器整合包" Then
-            InstallBrsPack()
-        ElseIf BtnLaunch.Text = "下载游戏" Then
-            FrmMain.PageChange(FormMain.PageType.Download, FormMain.PageSubType.DownloadInstall)
-        End If
-    End Sub
-    Private BtnLaunchState As Integer = 0
-    Private BtnLaunchInstance As McInstance = Nothing
-    Public Sub RefreshButtonsUI() Handles BtnLaunch.Loaded
-        If Not BtnLaunch.IsLoaded Then Return
-        '获取当前状态
-        Dim CurrentState As Integer
-        Dim BrsInstance As McInstance = Nothing
-        If IsBrsPackInstalling Then
-            CurrentState = 4
-        ElseIf (Not IsLoadFinished) OrElse McInstanceListLoader.State = LoadState.Loading OrElse McFolderListLoader.State = LoadState.Loading Then
-            CurrentState = 0
-        Else
-            BrsInstance = FindBrsInstance()
-            If BrsInstance Is Nothing Then
-                CurrentState = 1
-            Else
-                CurrentState = 3
-            End If
-        End If
-        '更新状态
-        If CurrentState = BtnLaunchState AndAlso
-           If(BrsInstance Is Nothing, "", BrsInstance.PathVersion) = If(BtnLaunchInstance Is Nothing, "", BtnLaunchInstance.PathVersion) Then GoTo ExitRefresh
-        BtnLaunchInstance = BrsInstance
-        BtnLaunchState = CurrentState
-        Select Case CurrentState
-            Case 0
-                Logger.Info("启动按钮：正在加载 Minecraft 版本")
-                FrmLaunchLeft.BtnLaunch.Text = "正在加载"
-                FrmLaunchLeft.BtnLaunch.IsEnabled = False
-                FrmLaunchLeft.LabVersion.Text = "正在加载中，请稍候"
-                FrmLaunchLeft.BtnVersion.IsEnabled = False
-                FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
-            Case 1
-                Logger.Info("启动按钮：未找到 TRM 实例，可下载服务器整合包")
-                FrmLaunchLeft.BtnLaunch.Text = "下载服务器整合包"
-                FrmLaunchLeft.BtnLaunch.IsEnabled = True
-                FrmLaunchLeft.LabVersion.Text = BrsPackName
-                FrmLaunchLeft.BtnVersion.IsEnabled = True
-                FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
-            Case 2
-                Logger.Info("启动按钮：无 Minecraft 版本，要求下载")
-                FrmLaunchLeft.BtnLaunch.Text = "下载游戏"
-                FrmLaunchLeft.BtnLaunch.IsEnabled = True
-                FrmLaunchLeft.LabVersion.Text = "未找到可用的游戏版本"
-                FrmLaunchLeft.BtnVersion.IsEnabled = True
-                FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
-            Case 3
-                Logger.Info($"启动按钮：TRM 实例：{BrsInstance.PathVersion}")
-                FrmLaunchLeft.BtnLaunch.Text = "启动 BRS"
-                FrmLaunchLeft.BtnVersion.IsEnabled = True
-                FrmLaunchLeft.BtnLaunch.IsEnabled = True
-                FrmLaunchLeft.LabVersion.Text = BrsInstance.Name
-                'FrmLaunchLeft.BtnMore.Visibility = Visibility.Visible '由功能隐藏设置修改
-            Case 4
-                FrmLaunchLeft.BtnLaunch.Text = "正在安装整合包"
-                FrmLaunchLeft.BtnLaunch.IsEnabled = False
-                FrmLaunchLeft.LabVersion.Text = "可在下载任务中查看进度或取消"
-                FrmLaunchLeft.BtnVersion.IsEnabled = False
-                FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
+        Select Case LaunchState
+            Case BrsLaunchState.Ready
+                Dim Instance = LaunchInstance
+                If Not IsInstanceInFolder(Instance, McFolderSelected) OrElse Not New McInstance(Instance.PathVersion).Check() Then
+                    Hint("首页所选实例已不可用，请重新选择后再启动。", HintType.Red)
+                    McInstanceListForceRefresh = True
+                    LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
+                    RefreshButtonsUI()
+                    Return
+                End If
+                McLaunchStart(New McLaunchOptions With {.Instance = Instance})
+            Case BrsLaunchState.Install
+                InstallBrsPack()
+            Case BrsLaunchState.ChooseInstance
+                BtnVersion_Click()
         End Select
-ExitRefresh:
-        '功能隐藏
-        FrmLaunchLeft.BtnVersion.Visibility = If(Not PageSetupUI.HiddenForceShow AndAlso Settings.Get(Of Boolean)("UiHiddenFunctionSelect"), Visibility.Collapsed, Visibility.Visible)
-        If CurrentState = 3 Then
-            FrmLaunchLeft.BtnMore.Visibility = FrmLaunchLeft.BtnVersion.Visibility
+    End Sub
+
+    Private Enum BrsLaunchState
+        Loading
+        Install
+        ChooseInstance
+        Ready
+        Installing
+    End Enum
+
+    Private LaunchState As BrsLaunchState
+    Private LaunchInstance As McInstance
+
+    Private Sub BtnUpgrade_Click() Handles BtnUpgrade.Click
+        If McLaunchLoader.State <> LoadState.Loading Then InstallBrsPack()
+    End Sub
+
+    Public Sub RefreshButtonsUI() Handles BtnLaunch.Loaded
+        If BtnLaunch Is Nothing Then Return
+
+        Dim Target As BrsLaunchTarget = Nothing
+        If IsBrsPackInstalling Then
+            LaunchState = BrsLaunchState.Installing
+        ElseIf Not IsLoadFinished OrElse McInstanceListLoader.State = LoadState.Loading OrElse McFolderListLoader.State = LoadState.Loading Then
+            LaunchState = BrsLaunchState.Loading
+        Else
+            Dim Folder = McFolderSelected
+            Dim SavedName = If(Folder = "", "", ReadBrsSelection(Folder))
+            Target = SelectBrsLaunchTarget(Folder, McInstanceList.Values.SelectMany(Function(List) List), SavedName)
+            If Target IsNot Nothing Then
+                LaunchState = BrsLaunchState.Ready
+            ElseIf SavedName <> "" Then
+                LaunchState = BrsLaunchState.ChooseInstance
+            Else
+                LaunchState = BrsLaunchState.Install
+            End If
+        End If
+
+        LaunchInstance = Target?.Instance
+        Dim HasTarget = Target IsNot Nothing
+        Dim Busy = LaunchState = BrsLaunchState.Loading OrElse LaunchState = BrsLaunchState.Installing
+        BtnLaunch.IsEnabled = Not Busy
+        BtnLaunch.Height = If(HasTarget, 88, 68)
+        BtnLaunch.Padding = New Thickness(12, 0, 12, If(HasTarget, 38, 19))
+        LabLaunchInstance.Visibility = If(HasTarget, Visibility.Visible, Visibility.Collapsed)
+        LabLaunchInstance.Text = If(HasTarget, "实例 · " & LaunchInstance?.Name, "")
+        BtnVersion.IsEnabled = Not Busy
+        BtnVersion.Visibility = If(Not PageSetupUI.HiddenForceShow AndAlso Settings.Get(Of Boolean)("UiHiddenFunctionSelect"), Visibility.Collapsed, Visibility.Visible)
+        BtnMore.Visibility = If(HasTarget, BtnVersion.Visibility, Visibility.Collapsed)
+        BtnUpgrade.Visibility = If(LaunchState = BrsLaunchState.ChooseInstance OrElse (HasTarget AndAlso Target.HasUpgrade), Visibility.Visible, Visibility.Collapsed)
+        BtnUpgrade.Text = If(LaunchState = BrsLaunchState.ChooseInstance, "安装 TRM 整合包", "安装新版 TRM")
+
+        Select Case LaunchState
+            Case BrsLaunchState.Loading
+                BtnLaunch.Text = "正在加载"
+                LabVersion.Text = "正在加载中，请稍候"
+            Case BrsLaunchState.Install
+                BtnLaunch.Text = "下载服务器整合包"
+                LabVersion.Text = BrsPackName
+            Case BrsLaunchState.ChooseInstance
+                BtnLaunch.Text = "重新选择实例"
+                LabVersion.Text = "上次选择的 TRM 实例不可用"
+            Case BrsLaunchState.Ready
+                BtnLaunch.Text = "启动 BRS"
+                LabVersion.Text = Target.Description
+            Case BrsLaunchState.Installing
+                BtnLaunch.Text = "正在安装整合包"
+                LabVersion.Text = "可在下载任务中查看进度或取消"
+        End Select
+        Dim Summary = If(HasTarget, LabVersion.Text & vbCrLf & LabLaunchInstance.Text, LabVersion.Text)
+        BtnLaunch.ToolTip = Summary
+        Automation.AutomationProperties.SetHelpText(BtnLaunch, Summary)
+
+        If HasTarget AndAlso FrmMain IsNot Nothing AndAlso FrmMain.PageCurrent.Page = FormMain.PageType.Launch AndAlso
+            McLaunchLoader.State <> LoadState.Loading AndAlso McInstanceSelected <> LaunchInstance Then
+            McInstanceSelected = LaunchInstance
+            RefreshPage(False, False)
         End If
     End Sub
     '取消按钮

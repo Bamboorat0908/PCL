@@ -1,8 +1,38 @@
 ﻿Imports System.IO
 Imports System.Text.RegularExpressions
+Imports Newtonsoft.Json
 
 Friend Module ModBrsPack
     Public Const BrsPackName As String = "TRM 1.11（高预设 / 低预设）"
+    Private Const LaunchSelectionFile As String = "BRCL-TRM-selection.txt"
+    Private Const CurrentPackVersion As String = "1.11"
+    Private Const MarkerFile As String = "PCL\BRS-TRM.json"
+
+    Friend Class BrsLaunchTarget
+        Public ReadOnly Instance As McInstance
+        Public ReadOnly PackVersion As Version
+        Public ReadOnly PresetId As String
+
+        Public Sub New(Instance As McInstance, PackVersion As Version, PresetId As String)
+            Me.Instance = Instance
+            Me.PackVersion = PackVersion
+            Me.PresetId = PresetId
+        End Sub
+
+        Public ReadOnly Property Description As String
+            Get
+                Dim PresetName = If(PresetId = "high", "高预设", If(PresetId = "low", "低预设", "预设未知"))
+                Return $"TRM {If(PackVersion?.ToString(), "版本未知")} · {PresetName}"
+            End Get
+        End Property
+
+        Public ReadOnly Property HasUpgrade As Boolean
+            Get
+                Return PackVersion IsNot Nothing AndAlso PackVersion < Version.Parse(CurrentPackVersion)
+            End Get
+        End Property
+    End Class
+
     Friend Class BrsPackPreset
         Public ReadOnly Name As String
         Public ReadOnly FileName As String
@@ -39,14 +69,115 @@ Friend Module ModBrsPack
              Name.IndexOf("The Retired Machinist", StringComparison.OrdinalIgnoreCase) >= 0 OrElse Name.Contains("退休机械工"))
     End Function
 
-    Private Function IsTrmInstance(Instance As McInstance) As Boolean
-        Return Instance IsNot Nothing AndAlso Instance.State <> McInstanceState.Error AndAlso
-            (IsTrmInstanceName(Instance.Name) OrElse File.Exists(Path.Combine(Instance.PathVersion, "PCL", "BRS-TRM.json")))
+    Friend Function IsInstanceInFolder(Instance As McInstance, Folder As String) As Boolean
+        Return Instance IsNot Nothing AndAlso Not String.IsNullOrEmpty(Folder) AndAlso
+            String.Equals(Path.GetDirectoryName(Instance.PathVersion.TrimEnd("\"c)), Path.Combine(Folder, "versions"), StringComparison.OrdinalIgnoreCase) AndAlso
+            Directory.Exists(Instance.PathVersion)
+    End Function
+
+    Friend Function ReadBrsLaunchTarget(Instance As McInstance) As BrsLaunchTarget
+        If Instance Is Nothing OrElse Instance.State = McInstanceState.Error Then Return Nothing
+        Dim RecognizedName = IsTrmInstanceName(Instance.Name)
+        Dim MarkerPath = Path.Combine(Instance.PathVersion, MarkerFile)
+        Dim HasMarker = File.Exists(MarkerPath)
+        If Not (HasMarker OrElse RecognizedName) Then Return Nothing
+
+        Dim Metadata As JObject = Nothing
+        If HasMarker Then
+            Try
+                Metadata = FileUtils.ReadAsJson(MarkerPath)
+            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException OrElse TypeOf ex Is JsonException
+                Logger.Warn(ex, $"读取 TRM 实例信息失败（{Instance.PathVersion}）")
+            End Try
+        End If
+
+        Dim PackVersion As Version = Nothing
+        Dim VersionText = TryCast(TryCast(Metadata?("version"), JValue)?.Value, String)
+        If Not Version.TryParse(VersionText, PackVersion) AndAlso RecognizedName Then
+            Version.TryParse(Regex.Match(Instance.Name, "(?<![0-9.])[0-9]+(?:\.[0-9]+){1,3}(?![0-9.])").Value, PackVersion)
+        End If
+
+        Dim Preset = TryCast(TryCast(Metadata?("preset"), JValue)?.Value, String)?.ToLowerInvariant()
+        If Preset <> "high" AndAlso Preset <> "low" Then
+            If Regex.IsMatch(Instance.Name, "高预设|(?<![a-z])high(?![a-z])", RegexOptions.IgnoreCase) Then Preset = "high"
+            If Regex.IsMatch(Instance.Name, "低预设|(?<![a-z])low(?![a-z])", RegexOptions.IgnoreCase) Then Preset = "low"
+        End If
+        Return New BrsLaunchTarget(Instance, PackVersion, Preset)
+    End Function
+
+    Friend Function ReadBrsSelection(Folder As String) As String
+        Dim SelectionPath = Path.Combine(Folder, LaunchSelectionFile)
+        Try
+            Return If(File.Exists(SelectionPath), FileUtils.ReadAsString(SelectionPath), "")
+        Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+            Logger.Warn(ex, $"读取已选 TRM 实例失败（{Folder}）")
+            Return ""
+        End Try
+    End Function
+
+    Friend Sub RememberBrsSelection(Folder As String, Instance As McInstance)
+        If IsInstanceInFolder(Instance, Folder) AndAlso ReadBrsLaunchTarget(Instance) IsNot Nothing Then
+            FileUtils.WriteAtomic(Path.Combine(Folder, LaunchSelectionFile), Instance.Name)
+        End If
+    End Sub
+
+    Friend Sub RenameBrsSelection(Folder As String, OldName As String, NewName As String)
+        If String.Equals(ReadBrsSelection(Folder), OldName, StringComparison.OrdinalIgnoreCase) Then
+            FileUtils.WriteAtomic(Path.Combine(Folder, LaunchSelectionFile), NewName)
+        End If
+    End Sub
+
+    Friend Sub PreserveBrsMetadataBeforeRename(Instance As McInstance)
+        Dim Target = ReadBrsLaunchTarget(Instance)
+        If Target IsNot Nothing AndAlso Not File.Exists(Path.Combine(Instance.PathVersion, MarkerFile)) Then
+            WriteBrsMarker(Instance.PathVersion, Target.PackVersion?.ToString(), Target.PresetId)
+        End If
+    End Sub
+
+    Private Sub WriteBrsMarker(Folder As String, PackVersion As String, PresetId As String)
+        Dim Metadata As New JObject From {{"name", "TRM"}, {"version", PackVersion}, {"preset", PresetId}}
+        FileUtils.WriteAtomic(Path.Combine(Folder, MarkerFile), Metadata.ToString(Formatting.None))
+    End Sub
+
+    Friend Function SelectBrsLaunchTarget(Folder As String, Instances As IEnumerable(Of McInstance), SavedName As String) As BrsLaunchTarget
+        Dim Candidates = Instances.Where(Function(Instance) IsInstanceInFolder(Instance, Folder))
+        If SavedName <> "" Then
+            Dim Selected = Candidates.FirstOrDefault(Function(Instance) String.Equals(Instance.Name, SavedName, StringComparison.OrdinalIgnoreCase))
+            Return ReadBrsLaunchTarget(Selected)
+        End If
+        Return Candidates.Select(Function(Instance) ReadBrsLaunchTarget(Instance)).
+            Where(Function(Target) Target IsNot Nothing).
+            OrderByDescending(Function(Target) Target.PackVersion).
+            ThenBy(Function(Target) Target.Instance.Name, StringComparer.OrdinalIgnoreCase).
+            FirstOrDefault()
     End Function
 
     Public Function FindBrsInstance() As McInstance
-        If IsTrmInstance(McInstanceSelected) Then Return McInstanceSelected
-        Return McInstanceList.Values.SelectMany(Function(List) List).FirstOrDefault(Function(Instance) IsTrmInstance(Instance))
+        Dim Folder = McFolderSelected
+        If Folder = "" OrElse McInstanceListLoader.State = LoadState.Loading Then Return Nothing
+        Return SelectBrsLaunchTarget(Folder, McInstanceList.Values.SelectMany(Function(List) List), ReadBrsSelection(Folder))?.Instance
+    End Function
+
+    Friend Function CreateBrsInstallDirectory(InstallRoot As String, PresetName As String) As String
+        Dim VersionsFolder = Path.Combine(InstallRoot, "versions")
+        Dim Reservation = Path.Combine(VersionsFolder, ".brcl-trm-" & Guid.NewGuid().ToString("N"))
+        Directory.CreateDirectory(Reservation)
+        Try
+            Dim Target = Path.Combine(VersionsFolder, PresetName)
+            Dim Suffix = 2
+            Do
+                Try
+                    '重命名空目录来占用目标名称。现有文件或目录不会被覆盖。
+                    Directory.Move(Reservation, Target)
+                    Return Target
+                Catch ex As IOException When Directory.Exists(Target) OrElse File.Exists(Target)
+                    Target = Path.Combine(VersionsFolder, $"{PresetName} ({Suffix})")
+                    Suffix += 1
+                End Try
+            Loop
+        Finally
+            If Directory.Exists(Reservation) Then Directory.Delete(Reservation)
+        End Try
     End Function
 
     Public Sub InstallBrsPack()
@@ -54,14 +185,9 @@ Friend Module ModBrsPack
         Dim InstallRoot = McFolderSelected
         Dim PresetDialog As New BrsPackPresetWindow(InstallRoot)
         If PresetDialog.ShowDialog() <> True Then Return
-        Dim Choice = If(PresetDialog.LowPreset, 2, 1)
+        Dim InitialSelection = ReadBrsSelection(InstallRoot)
+        Dim PresetId = If(PresetDialog.LowPreset, "low", "high")
         Dim Preset = GetBrsPackPreset(PresetDialog.LowPreset)
-        Dim InstanceName = Preset.Name
-        Dim Suffix = 2
-        While Directory.Exists(Path.Combine(InstallRoot, "versions", InstanceName))
-            InstanceName = Preset.Name & " (" & Suffix & ")"
-            Suffix += 1
-        End While
         Dim ArchivePath = Path.Combine(Paths.Base, "BRCL", "Downloads", Preset.FileName)
         Directory.CreateDirectory(Path.GetDirectoryName(ArchivePath))
         Dim Download As New LoaderDownload("下载服务器整合包", New List(Of NetFile) From {
@@ -74,24 +200,40 @@ Friend Module ModBrsPack
                 Dim ErrorText = Problem.Check(ArchivePath)
                 If ErrorText IsNot Nothing Then Throw New IOException(ErrorText)
                 If McFolderSelected <> InstallRoot Then Throw New Exception("游戏目录已切换，请在目标目录重新安装。")
+                '下载期间可能新增同名实例，在实际安装前分配未使用的目录。
+                Dim VersionFolder = CreateBrsInstallDirectory(InstallRoot, Preset.Name)
+                Dim InstanceName = Path.GetFileName(VersionFolder)
                 Dim Child As LoaderCombo(Of String) = Nothing
                 Try
                     Child = ModpackInstall(ArchivePath, InstanceName)
-                    Child.WaitForExit(Input:=Path.Combine(InstallRoot, "versions", InstanceName) & "\", LoaderToSyncProgress:=Task, c:=Token)
+                    Child.WaitForExit(Input:=VersionFolder & "\", LoaderToSyncProgress:=Task, c:=Token)
                     Token.ThrowIfCancellationRequested()
-                    Dim VersionFolder = Path.Combine(InstallRoot, "versions", InstanceName)
-                    Directory.CreateDirectory(Path.Combine(VersionFolder, "PCL"))
-                    File.WriteAllText(Path.Combine(VersionFolder, "PCL", "BRS-TRM.json"), "{""name"":""TRM"",""version"":""1.11"",""preset"":""" & If(Choice = 2, "low", "high") & """}")
-                    WriteIni(InstallRoot & "PCL.ini", "Version", InstanceName)
+                    Dim Installed As New McInstance(VersionFolder)
+                    Installed.Load()
+                    If Installed.State = McInstanceState.Error Then Throw New IOException(Installed.Info)
+                    WriteBrsMarker(VersionFolder, CurrentPackVersion, PresetId)
                     RunInUiWait(Sub()
+                                    Token.ThrowIfCancellationRequested()
+                                    If ReadBrsSelection(InstallRoot) = InitialSelection Then
+                                        RememberBrsSelection(InstallRoot, Installed)
+                                        If McFolderSelected = InstallRoot Then McInstanceSelected = Installed
+                                    End If
                                     If McFolderSelected = InstallRoot Then
-                                        McInstanceSelected = New McInstance(VersionFolder).Load()
                                         McInstanceListForceRefresh = True
                                         LoaderFolderRun(McInstanceListLoader, InstallRoot, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
                                     End If
                                 End Sub)
                 Catch
-                    If Child IsNot Nothing AndAlso Child.State = LoadState.Loading Then Child.Cancel()
+                    If Child IsNot Nothing Then
+                        If Child.State = LoadState.Loading Then Child.Cancel()
+                    Else
+                        Try
+                            '只有安装任务还未创建时，才尝试移除自己占用的空目录。
+                            Directory.Delete(VersionFolder)
+                        Catch ex As IOException
+                            Logger.Warn(ex, $"无法清理 TRM 安装占位目录（{VersionFolder}）")
+                        End Try
+                    End If
                     Throw
                 End Try
             End Sub) With {.ProgressWeight = 80}

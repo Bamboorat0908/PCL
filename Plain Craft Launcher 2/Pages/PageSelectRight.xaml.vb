@@ -168,6 +168,12 @@ Public Class PageSelectRight
         Dim Instance As McInstance = sender.Tag
         If New McInstance(Instance.PathVersion).Check Then
             '正常版本
+            Try
+                RememberBrsSelection(McFolderSelected, Instance)
+            Catch ex As Exception
+                Logger.Error(ex, "保存所选 TRM 实例失败", LogBehavior.Toast)
+                Return
+            End Try
             McInstanceSelected = Instance
             FrmMain.PageBack()
         Else
