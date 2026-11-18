@@ -1,0 +1,15 @@
+[Unit]
+Description=BRCL bank encrypted website transport
+After=network-online.target brcl-bank.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -F /dev/null -N -T -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=%h/brcl-bank/website_known_hosts -o IdentitiesOnly=yes -i %h/brcl-bank/website_tunnel_key -p 64886 -R 127.0.0.1:18786:127.0.0.1:8786 root@45.207.197.246
+Restart=always
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

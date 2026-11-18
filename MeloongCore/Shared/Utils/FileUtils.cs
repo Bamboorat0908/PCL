@@ -386,6 +386,7 @@ public static class FileUtils {
         // 解压 gz（gz 不需要考虑编码）
         if (PathUtils.GetExtension(compressionFile) == "gz") {
             string outFilePath = Path.Combine(outputDirectory, PathUtils.GetFileNameWithoutExtension(compressionFile));
+            ValidateExtractionTarget(outputDirectory, outFilePath);
             Logger.Trace($"解压 gz 文件：{compressionFile} → {outFilePath}");
             using var fileStream = FileUtils.ReadAsStream(compressionFile);
             using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
@@ -405,11 +406,21 @@ public static class FileUtils {
             if (totalCount > 0) p?.Set((double) doneCount / totalCount);
             // ZipSlip 修复
             string outputFilePath = Path.Combine(outputDirectory, entry.FullName);
-            if (!PathUtils.IsParentOf(outputDirectory, outputFilePath))
+            if (Path.IsPathRooted(entry.FullName) || (Path.DirectorySeparatorChar == '\\' && entry.FullName.Contains(':')) || !PathUtils.IsParentOf(outputDirectory, outputFilePath))
                 throw new InvalidDataException($"Zip 文件项 {entry.FullName} 的路径在压缩包之外，这可能导致安全问题");
+            ValidateExtractionTarget(outputDirectory, outputFilePath);
             // 实际的解压
             using var entryStream = entry.Open();
             FileUtils.Write(outputFilePath, entryStream);
+        }
+    }
+
+    private static void ValidateExtractionTarget(string outputDirectory, string outputFilePath) {
+        // 已有链接会让合法的相对路径写入目录之外；ZIP 和 GZip 均需检查目标及其父目录。
+        for (string? current = PathUtils.ForCompare(outputFilePath); current is not null && PathUtils.IsParentOf(outputDirectory, current); current = Path.GetDirectoryName(current)) {
+            string apiPath = PathUtils.ForApi(current);
+            if ((File.Exists(apiPath) || Directory.Exists(apiPath)) && (File.GetAttributes(apiPath) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException($"解压目标路径包含链接，这可能导致写入压缩包之外：{current}");
         }
     }
 

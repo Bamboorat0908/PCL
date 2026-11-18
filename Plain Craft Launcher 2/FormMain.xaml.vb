@@ -261,12 +261,24 @@ Public Class FormMain
 
     '窗口加载
     Private IsWindowLoadFinished As Boolean = False
+    Private ReadOnly StartupClock As Diagnostics.Stopwatch = Diagnostics.Stopwatch.StartNew()
+    Private ReadOnly StartupUiReady As New Global.System.Threading.ManualResetEventSlim(False)
+    Private NeedsLayoutMarker As Boolean
+    Private DeferredStartupStarted As Boolean
+    Private PageWarmupTimer As Threading.DispatcherTimer
+    Private WarmupTarget As MyRadioButton
+    Private Shared ReadOnly TraceBoot As Boolean = Environment.GetEnvironmentVariable("BRCL_STARTUP_TRACE") = "1"
+    Private Shared Sub MarkBoot(stage As String)
+        If TraceBoot Then Logger.Info("BootStage " & stage)
+    End Sub
+    Private ReadOnly EmptyPageLeft As MyPageLeft
+    Private FrmNews As PageNews
+    Private FrmBank As PageBank
     Public Sub New()
         ApplicationStartTick = GetTimeMs()
+        MarkBoot("ctor")
         '窗体参数初始化
         FrmMain = Me
-        FrmLaunchLeft = New PageLaunchLeft
-        FrmLaunchRight = New PageLaunchRight
         '版本号改变
         Dim LastVersion As Integer = Settings.Get(Of Integer)("SystemLastVersionReg")
         If LastVersion < VersionCode Then
@@ -285,19 +297,29 @@ Public Class FormMain
                 Logger.Info("从老 BRCL 升级，但此前未调整版本隔离，使用老的版本隔离默认值")
                 Settings.Set("LaunchArgumentIndieV2", Settings.GetDefault("LaunchArgumentIndie"))
             Else
-                Logger.Info("全新的 PCL，使用新的版本隔离默认值")
+                Logger.Info("全新的 BRCL，使用新的版本隔离默认值")
                 Settings.Set("LaunchArgumentIndieV2", Settings.GetDefault("LaunchArgumentIndieV2"))
             End If
         End If
         '刷新主题
         ThemeCheckAll(False)
         ThemeRefresh(Settings.Get(Of Integer)("UiLauncherTheme"))
+        'Create controls after the initial palette, avoiding a second resource refresh.
+        MarkBoot("launch-left")
+        FrmLaunchLeft = New PageLaunchLeft
+        MarkBoot("launch-right")
+        FrmLaunchRight = New PageLaunchRight
         '注册拖拽事件（不能直接加 Handles，否则没用；#6340）
         [AddHandler](DragDrop.DragEnterEvent, New DragEventHandler(AddressOf HandleDrag), handledEventsToo:=True)
         [AddHandler](DragDrop.DragOverEvent, New DragEventHandler(AddressOf HandleDrag), handledEventsToo:=True)
         '加载 UI
+        MarkBoot("window-xaml")
         InitializeComponent()
+        MarkBoot("initial-size")
+        RestoreStartupSize()
         Opacity = 0
+        MarkBoot("attach-home")
+        EmptyPageLeft = New MyPageLeft
         '开启管理员权限下的文件拖拽
         If WindowsUtils.HasAdminRole() Then
             Static Helper As New DragHelper
@@ -317,6 +339,7 @@ Public Class FormMain
         PageLeft = FrmLaunchLeft
         PanMainRight.Child = FrmLaunchRight
         PageRight = FrmLaunchRight
+        ConfigurePageLayout(True)
         FrmLaunchRight.PageState = MyPageRight.PageStates.ContentStay
         '模式提醒
         If BuildType = BuildTypes.Debug Then Hint("[开发者模式] BRCL 正以开发者模式运行，这可能会造成严重的性能下降，请务必立即向开发者反馈此问题！", HintType.Red)
@@ -326,15 +349,34 @@ Public Class FormMain
 
         Logger.Info($"第二阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
     End Sub
+    Private Sub RestoreStartupSize()
+        Try
+            Height = Settings.Get(Of Integer)("WindowHeight")
+            Width = Settings.Get(Of Integer)("WindowWidth")
+            If Not System.IO.File.Exists(Paths.Base & "BRCL\IndustrialLayout.v1") Then
+                Width = Math.Min(1180, SystemParameters.WorkArea.Width - 40)
+                Height = Math.Min(740, SystemParameters.WorkArea.Height - 40)
+                NeedsLayoutMarker = True
+            End If
+        Catch ex As Exception '修复 #2019
+            Logger.Error(ex, "读取窗口默认大小失败", LogBehavior.Toast)
+            Height = MinHeight + 100
+            Width = MinWidth + 100
+        End Try
+    End Sub
+
     Private Sub FormMain_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+        MarkBoot("loaded")
         InitRail()
         ApplicationStartTick = GetTimeMs()
         Handle = New WindowInteropHelper(Me).Handle
         '读取设置
         UpdateBackgroundAndTitleBar()
         PageSetupUI.HiddenRefresh()
-        PageSetupUI.BackgroundRefresh(False, True)
-        MusicRefreshPlay(False, True)
+        MarkBoot("audio")
+        InstallUiSoundHandlers()
+        WarmUiSounds()
+        MarkBoot("buttons")
         '扩展按钮
         BtnExtraDownload.ShowCheck = AddressOf BtnExtraDownload_ShowCheck
         BtnExtraBack.ShowCheck = AddressOf BtnExtraBack_ShowCheck
@@ -356,19 +398,12 @@ Public Class FormMain
             ShapeTitleLogo.Data = New GeometryConverter().ConvertFromString("M26,29 v-25 h6 a7,7 180 0 1 0,14 h-6 M83,6.5 a10,11.5 180 1 0 0,18 M48,2.5 v24.5 h13.5")
         End If
         '加载窗口
+        MarkBoot("position")
         ThemeRefreshMain()
-        Try
-            Height = Settings.Get(Of Integer)("WindowHeight")
-            Width = Settings.Get(Of Integer)("WindowWidth")
-        Catch ex As Exception '修复 #2019
-            Logger.Error(ex, "读取窗口默认大小失败", LogBehavior.Toast)
-            Height = MinHeight + 100
-            Width = MinWidth + 100
-        End Try
         'MinHeight = 50
         'MinWidth = 50
         Topmost = False
-        If FrmStart IsNot Nothing Then FrmStart.Close(New TimeSpan(0, 0, 0, 0, 400 / AniSpeed))
+        If FrmStart IsNot Nothing Then FrmStart.Close(TimeSpan.FromMilliseconds(MotionDuration(240) / AniSpeed))
         '更改窗口
         Top = (GetWPFSize(My.Computer.Screen.WorkingArea.Height) - Height) / 2
         Left = (GetWPFSize(My.Computer.Screen.WorkingArea.Width) - Width) / 2
@@ -376,16 +411,31 @@ Public Class FormMain
         ShowWindowToTop()
         Dim HwndSource As Interop.HwndSource = PresentationSource.FromVisual(Me)
         HwndSource.AddHook(New Interop.HwndSourceHook(AddressOf WndProc))
+        MarkBoot("enter-motion")
+        Dim OpenDuration As Integer = MotionDuration(260)
+        Dim BootDelay As Integer = If(UiMotionEnabled, 180, 0)
         AniStart({
-            AaCode(Sub() AniControlEnabled -= 1, 50),
-            AaOpacity(Me, Settings.Get(Of Integer)("UiLauncherTransparent") / 1000 + 0.4, 250, 100),
-            AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, 600, 100, New AniEaseOutBack(AniEasePower.Weak)),
-            AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 500, 100, New AniEaseOutBack(AniEasePower.Weak)),
+            AaCode(Sub() AniControlEnabled -= 1, 20),
+            AaOpacity(Me, Settings.Get(Of Integer)("UiLauncherTransparent") / 1000 + 0.4 - Opacity, OpenDuration),
+            AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, OpenDuration,, New AniEaseOutFluent),
+            AaDouble(Sub(i)
+                         TransformScale.ScaleX += i
+                         TransformScale.ScaleY += i
+                     End Sub, 1 - TransformScale.ScaleX, OpenDuration,, New AniEaseOutFluent),
+            AaDouble(Sub(i) BootPosition.Y += i, -8, OpenDuration,, New AniEaseOutFluent),
+            AaDouble(Sub(i) BootProgressScale.ScaleX += i, 1, MotionDuration(280),, New AniEaseOutFluent),
+            AaOpacity(BootLayer, -1, MotionDuration(180), BootDelay),
             AaCode(
             Sub()
                 PanBack.RenderTransform = Nothing
+                BootLayer.Visibility = Visibility.Collapsed
                 IsWindowLoadFinished = True
+                StartupUiReady.Set()
+                Logger.Info($"启动首屏可交互：{StartupClock.ElapsedMilliseconds} ms（含窗口进入过渡）")
+                PlayUiSound(UiSoundCue.Startup)
                 Logger.Info($"DPI：{DPI}，系统版本：{Environment.OSVersion.VersionString}，BRCL 位置：{PathExe}")
+                StartStartupUpdateCheck()
+                StartDeferredStartup()
             End Sub, , True)
         }, "Form Show")
         'Timer 启动
@@ -394,6 +444,9 @@ Public Class FormMain
         '加载池
         RunInNewThread(
         Sub()
+            'Filesystem scans and Java probing must not contend with the first render.
+            StartupUiReady.Wait(TimeSpan.FromSeconds(5))
+            If WindowClosing Then Return
             'EULA 提示
             Const EulaVersion As Integer = 2
             If Settings.Get(Of Integer)("SystemEulaVersion") < EulaVersion Then
@@ -415,7 +468,6 @@ Public Class FormMain
                 Thread.Sleep(100)
                 DlClientListMojangLoader.Start(1) 'BRCL 会同时根据这里的加载结果决定是否使用官方源进行下载
                 RunCountSub()
-                ServerLoader.Start()
                 RunInNewThread(AddressOf TryClearTaskTemp, "TryClearTaskTemp", ThreadPriority.BelowNormal)
             Catch ex As Exception
                 Logger.Error(ex, "初始化加载池运行失败")
@@ -428,26 +480,223 @@ Public Class FormMain
             End Try
             '上报
             Telemetry("启动")
+            If Environment.GetEnvironmentVariable("BRCL_UI_PREVIEW") <> "1" Then
+                If UsageChoiceNeeded() Then
+                    RunInUiWait(
+                        Sub()
+                            If WindowClosing OrElse Not UsageChoiceNeeded() Then Return
+                            Dim Choice = BrclUsageConsentWindow.Ask(Me)
+                            If Choice.HasValue Then SaveUsageChoice(Choice.Value)
+                        End Sub)
+                End If
+                If Not WindowClosing Then
+                    RecordUsage()
+                    OfferPendingReports()
+                End If
+            End If
         End Sub, "初始化", ThreadPriority.Lowest)
 
         Logger.Info($"第三阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
 
         '调试钩子：设置环境变量 BRCL_START_PAGE 时直接进入指定页面，便于界面自检
+        If Environment.GetEnvironmentVariable("BRCL_UI_PREVIEW") = "1" AndAlso Not String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("BRCL_DIALOG_PREVIEW")) Then
+            Dim PreviewTimer As New Threading.DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(1600)}
+            AddHandler PreviewTimer.Tick,
+                Sub()
+                    PreviewTimer.Stop()
+                    Select Case Environment.GetEnvironmentVariable("BRCL_DIALOG_PREVIEW")
+                        Case "permission"
+                            ShowBrclError("客户端目录访问失败", New UnauthorizedAccessException("示例：客户端目录暂时无法写入。"))
+                        Case "fatal"
+                            ShowBrclError("BRCL 初始化错误", New InvalidOperationException("示例：无法初始化客户端运行环境。"), Fatal:=True)
+                        Case "confirm"
+                            MyMsgBox("是否继续此示例操作？", "确认操作", "继续", "取消")
+                        Case "usage"
+                            BrclUsageConsentWindow.Ask(Me)
+                        Case "long"
+                            ShowBrclError("启动检查失败", New InvalidOperationException(String.Join(vbCrLf, Enumerable.Repeat("示例诊断行：请检查客户端文件和运行环境。", 100))))
+                        Case Else
+                            ShowBrclError("服务器状态获取失败", New Net.WebException("示例：远程服务关闭了连接。"))
+                    End Select
+                End Sub
+            PreviewTimer.Start()
+        End If
         Try
             Select Case Environment.GetEnvironmentVariable("BRCL_START_PAGE")
                 Case "setup"
                     PageChange(PageType.Setup, PageSubType.SetupLaunch)
                 Case "about"
                     PageChange(PageType.Setup, PageSubType.SetupAbout)
+                Case "sound"
+                    PageChange(PageType.Setup, PageSubType.SetupSound)
+                Case "sponsors"
+                    PageChange(PageType.Setup, PageSubType.SetupSponsors)
+                Case "changelog"
+                    PageChange(PageType.Setup, PageSubType.SetupChangelog)
                 Case "brs"
                     PageChange(PageType.Brs)
                 Case "stock"
                     PageChange(PageType.Stock)
+                Case "map"
+                    PageChange(PageType.SatelliteMap)
+                Case "news"
+                    PageChange(PageType.News)
+                Case "bank"
+                    PageChange(PageType.Bank)
                 Case "ui"
                     PageChange(PageType.Setup, PageSubType.SetupUI)
+                Case "tasks"
+                    If Environment.GetEnvironmentVariable("BRCL_UI_PREVIEW") = "1" Then
+                        '仅用于界面自检的本地计时任务，不发起下载、不修改游戏文件。
+                        Dim PreviewTask As New LoaderTask(Of String, String)("预览下载进度（不下载文件）",
+                            Sub(Task)
+                                Dim Token = Task.CreateCancellationToken()
+                                For StepIndex = 1 To 1800
+                                    If Token.WaitHandle.WaitOne(100) Then Token.ThrowIfCancellationRequested()
+                                    Task.Progress = StepIndex / 1800.0
+                                Next
+                            End Sub)
+                        Dim PreviewCombo As New LoaderCombo(Of String)("下载界面预览", New List(Of LoaderBase) From {PreviewTask})
+                        PreviewCombo.Start("")
+                        LoaderTaskbarAdd(PreviewCombo)
+                        PageChange(PageType.TaskManager)
+                    End If
+                Case "instance"
+                    If Environment.GetEnvironmentVariable("BRCL_UI_PREVIEW") = "1" Then
+                        Dim PreviewTimer As New Threading.DispatcherTimer With {.Interval = TimeSpan.FromSeconds(3)}
+                        AddHandler PreviewTimer.Tick,
+                            Sub()
+                                If McInstanceListLoader.State = LoadState.Loading Then Return
+                                PreviewTimer.Stop()
+                                PageInstanceLeft.OpenSettings(If(FindBrsInstance(), McInstanceSelected))
+                            End Sub
+                        PreviewTimer.Start()
+                    End If
             End Select
+            '调试钩子：BRCL_DEBUG_TOGGLE=1 时启动 6 秒后自动切一次主题，便于自检联动
+            If Environment.GetEnvironmentVariable("BRCL_DEBUG_TOGGLE") = "1" Then
+                Dim ToggleTimer As New Threading.DispatcherTimer With {.Interval = TimeSpan.FromSeconds(6)}
+                AddHandler ToggleTimer.Tick,
+                    Sub()
+                        Try
+                            ToggleTimer.Stop()
+                            Logger.Info("BRCL 自检：自动切换主题")
+                            ToggleTheme()
+                        Catch ex As Exception
+                        End Try
+                    End Sub
+                ToggleTimer.Start()
+            End If
         Catch ex As Exception
             Logger.Warn(ex, "调试钩子执行失败")
+        End Try
+    End Sub
+
+    Private Sub LogFirstContentRendered() Handles Me.ContentRendered
+        Static Logged As Boolean
+        If Logged Then Return
+        Logged = True
+        Logger.Info($"启动首帧呈现：{StartupClock.ElapsedMilliseconds} ms")
+    End Sub
+
+    Private Sub StartDeferredStartup()
+        If DeferredStartupStarted OrElse WindowClosing Then Return
+        DeferredStartupStarted = True
+        Dim OriginalBackground = ImgBack.Background
+        Dim DecodeWidth = CInt(Math.Min(3840, Math.Max(1280, ActualWidth * VisualTreeHelper.GetDpi(Me).DpiScaleX)))
+        RunInNewThread(
+            Sub()
+                Try
+                    If NeedsLayoutMarker Then
+                        IO.Directory.CreateDirectory(Paths.Base & "BRCL")
+                        IO.File.WriteAllText(Paths.Base & "BRCL\IndustrialLayout.v1", "BRS launcher layout")
+                    End If
+                    Dim Pictures = DirectoryUtils.EnumerateFiles(Paths.Base & "BRCL\Pictures\", True).
+                        Where(Function(File) Not {"ini", "db"}.Contains(PathUtils.GetExtension(File))).ToList()
+                    If Pictures.Count > 0 Then
+                        Dim Address = RandomOne(Pictures)
+                        Dim Picture As ImageSource
+                        Try
+                            'Decode only enough pixels for the launcher, rather than
+                            'retaining the full resolution of a large wallpaper.
+                            Dim Bitmap As New Global.System.Windows.Media.Imaging.BitmapImage
+                            Using Input = IO.File.OpenRead(Address)
+                                Dim Decoder = Global.System.Windows.Media.Imaging.BitmapDecoder.Create(Input, Global.System.Windows.Media.Imaging.BitmapCreateOptions.DelayCreation, Global.System.Windows.Media.Imaging.BitmapCacheOption.None)
+                                Dim PixelWidth = Decoder.Frames(0).PixelWidth
+                                Input.Position = 0
+                                Bitmap.BeginInit()
+                                Bitmap.CacheOption = Global.System.Windows.Media.Imaging.BitmapCacheOption.OnLoad
+                                Bitmap.DecodePixelWidth = Math.Min(DecodeWidth, PixelWidth)
+                                Bitmap.StreamSource = Input
+                                Bitmap.EndInit()
+                            End Using
+                            Bitmap.Freeze()
+                            Picture = Bitmap
+                        Catch
+                            'Keep support for WebP and the legacy image formats.
+                            Dim Bitmap As New MyBitmap(Address)
+                            Using NativeBitmap As System.Drawing.Bitmap = Bitmap.Pic
+                                Picture = CType(Bitmap, ImageSource)
+                            End Using
+                        End Try
+                        Dim Brush As New ImageBrush(Picture)
+                        Brush.Freeze()
+                        Dispatcher.BeginInvoke(Threading.DispatcherPriority.Background, New Action(
+                            Sub()
+                                If WindowClosing OrElse ImgBack.Background IsNot OriginalBackground Then Return
+                                ImgBack.Background = Brush
+                                ImgBack.Visibility = Visibility.Visible
+                                UpdateBackgroundAndTitleBar()
+                                If FrmSetupUI IsNot Nothing Then FrmSetupUI.BackgroundRefreshUI(True, Pictures.Count)
+                            End Sub))
+                    End If
+                Catch ex As Exception
+                    Logger.Warn(ex, "初始化背景图片失败")
+                End Try
+                If Not WindowClosing Then MusicRefreshPlay(False, True)
+            End Sub, "延后初始化外观", ThreadPriority.Lowest)
+    End Sub
+
+    Private Function NeedsPageWarmup(button As MyRadioButton) As Boolean
+        If button Is BtnTitleSelectBrs Then Return FrmBrs Is Nothing
+        If button Is BtnTitleSelect3 Then Return FrmSetupLeft Is Nothing
+        If button Is BtnTitleSelectStock Then Return FrmStock Is Nothing
+        Return button Is BtnTitleSelectMap AndAlso FrmMap Is Nothing
+    End Function
+
+    Private Sub QueuePageWarmup(sender As Object, e As RoutedEventArgs) Handles BtnTitleSelectBrs.MouseEnter, BtnTitleSelect3.MouseEnter, BtnTitleSelectStock.MouseEnter, BtnTitleSelectMap.MouseEnter,
+        BtnTitleSelectBrs.GotKeyboardFocus, BtnTitleSelect3.GotKeyboardFocus, BtnTitleSelectStock.GotKeyboardFocus, BtnTitleSelectMap.GotKeyboardFocus
+        Dim target = DirectCast(sender, MyRadioButton)
+        If Not IsWindowLoadFinished OrElse WindowClosing OrElse Not NeedsPageWarmup(target) OrElse Environment.GetEnvironmentVariable("BRCL_UI_PREVIEW") = "1" Then Return
+        If PageWarmupTimer Is Nothing Then
+            PageWarmupTimer = New Threading.DispatcherTimer(Threading.DispatcherPriority.ApplicationIdle) With {.Interval = TimeSpan.FromMilliseconds(240)}
+            AddHandler PageWarmupTimer.Tick, AddressOf WarmupOnePage
+        End If
+        PageWarmupTimer.Stop()
+        WarmupTarget = target
+        PageWarmupTimer.Start()
+    End Sub
+
+    Private Sub WarmupOnePage(sender As Object, e As EventArgs)
+        PageWarmupTimer.Stop()
+        Dim target = WarmupTarget
+        WarmupTarget = Nothing
+        If WindowClosing OrElse Not IsActive OrElse Not IsVisible OrElse WindowState = WindowState.Minimized OrElse target Is Nothing Then Return
+        If Not (target.IsMouseOver OrElse target.IsKeyboardFocusWithin) OrElse Not NeedsPageWarmup(target) Then Return
+        If AniIsRun("FrmMain PageChangeRight") OrElse AniIsRun("PageRight PageChange " & PageRight.PageUuid) Then Return
+        Try
+            If My.Computer.Info.AvailablePhysicalMemory < 1073741824UL Then Return
+            If target Is BtnTitleSelectBrs Then
+                FrmBrs = New PageBRS
+            ElseIf target Is BtnTitleSelect3 Then
+                FrmSetupLeft = New PageSetupLeft
+            ElseIf target Is BtnTitleSelectStock Then
+                FrmStock = New PageStock
+            ElseIf target Is BtnTitleSelectMap Then
+                FrmMap = New PageMap
+            End If
+        Catch ex As Exception
+            Logger.Warn(ex, "预热页面失败，将在打开时重试")
         End Try
     End Sub
     '根据打开次数触发的事件
@@ -564,6 +813,7 @@ Public Class FormMain
     ''' </summary>
     ''' <param name="SendWarning">是否在还有下载任务未完成时发出警告。</param>
     Public Sub EndProgram(SendWarning As Boolean)
+        If WindowClosing Then Return
         '强行结束下载任务？
         If HasDownloadingTask() Then
             If SendWarning AndAlso MyMsgBox("还有下载任务尚未完成，是否确定退出？", "提示", "确定", "取消") = 2 Then Return
@@ -580,39 +830,48 @@ Public Class FormMain
         '关闭
         RunInUiWait(
         Sub()
+            If WindowClosing Then Return
+            WindowClosing = True
+            AniStop("Form Show")
+            AniStop("Form WindowMotion")
             IsHitTestVisible = False
-            If PanBack.RenderTransform Is Nothing Then
-                Dim TransformPos As New TranslateTransform(0, 0)
-                Dim TransformRotate As New RotateTransform(0)
-                Dim TransformScale As New ScaleTransform(1, 1)
-                PanBack.RenderTransform = New TransformGroup() With {.Children = New TransformCollection({TransformRotate, TransformPos, TransformScale})}
-                AniStart({
-                    AaOpacity(Me, -Opacity, 140, 40, New AniEaseOutFluent(AniEasePower.Weak)),
-                    AaDouble(
-                    Sub(i)
-                        TransformScale.ScaleX += i
-                        TransformScale.ScaleY += i
-                    End Sub, 0.88 - TransformScale.ScaleX, 180),
-                    AaDouble(Sub(i) TransformPos.Y += i, 20 - TransformPos.Y, 180, 0, New AniEaseOutFluent(AniEasePower.Weak)),
-                    AaDouble(Sub(i) TransformRotate.Angle += i, 0.6 - TransformRotate.Angle, 180, 0, New AniEaseInoutFluent(AniEasePower.Weak)),
-                    AaCode(
-                    Sub()
-                        IsHitTestVisible = False
-                        Top = -10000
-                        ShowInTaskbar = False
-                    End Sub, 210),
-                    AaCode(AddressOf EndProgramForce, 230)
-                }, "Form Close")
-            Else
+            If Not UiMotionEnabled OrElse WindowState = WindowState.Minimized Then
                 EndProgramForce()
+                Return
             End If
+            PanBack.RenderTransformOrigin = New Point(0.5, 0.5)
+            Dim TransformPos As TranslateTransform = Nothing
+            Dim TransformScale As ScaleTransform = Nothing
+            PrepareWindowMotion(TransformScale, TransformPos)
+            AniStart({
+                AaOpacity(Me, -Opacity, 170,, New AniEaseInFluent(AniEasePower.Weak)),
+                AaDouble(
+                Sub(i)
+                    TransformScale.ScaleX += i
+                    TransformScale.ScaleY += i
+                End Sub, 0.985 - TransformScale.ScaleX, 170,, New AniEaseInFluent),
+                AaDouble(Sub(i) TransformPos.Y += i, 6 - TransformPos.Y, 170,, New AniEaseInFluent),
+                AaCode(
+                Sub()
+                    IsHitTestVisible = False
+                    Top = -10000
+                    ShowInTaskbar = False
+                End Sub, 175),
+                AaCode(AddressOf EndProgramForce, 190)
+            }, "Form Close")
             Logger.Info("收到关闭指令")
         End Sub)
     End Sub
     Private Shared IsLogShown As Boolean = False
     Public Shared Sub EndProgramForce(Optional ReturnCode As ProcessReturnValues = ProcessReturnValues.Success)
         On Error Resume Next
+        If ReturnCode = ProcessReturnValues.Exception Then
+            QueueLauncherCrash("启动器因异常退出，详情见 launcher.log。")
+        Else
+            CompleteCrashSession()
+        End If
         IsProgramEnding = True
+        StopUiSounds()
         AniControlEnabled += 1
         If IsUpdateWaitingRestart Then UpdateRestart(False)
         If ReturnCode = ProcessReturnValues.Exception Then
@@ -636,8 +895,26 @@ Public Class FormMain
 
     '移动
     Private Sub FormDragMove(sender As Object, e As MouseButtonEventArgs) Handles PanTitle.MouseLeftButtonDown, PanMsg.MouseLeftButtonDown
-        On Error Resume Next
-        If sender.IsMouseDirectlyOver Then DragMove()
+        If WindowClosing OrElse WindowMotionBusy OrElse Not IsWindowLoadFinished Then Return
+        If Not CType(sender, UIElement).IsMouseDirectlyOver Then Return
+        If WindowState = WindowState.Maximized AndAlso sender IsNot PanTitle Then Return
+        If sender Is PanTitle AndAlso e.ClickCount = 2 Then
+            BtnTitleMax_Click()
+            e.Handled = True
+            Return
+        End If
+        e.Handled = True
+        Try
+            If WindowState = WindowState.Maximized Then
+                MyResizer.DragMaximizedWindow(Me, PanTitle)
+            Else
+                DragMove()
+            End If
+        Catch ex As InvalidOperationException When Mouse.LeftButton <> MouseButtonState.Pressed
+            'The button can be released between the input event and the native move loop.
+        Catch ex As Exception
+            Logger.Warn(ex, "拖动启动器窗口失败")
+        End Try
     End Sub
 
     '改变大小
@@ -645,8 +922,8 @@ Public Class FormMain
     ''' 是否可以向注册表储存尺寸改变信息。以此避免初始化时误储存。
     ''' </summary>
     Public IsSizeSaveable As Boolean = False
-    Private Sub FormMain_SizeChanged() Handles Me.SizeChanged, Me.Loaded
-        If IsSizeSaveable Then
+    Private Sub FormMain_SizeChanged() Handles Me.SizeChanged, Me.Loaded, BorderForm.SizeChanged
+        If IsSizeSaveable AndAlso WindowState = WindowState.Normal Then
             Settings.Set("WindowHeight", Height)
             Settings.Set("WindowWidth", Width)
         End If
@@ -656,19 +933,26 @@ Public Class FormMain
         UpdateRailExpand(PanForm.Width)
         PanMain.Width = Math.Max(0, PanForm.Width - RailWidthNow) '减去左侧导航栏宽度
         PanMain.Height = Math.Max(0, PanForm.Height - PanTitle.ActualHeight)
-        If WindowState = WindowState.Maximized Then WindowState = WindowState.Normal '修复 #1938
     End Sub
 
 #Region "左侧导航栏"
 
     Private Const RailCompact As Double = 76
-    Private Const RailWide As Double = 188
+    Private Const RailWide As Double = 88
     Private RailWidthNow As Double = RailCompact
     Private RailIsWide As Boolean = False
+    Private RailWidthTimer As Threading.DispatcherTimer
 
     Private Sub InitRail()
         Try
-            For Each Item As Grid In {Rail0, Rail10, Rail11, Rail3}
+            For Each Item As Grid In {Rail0, Rail13, Rail10, Rail11, Rail14, Rail12, Rail3}
+                Item.Focusable = True
+                Item.FocusVisualStyle = CType(FindResource("BrclRailFocusVisual"), Style)
+                KeyboardNavigation.SetIsTabStop(Item, True)
+                Automation.AutomationProperties.SetName(Item, RailNameOf(CInt(Item.Tag)))
+                Dim ShortcutLabel = TryCast(FindName("RailNum" & CStr(Item.Tag)), TextBlock)
+                If ShortcutLabel IsNot Nothing Then Automation.AutomationProperties.SetAcceleratorKey(Item, ShortcutLabel.Text)
+                AddHandler Item.KeyDown, AddressOf Rail_KeyDown
                 AddHandler Item.MouseUp, AddressOf Rail_Click
                 '悬停用短促的透明度过渡（110ms），接近终末地那种“设备回弹”手感
                 AddHandler Item.MouseEnter, Sub(sender As Object, e As MouseEventArgs)
@@ -681,6 +965,11 @@ Public Class FormMain
                                             End Sub
             Next
             AddHandler RailThemeBtn.MouseUp, AddressOf RailTheme_Click
+            RailThemeBtn.Focusable = True
+            RailThemeBtn.FocusVisualStyle = CType(FindResource("BrclRailFocusVisual"), Style)
+            KeyboardNavigation.SetIsTabStop(RailThemeBtn, True)
+            Automation.AutomationProperties.SetName(RailThemeBtn, "切换浅色或深色主题")
+            AddHandler RailThemeBtn.KeyDown, AddressOf Rail_KeyDown
             AddHandler RailThemeBtn.MouseEnter, Sub() AniStart(AaOpacity(RailThemeBtn, 0.82 - RailThemeBtn.Opacity, 110), "RailThemeHover")
             AddHandler RailThemeBtn.MouseLeave, Sub() AniStart(AaOpacity(RailThemeBtn, 1 - RailThemeBtn.Opacity, 140), "RailThemeHover")
             '旧的顶部胶囊导航隐藏（逻辑仍在，只是不再露出）
@@ -699,13 +988,16 @@ Public Class FormMain
     ''' </summary>
     Private Sub UpdateRailExpand(FormWidth As Double)
         Try
-            Dim ShouldWide As Boolean = If(RailIsWide, FormWidth >= 1000, FormWidth >= 1080)
+            Dim ShouldWide As Boolean = False
             If ShouldWide = RailIsWide Then Return
             RailIsWide = ShouldWide
             AnimateRailWidth(If(ShouldWide, RailWide, RailCompact))
             Dim Items = {(Rail0, RailInner0, RailIcon0, RailText0, RailNum0),
+                         (Rail13, RailInner13, RailIcon13, RailText13, RailNum13),
                          (Rail10, RailInner10, RailIcon10, RailText10, RailNum10),
                          (Rail11, RailInner11, RailIcon11, RailText11, RailNum11),
+                         (Rail14, RailInner14, RailIcon14, RailText14, RailNum14),
+                         (Rail12, RailInner12, RailIcon12, RailText12, RailNum12),
                          (Rail3, RailInner3, RailIcon3, RailText3, RailNum3),
                          (RailThemeBtn, RailThemeInner, RailThemeIcon, RailThemeText, RailNumTheme)}
             For Each It In Items
@@ -733,15 +1025,15 @@ Public Class FormMain
                     Item.Margin = New Thickness(6, 2, 6, 2)
                     Inner.Orientation = Orientation.Vertical
                     Inner.HorizontalAlignment = HorizontalAlignment.Center
-                    Inner.Margin = New Thickness(0)
+                    Inner.Margin = New Thickness(0, 6, 0, 0)
                     Icon.Margin = New Thickness(0)
-                    Label.FontSize = 10
-                    Label.Margin = New Thickness(0, 5, 0, 0)
+                    Label.FontSize = 10.5
+                    Label.Margin = New Thickness(0, 4, 0, 0)
                     Label.VerticalAlignment = VerticalAlignment.Top
                     Num.HorizontalAlignment = HorizontalAlignment.Right
                     Num.VerticalAlignment = VerticalAlignment.Top
-                    Num.Margin = New Thickness(0, 4, 6, 0)
-                    Num.Opacity = 0.45
+                    Num.Margin = New Thickness(0, 2, 5, 0)
+                    Num.Opacity = 0.7
                 End If
             Next
             '主题按钮与其它项保持同样的间距节奏
@@ -754,8 +1046,24 @@ Public Class FormMain
     Private Sub Rail_Click(sender As Object, e As MouseButtonEventArgs)
         If e.ChangedButton <> MouseButton.Left Then Return
         Dim Taget As Integer
-        Logger.Info($"BRCL 点击导航项 {Taget}")
-        If Integer.TryParse(CStr(CType(sender, Grid).Tag), Taget) Then PageChange(Taget)
+        If Integer.TryParse(CStr(CType(sender, Grid).Tag), Taget) Then
+            Logger.Info($"BRCL 点击导航项 {Taget}")
+            PlayUiSound(UiSoundCue.Navigate)
+            PageChange(Taget)
+            e.Handled = True
+        End If
+    End Sub
+
+    Private Sub Rail_KeyDown(sender As Object, e As KeyEventArgs)
+        If e.Key <> Key.Enter AndAlso e.Key <> Key.Space Then Return
+        e.Handled = True
+        If e.IsRepeat Then Return
+        If sender Is RailThemeBtn Then
+            ToggleTheme()
+        Else
+            PlayUiSound(UiSoundCue.Navigate)
+            PageChange(CInt(CType(sender, Grid).Tag))
+        End If
     End Sub
 
     Private Sub UpdateRail()
@@ -764,7 +1072,10 @@ Public Class FormMain
             SetRailItem(Rail0, RailBar0, RailIcon0, RailText0, Cur = CInt(PageType.Launch))
             SetRailItem(Rail10, RailBar10, RailIcon10, RailText10, Cur = CInt(PageType.Brs))
             SetRailItem(Rail11, RailBar11, RailIcon11, RailText11, Cur = CInt(PageType.Stock))
+            SetRailItem(Rail14, RailBar14, RailIcon14, RailText14, Cur = CInt(PageType.Bank))
+            SetRailItem(Rail12, RailBar12, RailIcon12, RailText12, Cur = CInt(PageType.SatelliteMap))
             SetRailItem(Rail3, RailBar3, RailIcon3, RailText3, Cur = CInt(PageType.Setup))
+            SetRailItem(Rail13, RailBar13, RailIcon13, RailText13, Cur = CInt(PageType.News))
             LabTitlePage.Text = If(PageNameGet(PageCurrent) = "", RailNameOf(Cur), PageNameGet(PageCurrent))
         Catch ex As Exception
         End Try
@@ -775,7 +1086,10 @@ Public Class FormMain
             Case CInt(PageType.Launch) : Return "启动"
             Case CInt(PageType.Brs) : Return "BRS 服务器"
             Case CInt(PageType.Stock) : Return "交易所"
+            Case CInt(PageType.Bank) : Return "银行"
+            Case CInt(PageType.SatelliteMap) : Return "卫星图"
             Case CInt(PageType.Setup) : Return "设置"
+            Case CInt(PageType.News) : Return "新闻"
             Case Else : Return "BRCL"
         End Select
     End Function
@@ -783,6 +1097,7 @@ Public Class FormMain
     ''' <summary>侧栏宽度过渡：Linear / Discord 式 160ms ease-out，替代瞬变。</summary>
     Private Sub AnimateRailWidth(Target As Double)
         Try
+            RailWidthTimer?.Stop()
             Dim From As Double = RailWidthNow
             If Math.Abs(Target - From) < 0.5 Then
                 RailWidthNow = Target
@@ -793,6 +1108,7 @@ Public Class FormMain
             Dim Sw As New System.Diagnostics.Stopwatch()
             Sw.Start()
             Dim Timer As New Threading.DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(16)}
+            RailWidthTimer = Timer
             AddHandler Timer.Tick,
                 Sub()
                     Dim P As Double = Math.Min(1, Sw.Elapsed.TotalMilliseconds / 160)
@@ -823,11 +1139,14 @@ Public Class FormMain
             Dim IsLight As Boolean = (Settings.Get(Of Integer)("UiThemeMode") = 1)
             BtnTitleClose.Theme = If(IsLight, MyIconButton.Themes.Black, MyIconButton.Themes.White)
             BtnTitleMin.Theme = If(IsLight, MyIconButton.Themes.Black, MyIconButton.Themes.White)
+            BtnTitleMax.Theme = If(IsLight, MyIconButton.Themes.Black, MyIconButton.Themes.White)
+            BtnTitleInner.Theme = If(IsLight, MyIconButton.Themes.Black, MyIconButton.Themes.White)
         Catch ex As Exception
         End Try
     End Sub
 
     Private Sub SetRailItem(Item As Grid, Bar As Shapes.Rectangle, Icon As Shapes.Path, Label As TextBlock, Selected As Boolean)
+        Automation.AutomationProperties.SetItemStatus(Item, If(Selected, "已选中", ""))
         Bar.Visibility = If(Selected, Visibility.Visible, Visibility.Collapsed)
         If Selected Then
             '选中指示条做一次“落位”动画
@@ -839,8 +1158,8 @@ Public Class FormMain
         Else
             Item.Background = Brushes.Transparent
         End If
-        Icon.SetResourceReference(Shapes.Path.FillProperty, If(Selected, "ColorBrush3", "ColorBrush2"))
-        Label.SetResourceReference(TextBlock.ForegroundProperty, If(Selected, "ColorBrush1", "ColorBrush2"))
+        Icon.SetResourceReference(Shapes.Path.FillProperty, If(Selected, "IndustrialAccent", "IndustrialRailText"))
+        Label.SetResourceReference(TextBlock.ForegroundProperty, If(Selected, "IndustrialRailActiveText", "IndustrialRailText"))
     End Sub
 
 #End Region
@@ -849,12 +1168,25 @@ Public Class FormMain
     Private Sub RailTheme_Click(sender As Object, e As MouseButtonEventArgs)
         If e.ChangedButton <> MouseButton.Left Then Return
         Logger.Info("BRCL 点击主题按钮")
+        ToggleTheme()
+    End Sub
+
+    ''' <summary>在浅色与深色之间切换（供按钮与自检钩子复用）。</summary>
+    Private Sub ToggleTheme()
+        PlayUiSound(UiSoundCue.Toggle)
         Try
             Dim Mode As Integer = Settings.Get(Of Integer)("UiThemeMode")
             Settings.Set("UiThemeMode", If(Mode = 1, 2, 1))
             ThemeRefresh()
             UpdateThemeIcon()
             ApplyChromeTheme()
+            FrmBrs?.RefreshTheme()
+            FrmMap?.ApplyWebTheme()
+            '交易所页面已打开时，让网页同步跟随新主题
+            Try
+                FrmStock?.ApplyWebTheme()
+            Catch ex As Exception
+            End Try
             Hint(If(Settings.Get(Of Integer)("UiThemeMode") = 1, "已切换到浅色主题", "已切换到深色主题"), HintType.Green)
         Catch ex As Exception
             Logger.Warn(ex, "切换主题失败")
@@ -865,19 +1197,133 @@ Public Class FormMain
     Private Sub UpdateThemeIcon()
         Try
             If Settings.Get(Of Integer)("UiThemeMode") = 1 Then
-                RailThemeIcon.Data = (New GeometryConverter).ConvertFromString("M21.2 14.6A9 9 0 0 1 9.4 2.8a9 9 0 1 0 11.8 11.8z")
+                RailThemeIcon.Data = CType(System.Windows.Application.Current.FindResource("BrclGeometryMoon"), Geometry)
                 RailThemeBtn.ToolTip = "切换到深色"
             Else
-                RailThemeIcon.Data = (New GeometryConverter).ConvertFromString("M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm0-13a5 5 0 1 0 0 10 5 5 0 0 0 0-10z")
+                RailThemeIcon.Data = CType(System.Windows.Application.Current.FindResource("BrclGeometrySun"), Geometry)
                 RailThemeBtn.ToolTip = "切换到浅色"
             End If
         Catch ex As Exception
         End Try
     End Sub
 
+    Private Sub BtnTitleMax_Click() Handles BtnTitleMax.Click
+        If WindowClosing OrElse WindowMotionBusy OrElse Not IsWindowLoadFinished Then Return
+        WindowState = If(WindowState = WindowState.Maximized, WindowState.Normal, WindowState.Maximized)
+    End Sub
+
+    Private Sub BtnTitleMax_KeyDown(sender As Object, e As KeyEventArgs) Handles BtnTitleMax.KeyDown
+        If e.Key <> Key.Enter AndAlso e.Key <> Key.Space Then Return
+        e.Handled = True
+        If e.IsRepeat Then Return
+        PlayUiSound()
+        BtnTitleMax_Click()
+    End Sub
+
+    Private Sub BtnTitleChrome_KeyDown(sender As Object, e As KeyEventArgs) Handles BtnTitleMin.KeyDown, BtnTitleClose.KeyDown, BtnTitleInner.KeyDown
+        If e.Key <> Key.Enter AndAlso e.Key <> Key.Space Then Return
+        e.Handled = True
+        If e.IsRepeat OrElse WindowClosing OrElse WindowMotionBusy OrElse Not IsWindowLoadFinished Then Return
+        PlayUiSound()
+        If sender Is BtnTitleMin Then
+            BtnTitleMin_Click()
+        ElseIf sender Is BtnTitleClose Then
+            BtnTitleClose_Click(sender, Nothing)
+        ElseIf sender Is BtnTitleInner Then
+            PageBack()
+        End If
+    End Sub
+
+    Private Shared Sub UpdateMaximizeButton(Button As MyIconButton, Maximized As Boolean)
+        Dim Label = If(Maximized, "还原", "最大化")
+        Button.ToolTip = Label
+        Automation.AutomationProperties.SetName(Button, Label)
+        Button.Logo = CStr(System.Windows.Application.Current.FindResource(If(Maximized, "BrclIconRestore", "BrclIconMaximize")))
+    End Sub
+
+    Private Sub UpdateWindowStateChrome() Handles Me.StateChanged
+        If BtnTitleMax Is Nothing Then Return
+        Dim Maximized = WindowState = WindowState.Maximized OrElse
+            (WindowState = WindowState.Minimized AndAlso LastUnminimizedWindowState = WindowState.Maximized)
+        UpdateMaximizeButton(BtnTitleMax, Maximized)
+        PanBack.Margin = New Thickness(If(Maximized, 0, 10))
+        BorderForm.Margin = New Thickness(If(Maximized, 0, 8))
+        RectForm.RadiusX = If(Maximized, 0, 3)
+        RectForm.RadiusY = If(Maximized, 0, 3)
+        For Each Edge As FrameworkElement In {ResizerT, ResizerB, ResizerL, ResizerR, ResizerLT, ResizerLB, ResizerRT, ResizerRB}
+            Edge.Visibility = If(Maximized, Visibility.Collapsed, Visibility.Visible)
+        Next
+    End Sub
+
     '最小化
     Private Sub BtnTitleMin_Click() Handles BtnTitleMin.Click
-        WindowState = WindowState.Minimized
+        If WindowClosing OrElse WindowMotionBusy OrElse Not IsWindowLoadFinished Then Return
+        If Not UiMotionEnabled Then
+            WindowState = WindowState.Minimized
+            Return
+        End If
+        AniStop("Form WindowMotion")
+        WindowMotionBusy = True
+        PanBack.IsHitTestVisible = False
+        Dim Scale As ScaleTransform = Nothing
+        Dim Position As TranslateTransform = Nothing
+        PrepareWindowMotion(Scale, Position)
+        AniStart({
+            AaDouble(Sub(i)
+                         Scale.ScaleX += i
+                         Scale.ScaleY += i
+                     End Sub, 0.98 - Scale.ScaleX, 160,, New AniEaseInFluent),
+            AaDouble(Sub(i) Position.Y += i, 10 - Position.Y, 160,, New AniEaseInFluent),
+            AaOpacity(Me, -Opacity, 160),
+            AaCode(Sub()
+                       WindowState = WindowState.Minimized
+                       PanBack.RenderTransform = Nothing
+                       Opacity = Settings.Get(Of Integer)("UiLauncherTransparent") / 1000 + 0.4
+                       PanBack.IsHitTestVisible = True
+                       WindowMotionBusy = False
+                   End Sub,, True)
+        }, "Form WindowMotion")
+    End Sub
+
+    Private WindowClosing As Boolean
+    Private WindowMotionBusy As Boolean
+    Private WindowWasMinimized As Boolean
+    Private LastUnminimizedWindowState As WindowState = WindowState.Normal
+
+    Private Sub PrepareWindowMotion(ByRef Scale As ScaleTransform, ByRef Position As TranslateTransform)
+        Dim Group = TryCast(PanBack.RenderTransform, TransformGroup)
+        Scale = If(Group?.Children.OfType(Of ScaleTransform)().FirstOrDefault(), New ScaleTransform(1, 1))
+        Position = If(Group?.Children.OfType(Of TranslateTransform)().FirstOrDefault(), New TranslateTransform())
+        PanBack.RenderTransformOrigin = New Point(0.5, 0.5)
+        PanBack.RenderTransform = New TransformGroup With {.Children = New TransformCollection({Scale, Position})}
+    End Sub
+    Private Sub WindowRestoreAnimation() Handles Me.StateChanged
+        If WindowClosing Then Return
+        If WindowState = WindowState.Minimized Then
+            WindowWasMinimized = True
+            Return
+        End If
+        LastUnminimizedWindowState = WindowState
+        If Not WindowWasMinimized OrElse Not IsWindowLoadFinished Then Return
+        WindowWasMinimized = False
+        If Not UiMotionEnabled Then Return
+        AniStop("Form WindowMotion")
+        WindowMotionBusy = False
+        PanBack.IsHitTestVisible = True
+        PanBack.RenderTransformOrigin = New Point(0.5, 0.5)
+        Dim Scale As New ScaleTransform(0.985, 0.985)
+        Dim Position As New TranslateTransform(0, 6)
+        PanBack.RenderTransform = New TransformGroup With {.Children = New TransformCollection({Scale, Position})}
+        Opacity = 0
+        AniStart({
+            AaOpacity(Me, Settings.Get(Of Integer)("UiLauncherTransparent") / 1000 + 0.4, 180),
+            AaDouble(Sub(i)
+                         Scale.ScaleX += i
+                         Scale.ScaleY += i
+                     End Sub, 0.015, 180,, New AniEaseOutFluent),
+            AaDouble(Sub(i) Position.Y += i, -6, 180,, New AniEaseOutFluent),
+            AaCode(Sub() PanBack.RenderTransform = Nothing,, True)
+        }, "Form WindowMotion")
     End Sub
 
     '背景图片与标题栏
@@ -1016,14 +1462,16 @@ Public Class FormMain
 
     '按键事件
     Private Sub FormMain_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
-        If e.IsRepeat Then Return
+        If e.Handled OrElse e.IsRepeat Then Return
         '修复按下 Alt 后误认为弹出系统菜单导致的冻结
         If e.SystemKey = Key.LeftAlt OrElse e.SystemKey = Key.RightAlt Then e.Handled = True
         '在有弹窗时：回车选择第一个，Esc 选择最后一个
         If PanMsg.Children.Any Then
             If e.Key = Key.Enter Then
+                e.Handled = True
                 CType(PanMsg.Children(0), Object).Btn1_Click()
             ElseIf e.Key = Key.Escape OrElse (e.Key = Key.W AndAlso Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) Then
+                e.Handled = True
                 Dim Msg As Object = PanMsg.Children(0)
                 If TypeOf Msg IsNot MyMsgInput AndAlso TypeOf Msg IsNot MyMsgSelect AndAlso Msg.Btn3.Visibility = Visibility.Visible Then
                     Msg.Btn3_Click()
@@ -1040,20 +1488,36 @@ Public Class FormMain
         ' 在没有弹窗时：继续检查……
         '==========================
 
-        'Ctrl + 1~4 快速切换主页面（与导航按钮顺序一致；输入框内不抢键）
+        'Ctrl + 1~7 快速切换主页面（保留既有快捷键映射；输入框内不抢键）
         If Keyboard.Modifiers.HasFlag(ModifierKeys.Control) AndAlso TypeOf Keyboard.FocusedElement IsNot TextBox Then
             Select Case e.Key
                 Case Key.D1, Key.NumPad1
+                    e.Handled = True
                     PageChange(PageType.Launch)
                     Return
                 Case Key.D2, Key.NumPad2
+                    e.Handled = True
                     PageChange(PageType.Brs)
                     Return
                 Case Key.D3, Key.NumPad3
+                    e.Handled = True
                     PageChange(PageType.Stock)
                     Return
                 Case Key.D4, Key.NumPad4
+                    e.Handled = True
+                    PageChange(PageType.SatelliteMap)
+                    Return
+                Case Key.D5, Key.NumPad5
+                    e.Handled = True
                     PageChange(PageType.Setup)
+                    Return
+                Case Key.D6, Key.NumPad6
+                    e.Handled = True
+                    PageChange(PageType.News)
+                    Return
+                Case Key.D7, Key.NumPad7
+                    e.Handled = True
+                    PageChange(PageType.Bank)
                     Return
             End Select
         End If
@@ -1078,6 +1542,7 @@ Public Class FormMain
         End If
         '按 F5 刷新页面
         If e.Key = Key.F5 Then
+            e.Handled = True
             If TypeOf PageLeft Is IRefreshable Then CType(PageLeft, IRefreshable).Refresh()
             If TypeOf PageRight Is IRefreshable Then CType(PageRight, IRefreshable).Refresh()
             Return
@@ -1389,7 +1854,7 @@ Public Class FormMain
             '这一坨乱七八糟的，别改，改了指不定就炸了，自己电脑还复现不出来
             Visibility = Visibility.Visible
             ShowInTaskbar = True
-            WindowState = WindowState.Normal
+            If WindowState = WindowState.Minimized Then WindowState = LastUnminimizedWindowState
             Hidden = False
             Topmost = True '偶尔 SetForegroundWindow 失效
             Topmost = False
@@ -1457,6 +1922,12 @@ Public Class FormMain
         ''' 交易所页。
         ''' </summary>
         Stock = 11
+        ''' <summary>服务器卫星地图。</summary>
+        SatelliteMap = 12
+        ''' <summary>服务器公告与动态。</summary>
+        News = 13
+        ''' <summary>团队银行。</summary>
+        Bank = 14
     End Enum
     ''' <summary>
     ''' 次要页面种类。其数值必须与 StackPanel 中的下标一致。
@@ -1474,6 +1945,10 @@ Public Class FormMain
         SetupLink = 1
         SetupUI = 2
         SetupAbout = 3
+        SetupSound = 4
+        SetupSponsors = 5
+        SetupChangelog = 6
+        SetupPrivacy = 7
         LinkMain = 0
         OtherHelp = 0
         OtherAbout = 1
@@ -1483,6 +1958,11 @@ Public Class FormMain
         InstanceMod = 2
         InstanceModDisabled = 3
         InstanceExport = 4
+        InstanceSaves = 5
+        InstanceResourcePacks = 6
+        InstanceShaders = 7
+        InstanceScreenshots = 8
+        InstanceSchematics = 9
     End Enum
     ''' <summary>
     ''' 获取次级页面的名称。若并非次级页面则返回空字符串，故可以以此判断是否为次级页面。
@@ -1587,7 +2067,31 @@ Public Class FormMain
             Return Value.Page
         End Operator
     End Class
-    Public PageLeft As MyPageLeft, PageRight As MyPageRight
+    Public PageLeft As MyPageLeft
+    Private _PageRight As MyPageRight
+    Public Property PageRight As MyPageRight
+        Get
+            Return _PageRight
+        End Get
+        Set(value As MyPageRight)
+            If value Is _PageRight Then Return
+            If _PageRight IsNot Nothing Then RemoveHandler _PageRight.Loaded, AddressOf WorkspacePageLoaded
+            _PageRight = value
+            If value Is Nothing Then Return
+            AddHandler value.Loaded, AddressOf WorkspacePageLoaded
+            If value.IsLoaded Then RefreshWorkspaceScene(value)
+        End Set
+    End Property
+
+    'A single canvas spans the workspace. Change its motif only when the new page
+    'is mounted, so an outgoing page never receives the next page's background.
+    Private Sub WorkspacePageLoaded(sender As Object, e As RoutedEventArgs)
+        If sender Is _PageRight Then RefreshWorkspaceScene(_PageRight)
+    End Sub
+    Private Sub RefreshWorkspaceScene(page As MyPageRight)
+        If WorkspaceBackdrop Is Nothing OrElse page Is Nothing Then Return
+        WorkspaceBackdrop.SceneKey = page.GetType().Name
+    End Sub
 
     '引发实际页面切换的入口
     Private IsChangingPage As Boolean = False
@@ -1642,7 +2146,7 @@ Public Class FormMain
     ''' <summary>
     ''' 通过点击导航栏改变页面。
     ''' </summary>
-    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check, BtnTitleSelectBrs.Check, BtnTitleSelectStock.Check
+    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check, BtnTitleSelectBrs.Check, BtnTitleSelectStock.Check, BtnTitleSelectMap.Check, BtnTitleSelectNews.Check, BtnTitleSelectBank.Check
         If IsChangingPage Then Return
         PageChangeActual(Val(sender.Tag))
     End Sub
@@ -1665,6 +2169,8 @@ Public Class FormMain
         If PageCurrent = Stack AndAlso (PageCurrentSub = SubType OrElse SubType = -1) Then Return
         AniControlEnabled += 1
         Try
+            '移除浏览器页前把键盘焦点还给主窗体，避免后续快捷键落入已隐藏的原生浏览器。
+            If TypeOf PageRight Is PageStock OrElse TypeOf PageRight Is PageMap Then Keyboard.Focus(Me)
 
 #Region "子页面处理"
             Dim PageName As String = PageNameGet(Stack)
@@ -1716,13 +2222,22 @@ Public Class FormMain
                     PageChangeAnim(FrmLaunchLeft, FrmLaunchRight)
                 Case PageType.Link '联机
                     If FrmLinkMain Is Nothing Then FrmLinkMain = New PageLinkMain
-                    PageChangeAnim(New MyPageLeft, FrmLinkMain)
+                    PageChangeAnim(EmptyPageLeft, FrmLinkMain)
                 Case PageType.Brs 'BRS 社区
                     If FrmBrs Is Nothing Then FrmBrs = New PageBRS
-                    PageChangeAnim(New MyPageLeft, FrmBrs)
+                    PageChangeAnim(EmptyPageLeft, FrmBrs)
                 Case PageType.Stock '交易所
                     If FrmStock Is Nothing Then FrmStock = New PageStock
-                    PageChangeAnim(New MyPageLeft, FrmStock)
+                    PageChangeAnim(EmptyPageLeft, FrmStock)
+                Case PageType.SatelliteMap '卫星图
+                    If FrmMap Is Nothing Then FrmMap = New PageMap
+                    PageChangeAnim(EmptyPageLeft, FrmMap)
+                Case PageType.News '新闻
+                    If FrmNews Is Nothing Then FrmNews = New PageNews
+                    PageChangeAnim(EmptyPageLeft, FrmNews)
+                Case PageType.Bank '银行
+                    If FrmBank Is Nothing Then FrmBank = New PageBank
+                    PageChangeAnim(EmptyPageLeft, FrmBank)
                 Case PageType.Setup '设置
                     If FrmSetupLeft Is Nothing Then FrmSetupLeft = New PageSetupLeft
                     PageChangeAnim(FrmSetupLeft, FrmSetupLeft.PageGet(SubType))
@@ -1739,9 +2254,9 @@ Public Class FormMain
                     PageChangeAnim(FrmInstanceLeft, FrmInstanceLeft.PageGet(SubType))
                 Case PageType.ResourceDetail '社区资源详情
                     If FrmDownloadResourceDetail Is Nothing Then FrmDownloadResourceDetail = New PageDownloadResourceDetail
-                    PageChangeAnim(New MyPageLeft, FrmDownloadResourceDetail)
+                    PageChangeAnim(EmptyPageLeft, FrmDownloadResourceDetail)
                 Case PageType.HelpDetail '帮助详情
-                    PageChangeAnim(New MyPageLeft, Stack.Additional(1))
+                    PageChangeAnim(EmptyPageLeft, Stack.Additional(1))
             End Select
 #End Region
 
@@ -1767,7 +2282,7 @@ Public Class FormMain
         PageLeft = TargetLeft
         PageRight = TargetRight
         '触发页面通用动画
-        CType(PanMainLeft.Child, MyPageLeft).TriggerHideAnimation()
+        If PanMainLeft.Child IsNot EmptyPageLeft Then CType(PanMainLeft.Child, MyPageLeft).TriggerHideAnimation()
         CType(PanMainRight.Child, MyPageRight).PageOnExit()
         AniControlEnabled -= 1
         '执行动画
@@ -1776,6 +2291,7 @@ Public Class FormMain
             Sub()
                 AniControlEnabled += 1
                 '把新页面添加进容器
+                ConfigurePageLayout(PageCurrent.Page = PageType.Launch)
                 PanMainLeft.Child = PageLeft
                 PageLeft.Opacity = 0
                 PanMainLeft.Background = Nothing
@@ -1786,7 +2302,7 @@ Public Class FormMain
             Sub()
                 '延迟触发页面通用动画，以使得在 Loaded 事件中加载的控件得以处理
                 PageLeft.Opacity = 1
-                PageLeft.TriggerShowAnimation()
+                If PageLeft IsNot EmptyPageLeft Then PageLeft.TriggerShowAnimation()
             End Sub, 30, True)
         }, "FrmMain PageChangeLeft")
         AniStart({
@@ -1808,6 +2324,24 @@ Public Class FormMain
                 PageRight.PageOnEnter()
             End Sub, 30, True)
         }, "FrmMain PageChangeRight")
+    End Sub
+
+    '启动页以场景为中心，玩家操作停靠右侧；其它页面保留二级导航结构。
+    Private Sub ConfigurePageLayout(IsLaunch As Boolean)
+        Dim PlayerHost = CType(PanMainLeft.Parent, Border)
+        Dim ContentHost = CType(PanMainRight.Parent, Border)
+        Grid.SetColumn(PlayerHost, If(IsLaunch, 1, 0))
+        Grid.SetColumn(ContentHost, If(IsLaunch, 0, 1))
+        PanMain.ColumnDefinitions(0).Width = If(IsLaunch, New GridLength(1, GridUnitType.Star), GridLength.Auto)
+        PanMain.ColumnDefinitions(1).Width = If(IsLaunch, GridLength.Auto, New GridLength(1, GridUnitType.Star))
+        PanLeft.HorizontalAlignment = If(IsLaunch, HorizontalAlignment.Right, HorizontalAlignment.Left)
+        PlayerHost.BorderThickness = If(IsLaunch, New Thickness(1, 0, 0, 0), New Thickness(0))
+        PlayerHost.SetResourceReference(Border.BorderBrushProperty, "ColorBrushCardLine")
+        If IsLaunch Then
+            PlayerHost.SetResourceReference(Border.BackgroundProperty, "ColorBrush7")
+        Else
+            PlayerHost.Background = Nothing
+        End If
     End Sub
     ''' <summary>
     ''' 退出子界面。

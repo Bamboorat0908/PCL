@@ -68,12 +68,34 @@ Public Class PageLoginMs
         ComboAccounts.IsEnabled = False
         BtnLogin.IsEnabled = False
         BtnLogin.Text = "0%"
+        LabLoginStatus.Text = "正在连接微软登录服务…"
+        LabLoginStatus.Visibility = Visibility.Visible
         RunInNewThread(
         Sub()
             Try
+                Dim Timer = Stopwatch.StartNew()
+                Dim LastProgress As Double = -1
+                Dim StageStart As Long = 0
                 McLoginMsLoader.Start(GetLoginData(), IsForceRestart:=True)
                 Do While McLoginMsLoader.State = LoadState.Loading
-                    RunInUi(Sub() BtnLogin.Text = Math.Round(McLoginMsLoader.Progress * 100) & "%")
+                    Dim Progress = McLoginMsLoader.Progress
+                    If Progress <> LastProgress Then
+                        LastProgress = Progress
+                        StageStart = Timer.ElapsedMilliseconds
+                    End If
+                    Dim Status As String
+                    Select Case Progress
+                        Case Is < 0.25 : Status = "正在等待微软登录授权…"
+                        Case Is < 0.55 : Status = "正在验证 Xbox 账号…"
+                        Case Is < 0.7 : Status = "正在获取游戏登录凭证…"
+                        Case Is < 0.85 : Status = "正在验证游戏与玩家信息…"
+                        Case Else : Status = "正在获取玩家信息…"
+                    End Select
+                    If Progress >= 0.25 AndAlso Timer.ElapsedMilliseconds - StageStart >= 12000 Then Status &= " 连接较慢，请稍候。"
+                    RunInUi(Sub()
+                                BtnLogin.Text = Math.Round(Progress * 100) & "%"
+                                If LabLoginStatus.Text <> Status Then LabLoginStatus.Text = Status
+                            End Sub)
                     Thread.Sleep(50)
                 Loop
                 If McLoginMsLoader.State = LoadState.Finished Then
@@ -100,6 +122,7 @@ Public Class PageLoginMs
                     ComboAccounts.IsEnabled = True
                     BtnLogin.IsEnabled = True
                     BtnLogin.Text = "登录"
+                    LabLoginStatus.Visibility = Visibility.Collapsed
                 End Sub)
             End Try
         End Sub, "Ms Login")

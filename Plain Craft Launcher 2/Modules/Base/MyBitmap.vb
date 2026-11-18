@@ -125,6 +125,7 @@ Public Class MyBitmap
         End Using
     End Sub
     Private Class WebPDecoder '将代码隔离在另外一个类中，这样只要不调用这个方法就不会加载 Imazen.WebP.dll
+        <Runtime.CompilerServices.MethodImpl(Runtime.CompilerServices.MethodImplOptions.NoInlining)>
         Public Shared Function DecodeFromBytes(Bytes As Byte()) As System.Drawing.Bitmap
             Return New Imazen.WebP.SimpleDecoder().DecodeFromBytes(Bytes, Bytes.Length)
         End Function

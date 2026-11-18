@@ -17,13 +17,13 @@ Public Class MyPageLeft
         If AnimatedControl Is Nothing Then
             '缩放动画
             If TypeOf RenderTransform IsNot ScaleTransform Then
-                RenderTransform = New ScaleTransform(0.96, 0.96)
+                RenderTransform = New ScaleTransform(0.985, 0.985)
                 RenderTransformOrigin = New Point(0.5, 0.5)
             End If
             Opacity = 0
             AniStart({
-                AaScaleTransform(Me, 1 - CType(RenderTransform, ScaleTransform).ScaleX, 400,, New AniEaseOutBack(2)),
-                AaOpacity(Me, 1, 100)
+                AaScaleTransform(Me, 1 - CType(RenderTransform, ScaleTransform).ScaleX, 220,, New AniEaseOutFluent),
+                AaOpacity(Me, 1, 150)
             }, "PageLeft PageChange " & Uuid)
         Else
             '逐个进入动画
@@ -38,19 +38,18 @@ Public Class MyPageLeft
                     If TypeOf Element Is MyListItem Then CType(Element, MyListItem).IsMouseOverAnimationEnabled = True
                 Else
                     Element.Opacity = 0
-                    Element.RenderTransform = New TranslateTransform(-25, 0)
+                    Element.RenderTransform = New TranslateTransform(-10, 0)
                     If TypeOf Element Is MyListItem Then CType(Element, MyListItem).IsMouseOverAnimationEnabled = False
                     AniList.Add(AaOpacity(Element, If(TypeOf Element Is TextBlock, 0.6, 1), 100, Delay, New AniEaseOutFluent(AniEasePower.Weak)))
-                    AniList.Add(AaTranslateX(Element, 5, 200, Delay, New AniEaseOutFluent))
-                    AniList.Add(AaTranslateX(Element, 20, 300, Delay, New AniEaseOutBack(AniEasePower.Weak)))
+                    AniList.Add(AaTranslateX(Element, 10, 220, Delay, New AniEaseOutFluent))
                     If TypeOf Element Is MyListItem Then
                         AniList.Add(AaCode(
                         Sub()
                             CType(Element, MyListItem).IsMouseOverAnimationEnabled = True
                             CType(Element, MyListItem).RefreshColor(Me, New EventArgs)
-                        End Sub, Delay + 280))
+                        End Sub, MotionDuration(Delay + 220)))
                     End If
-                    Delay += Math.Max(15 - Id, 7) * 2
+                    Delay = Math.Min(72, Delay + 18)
                     Id += 1
                 End If
             Next

@@ -5,15 +5,67 @@
     mc:Ignorable="d" x:Class="PageOtherAbout"
     PanScroll="PanBack" RenderOptions.BitmapScalingMode="LowQuality">
     <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
-        <StackPanel x:Name="PanMain" Margin="25,10" Grid.IsSharedSizeScope="True">
-            <local:MyCard Margin="0,15,0,0" Title="BRCL">
-                <StackPanel Margin="21,40,21,16">
-                    <TextBlock TextWrapping="Wrap" LineHeight="21" Margin="0,0,0,8"
-                               Text="BRCL 是基于 Plain Craft Launcher 2 的二次创作版本，在原版基础上移除了下载与更多页面，并更换了名称与图标。" />
-                    <TextBlock TextWrapping="Wrap" LineHeight="21" Margin="0,0,0,8"
-                               Text="本版本遵循 Plain Craft Launcher 的分发有限许可：保留原作者龙腾猫跃的署名与许可声明，不用于商业用途。" />
-                    <TextBlock TextWrapping="Wrap" LineHeight="21"
-                               Text="原项目地址：https://github.com/Meloong-Git/PCL" />
+        <StackPanel x:Name="PanMain" Margin="20,16,20,20">
+            <DockPanel Margin="0,0,0,12" LastChildFill="True">
+                <local:MyButton x:Name="BtnSupportAuthor" DockPanel.Dock="Right" Text="支持 PCL 原作者" Icon="{StaticResource BrclGeometryHeart}" Height="30" Padding="10,0" Margin="12,0,0,0" />
+                <TextBlock Text="基础项目 PCL · 原作者 龙腾猫跃" Foreground="{DynamicResource ColorBrush2}" FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </DockPanel>
+            <Border Background="{DynamicResource ColorBrush7}" BorderBrush="{DynamicResource ColorBrushCardLine}" BorderThickness="1" Padding="20">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Image Width="72" Height="72" Margin="0,0,18,0" VerticalAlignment="Top" Source="/BRCL;component/Images/LauncherLogo.png" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="BRS / COMMUNITY LAUNCHER" FontFamily="Consolas" FontSize="10" Foreground="{DynamicResource ColorBrush2}" Margin="0,0,0,6" TextWrapping="Wrap" />
+                        <TextBlock Text="BRCL" FontSize="25" FontWeight="Bold" />
+                        <TextBlock Text="BRS 专属 Minecraft 启动器" FontSize="13" Margin="0,5,0,0" TextWrapping="Wrap" />
+                        <TextBlock Text="从新的周目出发，让我们的故事继续。" Foreground="{DynamicResource ColorBrush2}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap" LineHeight="20" />
+                        <TextBlock x:Name="LabVersion" FontFamily="Consolas, Microsoft YaHei UI" Foreground="{DynamicResource ColorBrush3}" Margin="0,12,0,0" TextWrapping="Wrap" />
+                        <TextBlock x:Name="LabBaseVersion" Foreground="{DynamicResource ColorBrush2}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap" />
+                        <TextBlock x:Name="LabRuntime" Foreground="{DynamicResource ColorBrush2}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+            <WrapPanel Margin="0,12,0,0">
+                <local:MyButton x:Name="BtnCopyVersion" Text="复制版本信息" Icon="{StaticResource BrclGeometryCopy}" Height="34" Padding="12,0" Margin="0,0,8,8" />
+                <local:MyButton x:Name="BtnCheckUpdate" Text="检查启动器更新" Icon="{StaticResource BrclGeometryRefresh}" Height="34" Padding="12,0" Margin="0,0,8,8" />
+                <local:MyButton x:Name="BtnDownloadLauncher" Text="下载当前版本" Icon="{StaticResource BrclGeometryDownload}" Height="34" Padding="12,0" Margin="0,0,8,8" />
+                <local:MyButton x:Name="BtnOpenLogs" Text="查看本地日志" Icon="{StaticResource BrclGeometryFolder}" Height="34" Padding="12,0" Margin="0,0,8,8" />
+            </WrapPanel>
+            <local:MyCard Title="一个入口，连接 BRS" Margin="0,8,0,0">
+                <StackPanel Margin="20,40,20,18">
+                    <TextBlock Text="BRCL 围绕 BRS 服务器的日常游玩打造，把进入游戏前的准备和社区里的日常，放在同一个启动器中。" TextWrapping="Wrap" LineHeight="21" />
+                    <TextBlock TextWrapping="Wrap" LineHeight="21" Margin="0,12,0,0"><Run FontWeight="SemiBold" Text="启动与管理　"/><Run Text="登录账号、选择客户端、管理游戏版本与运行环境。"/></TextBlock>
+                    <TextBlock TextWrapping="Wrap" LineHeight="21" Margin="0,7,0,0"><Run FontWeight="SemiBold" Text="周目与整合包　"/><Run Text="查看当前周目、整合包主题和服务器状态，安装 BRS 专属整合包。"/></TextBlock>
+                    <TextBlock TextWrapping="Wrap" LineHeight="21" Margin="0,7,0,0"><Run FontWeight="SemiBold" Text="社区与服务　"/><Run Text="浏览 BRS 社区动态，进入交易所，通过卫星地图查看服务器世界。"/></TextBlock>
+                    <TextBlock Text="社区网页、交易所与卫星地图需要网络连接，内嵌页面依赖 WebView2 运行时；内容与可用性由对应服务提供。" TextWrapping="Wrap" LineHeight="20" Foreground="{DynamicResource ColorBrush2}" FontSize="11" Margin="0,12,0,0" />
+                    <local:MyButton x:Name="BtnBrsWebsite" Text="前往 BRS 社区" Icon="{StaticResource BrclGeometryExternal}" Height="32" HorizontalAlignment="Left" Padding="12,0" Margin="0,12,0,0" />
+                </StackPanel>
+            </local:MyCard>
+            <local:MyCard Title="更新与问题反馈" Margin="0,14,0,0">
+                <StackPanel Margin="20,40,20,18">
+                    <TextBlock Text="每次启动后会在后台检查新版本，也可通过上方的“检查启动器更新”手动检查，或点击“下载当前版本”获取安装包。遇到问题时，请记录发生前的操作，并提供 BRCL 版本和错误弹窗中的错误代码；相关日志有助于进一步排查。" TextWrapping="Wrap" LineHeight="21" />
+                    <TextBlock Text="“复制版本信息”仅复制启动器版本、基础版本与运行环境，不包含账号、密码或登录令牌。" TextWrapping="Wrap" LineHeight="21" Margin="0,8,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                    <TextBlock Text="请向 BRS 维护方反馈 BRCL 专属功能和界面问题，便于结合服务器环境处理。" TextWrapping="Wrap" LineHeight="21" Margin="0,8,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                </StackPanel>
+            </local:MyCard>
+            <local:MyCard Title="诊断报告" Margin="0,14,0,0">
+                <StackPanel Margin="20,40,20,18">
+                    <TextBlock x:Name="LabCrashPreference" TextWrapping="Wrap" LineHeight="21" FontWeight="SemiBold" />
+                    <TextBlock Text="开启后，启动器异常退出或游戏崩溃时，BRCL 会收集相关错误信息与日志，过滤登录令牌等敏感字段，并加密发送至 BRS 诊断服务，用于排查问题。" TextWrapping="Wrap" LineHeight="21" Margin="0,8,0,0" />
+                    <TextBlock Text="你可以在“设置 → 启动”中随时开启或关闭自动诊断报告。" TextWrapping="Wrap" LineHeight="21" Margin="0,8,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                </StackPanel>
+            </local:MyCard>
+            <local:MyCard Title="项目来源与致谢" Margin="0,14,0,0">
+                <StackPanel Margin="20,40,20,18">
+                    <TextBlock Text="BRCL 是第三方基于 Plain Craft Launcher 2（PCL）独立修改的启动器，面向 BRS 服务器提供专属界面与服务整合，与 PCL 官方无隶属关系。PCL 原作者为龙腾猫跃（成都瓜皮龙科技有限公司）。" TextWrapping="Wrap" LineHeight="21" />
+                    <TextBlock Text="感谢 PCL 与 MeloongCore 提供的基础能力，以及 Microsoft Edge WebView2、Newtonsoft.Json、NAudio 等项目的支持。也感谢参与 BRS 建设、测试和反馈的每一位玩家。" TextWrapping="Wrap" LineHeight="21" Margin="0,8,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                    <TextBlock Text="各项目与第三方组件的权利归各自权利人所有，使用与分发请遵循相应许可。Minecraft 及相关商标属于 Mojang / Microsoft，BRCL 并非其官方产品。" TextWrapping="Wrap" LineHeight="21" Margin="0,8,0,0" Foreground="{DynamicResource ColorBrush2}" />
+                    <WrapPanel Margin="0,12,0,0">
+                        <local:MyButton x:Name="BtnPclSource" Text="PCL 原项目" Height="32" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnPclLicense" Text="原项目许可" Height="32" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnCoreSource" Text="MeloongCore" Height="32" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnWebViewInfo" Text="WebView2 说明" Height="32" Padding="12,0" Margin="0,0,8,8" />
+                    </WrapPanel>
                 </StackPanel>
             </local:MyCard>
         </StackPanel>

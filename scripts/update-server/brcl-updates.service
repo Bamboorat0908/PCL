@@ -1,0 +1,29 @@
+[Unit]
+Description=BRCL signed launcher updates
+After=network.target
+
+[Service]
+Type=simple
+User=brcl-updates
+Group=brcl-updates
+StateDirectory=brcl-reports
+StateDirectoryMode=0700
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/brcl-updates/server.py
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6
+CapabilityBoundingSet=
+MemoryMax=384M
+TasksMax=256
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,31 @@
+<local:MyPageRight x:Class="PageMap"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:PCL"
+    xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
+    <Grid Margin="20,16,20,20" Background="Transparent">
+        <Border BorderBrush="{DynamicResource ColorBrushCardLine}" BorderThickness="1" Background="{DynamicResource ColorBrush7}" CornerRadius="3" ClipToBounds="True">
+        <Grid>
+        <wv2:WebView2 x:Name="ViewMap" Visibility="Hidden" />
+        <local:MyCard x:Name="CardLoading" HorizontalAlignment="Center" VerticalAlignment="Center" UseAnimation="False">
+            <StackPanel Margin="24,20">
+                <TextBlock Text="正在连接服务器卫星地图" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="首次打开可能需要几秒" Margin="0,8,0,0" Foreground="{DynamicResource ColorBrush2}" />
+            </StackPanel>
+        </local:MyCard>
+        <local:MyCard x:Name="CardUnavailable" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="440" Margin="24" UseAnimation="False">
+            <StackPanel Margin="24,20">
+                <TextBlock x:Name="LabTitle" Text="卫星地图暂未就绪" FontSize="17" FontWeight="SemiBold" />
+                <TextBlock x:Name="LabMessage" Text="地图服务正在部署中，请稍后重试。" TextWrapping="Wrap" Margin="0,10,0,0" />
+                <TextBlock Text="t42.sjcmc.cn:25277" FontFamily="Consolas" Margin="0,10,0,14" Foreground="{DynamicResource ColorBrush2}" />
+                <WrapPanel>
+                    <local:MyButton x:Name="BtnRetry" Text="重新连接" Icon="{StaticResource BrclGeometryRefresh}" ColorType="Highlight" Height="34" MinWidth="110" Padding="12,0" Margin="0,0,8,8" />
+                    <local:MyButton x:Name="BtnBrowser" Text="在浏览器中打开" Icon="{StaticResource BrclGeometryExternal}" Height="34" Padding="12,0" Margin="0,0,0,8" />
+                </WrapPanel>
+                <TextBlock Text="也可以按 F5 刷新" Margin="0,10,0,0" FontSize="11" Foreground="{DynamicResource ColorBrush2}" />
+            </StackPanel>
+        </local:MyCard>
+        </Grid>
+        </Border>
+    </Grid>
+</local:MyPageRight>

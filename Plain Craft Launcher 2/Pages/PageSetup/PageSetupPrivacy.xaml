@@ -1,0 +1,26 @@
+<local:MyPageRight xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:PCL"
+    x:Class="PageSetupPrivacy" PanScroll="PanBack">
+    <local:MyScrollViewer x:Name="PanBack" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="20,16,20,20">
+            <local:MyCard Title="用户体验改善计划" Margin="0,0,0,14">
+                <StackPanel Margin="20,40,20,20">
+                    <local:MyCheckBox x:Name="CheckUsageStatistics" Height="28" Text="参与启动器使用统计" local:SettingService.Key="BrclUsageEnabled"/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Text="发送随机安装标识、启动日期、版本和游戏会话，用于计算活跃安装和崩溃率。"/>
+                </StackPanel>
+            </local:MyCard>
+            <local:MyCard Title="崩溃诊断">
+                <StackPanel Margin="20,40,20,20">
+                    <TextBlock Text="启动器、Minecraft 和 JVM 崩溃诊断" Margin="0,0,0,5"/>
+                    <local:MyComboBox local:SettingService.Key="BrclCrashMode" AutomationProperties.Name="崩溃诊断模式" HorizontalAlignment="Left" Width="210">
+                        <local:MyComboBoxItem Content="不收集、不发送"/>
+                        <local:MyComboBoxItem Content="每次询问"/>
+                        <local:MyComboBoxItem Content="自动发送脱敏报告"/>
+                    </local:MyComboBox>
+                    <TextBlock TextWrapping="Wrap" Margin="0,8" Text="报告包括异常堆栈和本次会话日志片段，在本机脱敏后加密发送。服务器保留日志正文 30 天，关闭诊断后清除待发送报告。"/>
+                    <local:MyButton x:Name="BtnReviewReports" HorizontalAlignment="Left" Text="查看待确认的报告" Padding="12,0"/>
+                </StackPanel>
+            </local:MyCard>
+        </StackPanel>
+    </local:MyScrollViewer>
+</local:MyPageRight>

@@ -583,7 +583,7 @@ Public Module ModBase
             FileUtils.Delete(TestFilePath)
             Return True
         Catch ex As Exception
-            Logger.Warn(ex, $"没有对文件夹 {Folder} 的权限，请尝试以管理员权限运行 PCL")
+            Logger.Warn(ex, $"没有对文件夹 {Folder} 的权限，请尝试以管理员权限运行 BRCL")
             Return False
         End Try
     End Function
@@ -996,7 +996,7 @@ Public Module ModBase
         Catch ex As Exception
             Logger.Warn(ex, $"无法打开网页（{Url}）")
             ClipboardSet(Url, False)
-            MyMsgBox("可能由于浏览器未正确配置，PCL 无法为你打开网页。" & vbCrLf & "网址已经复制到剪贴板，若有需要可以手动粘贴访问。" & vbCrLf &
+            MyMsgBox("可能由于浏览器未正确配置，BRCL 无法为你打开网页。" & vbCrLf & "网址已经复制到剪贴板，若有需要可以手动粘贴访问。" & vbCrLf &
                      $"网址：{Url}", "无法打开网页")
         End Try
     End Sub
@@ -1059,7 +1059,7 @@ Public Module ModBase
     ''' 将程序中的资源释放到文件。
     ''' </summary>
     Public Sub ExtractResources(FilePath As String, ResourceName As String)
-        Dim Resource = My.Resources.ResourceManager.GetObject(ResourceName)
+        Dim Resource As Object = If(ResourceName = "libwebp64", CType(Application.ReadPackedBytes(ResourceName), Object), My.Resources.ResourceManager.GetObject(ResourceName))
         If TypeOf Resource Is Byte() Then
             Dim Bytes = DirectCast(Resource, Byte())
             If FileUtils.Exists(FilePath) AndAlso CryptographyUtils.ComputeFileHash(FilePath) = CryptographyUtils.ComputeHash(Bytes) Then Return

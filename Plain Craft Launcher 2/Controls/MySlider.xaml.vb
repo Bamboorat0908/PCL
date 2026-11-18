@@ -1,7 +1,14 @@
 Imports System.Windows.Shapes
+Imports System.Windows.Automation
+Imports System.Windows.Automation.Peers
+Imports System.Windows.Automation.Provider
 
 Public Class MySlider
     Implements ISettingControl
+
+    Protected Overrides Function OnCreateAutomationPeer() As AutomationPeer
+        Return New MySliderAutomationPeer(Me)
+    End Function
 
     '基础
 
@@ -17,9 +24,19 @@ Public Class MySlider
             Return _MaxValue
         End Get
         Set(value As Integer)
+            value = Math.Max(0, value)
             If value = _MaxValue Then Return
+            Dim OldMaximum = _MaxValue
+            Dim OldValue = _Value
             _MaxValue = value
+            _Value = Math.Min(_Value, value)
             RefreshWidth(Nothing, Nothing)
+            Dim Peer = TryCast(UIElementAutomationPeer.FromElement(Me), MySliderAutomationPeer)
+            If Peer IsNot Nothing Then
+                Peer.RaisePropertyChangedEvent(RangeValuePatternIdentifiers.MaximumProperty, CDbl(OldMaximum), CDbl(value))
+                If OldValue <> _Value Then Peer.RaisePropertyChangedEvent(RangeValuePatternIdentifiers.ValueProperty, CDbl(OldValue), CDbl(_Value))
+            End If
+            If OldValue <> _Value AndAlso AniControlEnabled = 0 Then RaiseEvent Change(Me, False)
         End Set
     End Property
     Private ChangeByKey As Boolean = False
@@ -42,13 +59,13 @@ Public Class MySlider
                     RaiseEvent PreviewChange(Me, e)
                     If e.Handled Then
                         _Value = OldValue
+                        If ReferenceEquals(DragControl, Me) Then DragControl = Nothing
                         DragStop()
                         Return
                     End If
                 End If
 
-                If IsLoaded AndAlso AniControlEnabled = 0 Then
-                    If ActualWidth < ShapeDot.Width Then Return
+                If IsLoaded AndAlso AniControlEnabled = 0 AndAlso MaxValue > 0 AndAlso ActualWidth > ShapeDot.Width Then
                     Dim NewWidth As Double = _Value / MaxValue * (ActualWidth - ShapeDot.Width)
                     Dim DeltaProcess As Double = Math.Abs(LineFore.Width / (ActualWidth - ShapeDot.Width) - _Value / MaxValue)
                     Dim Time As Double = (1 - Math.Pow(1 - DeltaProcess, 3)) * 300 + If(ChangeByKey, 100, 0)
@@ -60,6 +77,8 @@ Public Class MySlider
                 Else
                     RefreshWidth(Nothing, Nothing)
                 End If
+                Dim Peer = TryCast(UIElementAutomationPeer.FromElement(Me), MySliderAutomationPeer)
+                If Peer IsNot Nothing Then Peer.RaisePropertyChangedEvent(RangeValuePatternIdentifiers.ValueProperty, CDbl(OldValue), CDbl(_Value))
                 If AniControlEnabled = 0 Then RaiseEvent Change(Me, False)
 
             Catch ex As Exception
@@ -70,9 +89,10 @@ Public Class MySlider
     Private Sub RefreshWidth(sender As Object, e As SizeChangedEventArgs) Handles Me.SizeChanged
         If Not IsNothing(e) Then PanMain.Width = e.NewSize.Width
         AniStop("MySlider Progress " & Uuid)
-        Dim NewWidth As Double = _Value / MaxValue * (ActualWidth - ShapeDot.Width)
+        Dim AvailableWidth = Math.Max(0, ActualWidth - ShapeDot.Width)
+        Dim NewWidth As Double = If(MaxValue = 0, 0, _Value / MaxValue * AvailableWidth)
         LineFore.Width = Math.Max(0, NewWidth + If(NewWidth < 0.5, 0, 0.5))
-        LineBack.Width = Math.Max(0, ActualWidth - ShapeDot.Width - NewWidth + If(ActualWidth - ShapeDot.Width - NewWidth < 0.5, 0, 0.5))
+        LineBack.Width = Math.Max(0, AvailableWidth - NewWidth + If(AvailableWidth - NewWidth < 0.5, 0, 0.5))
         ShapeDot.Margin = New Thickness(NewWidth, ShapeDot.Margin.Top, ShapeDot.Margin.Right, ShapeDot.Margin.Bottom)
     End Sub
 
@@ -80,8 +100,11 @@ Public Class MySlider
 
     Public GetHintText As [Delegate]
     Private Sub DragStart(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
+        If Not IsEnabled Then Return
+        Focus() '实际操作才取得焦点；鼠标经过滑条不改变键盘位置。
         e.Handled = True '防止 ScrollViewer 失焦问题
         DragControl = Me
+        RequestMainTick()
         RefreshColor()
         FrmMain.DragDoing()
         AniStart({
@@ -91,6 +114,7 @@ Public Class MySlider
         AniStop("MySlider KeyPopup " & Uuid)
     End Sub
     Public Sub DragDoing()
+        If Not IsEnabled OrElse Not IsLoaded OrElse MaxValue = 0 OrElse ActualWidth <= ShapeDot.Width Then Return
         Dim Percent As Double = ((Mouse.GetPosition(PanMain).X - ShapeDot.Width / 2) / (ActualWidth - ShapeDot.Width)).Clamp(0, 1)
         Dim NewValue As Integer = Percent * MaxValue
         If Not NewValue = Value Then
@@ -103,6 +127,14 @@ Public Class MySlider
         AniStart({
                  AaScaleTransform(ShapeDot, 1 - CType(ShapeDot.RenderTransform, ScaleTransform).ScaleX, 200,, New AniEaseOutFluent)
             }, "MySlider Scale " & Uuid)
+        Popup.IsOpen = False
+    End Sub
+    Private Sub CancelDrag() Handles Me.IsEnabledChanged, Me.Unloaded
+        If ReferenceEquals(DragControl, Me) Then DragControl = Nothing
+        AniStop("MySlider Scale " & Uuid)
+        AniStop("MySlider KeyPopup " & Uuid)
+        CType(ShapeDot.RenderTransform, ScaleTransform).ScaleX = 1
+        CType(ShapeDot.RenderTransform, ScaleTransform).ScaleY = 1
         Popup.IsOpen = False
     End Sub
     Public Sub RefreshPopup()
@@ -163,26 +195,41 @@ Public Class MySlider
     '按键改变
 
     Public Property ValueByKey As UInteger = 1
-    Private Sub MySlider_MouseEnter() Handles Me.MouseEnter
-        Focus() '确保按键能改变值
+    Private Sub AutomationEnabledChanged(sender As Object, e As DependencyPropertyChangedEventArgs) Handles Me.IsEnabledChanged
+        Dim Peer = TryCast(UIElementAutomationPeer.FromElement(Me), MySliderAutomationPeer)
+        If Peer IsNot Nothing Then Peer.RaisePropertyChangedEvent(RangeValuePatternIdentifiers.IsReadOnlyProperty, Not CBool(e.OldValue), Not CBool(e.NewValue))
     End Sub
+
     Private Sub MySlider_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
+        If e.Handled OrElse Not IsEnabled Then Return
         '拒绝一边拖动一边用按键改变
         If ReferenceEquals(Me, DragControl) Then Return
         '改变值
-        If e.Key = Key.Left Then
-            ChangeByKey = True
-            Value -= ValueByKey
+        Dim NewValue As Long
+        Dim StepValue = CLng(Math.Max(1, Math.Min(CLng(ValueByKey), Integer.MaxValue)))
+        Select Case e.Key
+            Case Key.Left, Key.Down
+                NewValue = CLng(Value) - StepValue
+            Case Key.Right, Key.Up
+                NewValue = CLng(Value) + StepValue
+            Case Key.Home
+                NewValue = 0
+            Case Key.End
+                NewValue = MaxValue
+            Case Key.PageDown
+                NewValue = CLng(Value) - Math.Min(CLng(Integer.MaxValue), StepValue * 10)
+            Case Key.PageUp
+                NewValue = CLng(Value) + Math.Min(CLng(Integer.MaxValue), StepValue * 10)
+            Case Else
+                Return
+        End Select
+        e.Handled = True
+        ChangeByKey = True
+        Try
+            Value = CInt(Math.Max(0L, Math.Min(CLng(MaxValue), NewValue)))
+        Finally
             ChangeByKey = False
-            e.Handled = True
-        ElseIf e.Key = Key.Right Then
-            ChangeByKey = True
-            Value += ValueByKey
-            ChangeByKey = False
-            e.Handled = True
-        Else
-            Return
-        End If
+        End Try
         '更新 Popup
         If GetHintText IsNot Nothing Then
             RefreshPopup()
@@ -207,4 +254,96 @@ Public Class MySlider
 
 #End Region
 
+End Class
+
+Public Class MySliderAutomationPeer
+    Inherits FrameworkElementAutomationPeer
+    Implements IRangeValueProvider
+
+    Public Sub New(owner As MySlider)
+        MyBase.New(owner)
+    End Sub
+
+    Private ReadOnly Property Slider As MySlider
+        Get
+            Return DirectCast(Owner, MySlider)
+        End Get
+    End Property
+
+    Protected Overrides Function GetClassNameCore() As String
+        Return NameOf(MySlider)
+    End Function
+
+    Protected Overrides Function GetAutomationControlTypeCore() As AutomationControlType
+        Return AutomationControlType.Slider
+    End Function
+
+    Protected Overrides Function GetNameCore() As String
+        Dim ExplicitName = MyBase.GetNameCore()
+        If Not String.IsNullOrWhiteSpace(ExplicitName) Then Return ExplicitName
+        Return If(TryCast(Slider.ToolTip, String), "")
+    End Function
+
+    Protected Overrides Function GetChildrenCore() As List(Of AutomationPeer)
+        Return Nothing
+    End Function
+
+    Protected Overrides Function GetOrientationCore() As AutomationOrientation
+        Return AutomationOrientation.Horizontal
+    End Function
+
+    Protected Overrides Function IsControlElementCore() As Boolean
+        Return True
+    End Function
+
+    Protected Overrides Function HasKeyboardFocusCore() As Boolean
+        Return Slider.IsKeyboardFocused
+    End Function
+
+    Public Overrides Function GetPattern(patternInterface As PatternInterface) As Object
+        If patternInterface = PatternInterface.RangeValue Then Return Me
+        Return MyBase.GetPattern(patternInterface)
+    End Function
+
+    Public ReadOnly Property IsReadOnly As Boolean Implements IRangeValueProvider.IsReadOnly
+        Get
+            Return Not Slider.IsEnabled
+        End Get
+    End Property
+
+    Public ReadOnly Property LargeChange As Double Implements IRangeValueProvider.LargeChange
+        Get
+            Return Math.Min(Integer.MaxValue, SmallChange * 10)
+        End Get
+    End Property
+
+    Public ReadOnly Property Maximum As Double Implements IRangeValueProvider.Maximum
+        Get
+            Return Slider.MaxValue
+        End Get
+    End Property
+
+    Public ReadOnly Property Minimum As Double Implements IRangeValueProvider.Minimum
+        Get
+            Return 0
+        End Get
+    End Property
+
+    Public ReadOnly Property SmallChange As Double Implements IRangeValueProvider.SmallChange
+        Get
+            Return Math.Max(1, Math.Min(CDbl(Slider.ValueByKey), Integer.MaxValue))
+        End Get
+    End Property
+
+    Public ReadOnly Property Value As Double Implements IRangeValueProvider.Value
+        Get
+            Return Slider.Value
+        End Get
+    End Property
+
+    Public Sub SetValue(value As Double) Implements IRangeValueProvider.SetValue
+        If Not Slider.IsEnabled Then Throw New ElementNotEnabledException()
+        If Double.IsNaN(value) OrElse Double.IsInfinity(value) OrElse value < Minimum OrElse value > Maximum Then Throw New ArgumentOutOfRangeException(NameOf(value))
+        Slider.Value = CInt(Math.Round(value, MidpointRounding.AwayFromZero))
+    End Sub
 End Class

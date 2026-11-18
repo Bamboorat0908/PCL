@@ -76,6 +76,19 @@ public class DirectoryUtilsTest : TestWithFolder {
         => Assert.Throws<UnauthorizedAccessException>(() => DirectoryUtils.Move(Paths.Base, Path.Combine(tempFolder, "SafetyCheckDest")));
 
     [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task 剪切_拒绝父子目录且保留内容(bool moveToParent) {
+        var parent = Path.Combine(tempFolder, "parent");
+        var child = Path.Combine(parent, "child");
+        FileUtils.Write(Path.Combine(parent, "parent.txt"), "parent");
+        FileUtils.Write(Path.Combine(child, "child.txt"), "child");
+        Assert.Throws<IOException>(() => DirectoryUtils.Move(moveToParent ? child : parent, moveToParent ? parent : child));
+        await Assert.That(FileUtils.ReadAsString(Path.Combine(parent, "parent.txt"))).IsEqualTo("parent");
+        await Assert.That(FileUtils.ReadAsString(Path.Combine(child, "child.txt"))).IsEqualTo("child");
+    }
+
+    [Test]
     public async Task 删除_安全检查_允许程序目录下的子文件夹() {
         var folder = Path.Combine(Paths.Base, $"MeloongTest_{Guid.NewGuid():N}");
         try {

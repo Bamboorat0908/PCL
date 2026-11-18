@@ -1,10 +1,11 @@
 Public Class PclLogger
     Inherits FileLogger
+    Private Shared FatalDialogShown As Integer
 
     ''' <inheritdoc/>
     Public Overrides Function Format(Text As String, Level As LogLevel, FilePath As String, Ex As Exception) As String
         Text = MyBase.Format(Text, Level, FilePath, Ex)
-        Text = FilterUserName(FilterAccessToken(Text, "*"c), "*"c)
+        Text = SanitizeBrclDetails(Text)
         Return Text
     End Function
 
@@ -12,10 +13,11 @@ Public Class PclLogger
     Public Overrides Sub HandleBehavior(RawMessage As String, FormattedMessage As String, Behavior As LogBehavior, Ex As Exception)
         If IsProgramEnding Then Return
         MyBase.HandleBehavior(RawMessage, FormattedMessage, Behavior, Ex)
+        If Behavior = LogBehavior.None Then Return
         Dim BriefText = If(Ex Is Nothing, RawMessage, If(RawMessage Is Nothing, "", $"{RawMessage}：") & Ex.GetDisplay(False))
-        BriefText = FilterUserName(FilterAccessToken(BriefText, "*"c), "*"c)
+        BriefText = SanitizeBrclDetails(BriefText)
         Dim DetailText = If(Ex Is Nothing, RawMessage, If(RawMessage Is Nothing, "", $"{RawMessage}：") & Ex.GetDisplay(True))
-        DetailText = FilterUserName(FilterAccessToken(DetailText, "*"c), "*"c)
+        DetailText = SanitizeBrclDetails(DetailText)
         Select Case Behavior
             Case LogBehavior.None
                 '啥也不干
@@ -24,27 +26,12 @@ Public Class PclLogger
             Case LogBehavior.Toast
                 Hint(BriefText, HintType.Red, False)
             Case LogBehavior.Alert
-                MyMsgBox(DetailText, "错误", IsWarn:=True)
+                ShowBrclError(RawMessage, Ex, DetailText)
             Case LogBehavior.AlertThenFeedback
-                If PageSetupSystem.IsLauncherNewest Then
-                    If MyMsgBox(DetailText & vbCrLf & vbCrLf & "是否反馈此问题？如果不反馈，这个问题可能永远无法得到解决！", "错误", "反馈", "取消", IsWarn:=True) = 1 Then Feedback(False, True)
-                Else
-                    MyMsgBox(DetailText & vbCrLf & vbCrLf & "将 PCL 更新至最新版或许可以解决这个问题……", "错误", IsWarn:=True)
-                End If
+                ShowBrclError(RawMessage, Ex, DetailText)
             Case LogBehavior.AlertThenCrash
-                Static FirstTrigger As Boolean = True
-                If FirstTrigger Then
-                    '首次触发
-                    FirstTrigger = False
-                    If PageSetupSystem.IsLauncherNewest Then
-                        If MsgBox(DetailText & vbCrLf & vbCrLf & "是否反馈此问题？如果不反馈，这个问题可能永远无法得到解决！", MsgBoxStyle.Critical + MsgBoxStyle.YesNo, "错误") = MsgBoxResult.Yes Then Feedback(False, True)
-                    Else
-                        MsgBox(DetailText & vbCrLf & vbCrLf & "将 PCL 更新至最新版或许可以解决这个问题……", MsgBoxStyle.Critical, "错误")
-                    End If
-                Else
-                    '多次触发，直接使程序崩溃（这通常代表着在其他线程循环触发严重异常）
-                    Thread.Sleep(2000)
-                End If
+                If Threading.Interlocked.Exchange(FatalDialogShown, 1) <> 0 Then Return
+                ShowBrclError(RawMessage, Ex, DetailText, Fatal:=True)
                 FormMain.EndProgramForce(ProcessReturnValues.Exception)
         End Select
         '遥测

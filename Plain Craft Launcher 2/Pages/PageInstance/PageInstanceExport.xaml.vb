@@ -333,10 +333,10 @@ Public Class PageInstanceExport
             ConfigLines.Add($"# 当版本设置中选择了 {vbLQ}使用版本文件夹中的 Java{vbRQ} 时，是否打包版本文件夹中的 Java。")
             ConfigLines.Add("IncludeJava:" & CheckOptionsJava.Checked)
             ConfigLines.Add("")
-            ConfigLines.Add("# 是否打包正式版 PCL，以便没有启动器的玩家安装整合包。")
+            ConfigLines.Add("# 是否打包正式版 BRCL，以便没有启动器的玩家安装整合包。")
             ConfigLines.Add("IncludeLauncher:" & CheckOptionsPcl.Checked)
             ConfigLines.Add("")
-            ConfigLines.Add("# 是否打包 PCL 个性化内容，例如功能隐藏设置、主页、背景音乐和图片等。")
+            ConfigLines.Add("# 是否打包 BRCL 个性化内容，例如功能隐藏设置、主页、背景音乐和图片等。")
             ConfigLines.Add("IncludeLauncherCustom:" & CheckOptionsPclCustom.Checked)
             ConfigLines.Add("")
             ConfigLines.Add("# 是否将 Mod、资源包、光影包的文件直接放入整合包中，这样在导入时就无需联网下载它们。")
@@ -473,10 +473,10 @@ Public Class PageInstanceExport
         '构造步骤加载器
         Dim Loaders As New List(Of LoaderBase)
 
-#Region "准备 PCL 文件"
+#Region "准备 BRCL 文件"
 
         If BuildType <> BuildTypes.Release AndAlso IncludePCL Then
-            Loaders.Add(New LoaderTask(Of Integer, Integer)("下载 PCL 正式版",
+            Loaders.Add(New LoaderTask(Of Integer, Integer)("下载 BRCL 正式版",
             Sub(Loader As LoaderTask(Of Integer, Integer))
                 DownloadLatestPCL(Loader)
                 FileUtils.Copy(PathTemp & "Latest.exe", CacheFolder & "Plain Craft Launcher.exe")
@@ -562,12 +562,12 @@ Public Class PageInstanceExport
                 End If
             Next
             Loader.Progress = 0.97
-            '复制 PCL 版本设置
+            '复制 BRCL 版本设置
             If DirectoryUtils.Exists(McVersion.PathVersion & "PCL\") Then DirectoryUtils.Copy(McVersion.PathVersion & "PCL\", OverridesFolder & "PCL\")
             WriteIni(OverridesFolder & "PCL\Setup.ini", "IsStar", False)
-            '复制 PCL 本体（正式版）
+            '复制 BRCL 本体（正式版）
             If BuildType = BuildTypes.Release AndAlso IncludePCL Then FileUtils.Copy(PathExe, CacheFolder & "Plain Craft Launcher.exe")
-            '复制 PCL 个性化内容
+            '复制 BRCL 个性化内容
             If IncludePCLCustom Then
                 If DirectoryUtils.Exists(Paths.Base & "BRCL\Pictures\") Then DirectoryUtils.Copy(Paths.Base & "BRCL\Pictures\", CacheFolder & "PCL\Pictures\")
                 If DirectoryUtils.Exists(Paths.Base & "BRCL\Musics\") Then DirectoryUtils.Copy(Paths.Base & "BRCL\Musics\", CacheFolder & "PCL\Musics\")

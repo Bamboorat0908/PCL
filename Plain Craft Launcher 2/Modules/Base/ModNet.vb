@@ -76,6 +76,7 @@ Retry:
             Select Case RetryCount
                 Case 0
                     RetryException = ex
+                    If Not String.IsNullOrWhiteSpace(BackupUrl) Then Url = BackupUrl
                     RetryCount += 1
                     GoTo Retry
                 Case 1
@@ -94,47 +95,78 @@ Retry:
             Optional Content As Object = Nothing, Optional ContentType As String = Nothing, Optional Accept As String = "*/*",
             Optional Headers As String(,) = Nothing, Optional RequireJson As Boolean = False, Optional Timeout As Integer = 25000,
             Optional Encoding As Encoding = Nothing, Optional SimulateBrowserHeaders As Boolean = False) As String
+        If ThreadCount < 1 Then Throw New ArgumentOutOfRangeException(NameOf(ThreadCount))
         Dim Threads As New List(Of Thread)
-        Dim RequestResult = Nothing
+        Dim StateLock As New Object
+        Dim RequestResult As String = Nothing
         Dim RequestEx As Exception = Nothing
         Dim FailCount As Integer = 0
-        For i = 1 To ThreadCount
-            Dim th As New Thread(
-            Sub()
-                Try
-                    RequestResult = NetRequestByClient(Url, Method, Content, ContentType, Accept, Timeout, Headers, RequireJson, Encoding, SimulateBrowserHeaders)
-                Catch ex As Exception
-                    FailCount += 1
-                    RequestEx = ex
-                End Try
-            End Sub)
-            th.Start()
-            Threads.Add(th)
-            Thread.Sleep(i * 250)
-            If RequestResult IsNot Nothing Then GoTo RequestFinished
-        Next
-        Do While True
-            If RequestResult IsNot Nothing Then
-RequestFinished:
-                Try
-                    For Each th In Threads
-                        If th.IsAlive Then th.Interrupt()
-                    Next
-                Catch
-                End Try
-                Return RequestResult
-            ElseIf FailCount = ThreadCount Then
-                Try
-                    For Each th In Threads
-                        If th.IsAlive Then th.Interrupt()
-                    Next
-                Catch
-                End Try
+        Dim IsFinished As Boolean = False
+        Dim HasResult As Boolean = False
+        Try
+            For i = 1 To ThreadCount
+                SyncLock StateLock
+                    If IsFinished Then Exit For
+                    Dim th As New Thread(
+                    Sub()
+                        'Interrupt 也可能在进入结果锁时到达，整个工作线程都要保护。
+                        Try
+                            Dim Result As String = Nothing
+                            Dim Failure As Exception = Nothing
+                            Try
+                                Result = NetRequestByClient(Url, Method, Content, ContentType, Accept, Timeout, Headers, RequireJson, Encoding, SimulateBrowserHeaders)
+                            Catch ex As Exception
+                                Failure = ex
+                            End Try
+                            SyncLock StateLock
+                                If IsFinished Then Return
+                                If Failure Is Nothing Then
+                                    RequestResult = Result
+                                    HasResult = True
+                                    IsFinished = True
+                                Else
+                                    FailCount += 1
+                                    RequestEx = Failure
+                                    IsFinished = FailCount = ThreadCount
+                                End If
+                                Monitor.PulseAll(StateLock)
+                            End SyncLock
+                        Catch ex As ThreadInterruptedException
+                            '调用方已取得结果或被取消，不再发布备用请求的结果。
+                        End Try
+                    End Sub) With {.IsBackground = True}
+                    Threads.Add(th)
+                    th.Start()
+                    If i = ThreadCount Then Exit For
+                    '仅在请求仍未完成时等待启动备用请求；成功会立即唤醒，不附加固定延迟。
+                    Dim Delay As Integer = i * 250
+                    Dim Waiting As Stopwatch = Stopwatch.StartNew()
+                    Do While Not IsFinished AndAlso FailCount < Threads.Count
+                        Dim Remaining = Delay - CInt(Waiting.ElapsedMilliseconds)
+                        If Remaining <= 0 Then Exit Do
+                        Monitor.Wait(StateLock, Remaining)
+                    Loop
+                End SyncLock
+            Next
+            SyncLock StateLock
+                Do While Not IsFinished
+                    Monitor.Wait(StateLock)
+                Loop
+                If HasResult Then Return RequestResult
                 Throw RequestEx
-            End If
-            Thread.Sleep(20)
-        Loop
-        Return Nothing
+            End SyncLock
+        Finally
+            SyncLock StateLock
+                IsFinished = True
+            End SyncLock
+            For Each th In Threads
+                Try
+                    If th.IsAlive Then th.Interrupt()
+                Catch ex As ThreadStateException
+                    '线程可能恰好已退出。
+                End Try
+            Next
+        End Try
     End Function
 
     ''' <summary>
@@ -1736,6 +1768,14 @@ FinishExCatch:
                             ElseIf File.State < NetState.Merging AndAlso File.State >= NetState.WaitingToDownload Then
                                 OngoingFiles.Add(File)
                             End If
+                        Next
+                        '先恢复没有活动连接的未完成文件。全局速度足够只能抑制
+                        '额外分片，不能把唯一连接已失败的依赖一直留在进行中。
+                        For Each File As NetFile In OngoingFiles
+                            If NetTaskThreadCount >= NetTaskThreadLimit Then Continue While
+                            If File.Threads IsNot Nothing AndAlso File.Threads.Any(Function(Part) Part.State < NetState.Finished) Then Continue For
+                            Dim RecoveryThread = File.TryBeginThread()
+                            If RecoveryThread IsNot Nothing AndAlso RecoveryThread.Source.Url.Contains("bmclapi") Then Thread.Sleep(100)
                         Next
                         '为等待中的文件开始线程
                         For Each File As NetFile In WaitingFiles

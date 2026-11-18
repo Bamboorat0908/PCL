@@ -390,7 +390,7 @@ Public Class MyPageRight
 
     '逐个进入动画
     Public Sub TriggerEnterAnimation(ParamArray Elements As FrameworkElement())
-        Dim RealElements = Elements.Where(Function(e) e IsNot Nothing)
+        Dim RealElements = Elements.Where(Function(e) e IsNot Nothing).ToArray()
         For Each Element In RealElements
             Element.Visibility = Visibility.Visible '页面均处于默认的隐藏状态
         Next
@@ -406,13 +406,16 @@ Public Class MyPageRight
             For Each Control As FrameworkElement In GetAllAnimControls(Element)
                 If TypeOf Control Is MyExtraTextButton Then
                     CType(Control, MyExtraTextButton).Show = True
+                ElseIf Not ShouldAnimateControl(Control) Then
+                    'Off-screen cards are already at their final state when the
+                    'user scrolls to them; they need no per-frame property writes.
+                    Control.Opacity = 1
                 Else
                     Control.Opacity = 0
-                    Control.RenderTransform = New TranslateTransform(0, -16)
-                    AniList.Add(AaOpacity(Control, 1, 100, Delay, New AniEaseOutFluent(AniEasePower.Weak)))
-                    AniList.Add(AaTranslateY(Control, 5, 250, Delay, New AniEaseOutFluent))
-                    AniList.Add(AaTranslateY(Control, 11, 350, Delay, New AniEaseOutBack))
-                    Delay += 25
+                    Control.RenderTransform = New TranslateTransform(0, 8)
+                    AniList.Add(AaOpacity(Control, 1, 150, Delay, New AniEaseOutFluent))
+                    AniList.Add(AaTranslateY(Control, -8, 220, Delay, New AniEaseOutFluent))
+                    Delay = Math.Min(72, Delay + 18)
                 End If
             Next
         Next
@@ -420,7 +423,7 @@ Public Class MyPageRight
         Dim Scroll As MyScrollBar = GetFirstScrollViewer(RealElements)
         If Scroll IsNot Nothing Then
             If TypeOf Scroll.RenderTransform IsNot TranslateTransform Then Scroll.RenderTransform = New TranslateTransform(10, 0)
-            AniList.Add(AaTranslateX(Scroll, -CType(Scroll.RenderTransform, TranslateTransform).X, 350, 0, New AniEaseOutFluent))
+            AniList.Add(AaTranslateX(Scroll, -CType(Scroll.RenderTransform, TranslateTransform).X, 220, 0, New AniEaseOutFluent))
         End If
         '结束
         AniList.Add(AaCode(Sub() PageOnEnterAnimationFinished(),, True))
@@ -429,18 +432,21 @@ Public Class MyPageRight
 
     '逐个退出动画
     Public Sub TriggerExitAnimation(ParamArray Elements As FrameworkElement())
-        Dim RealElements = Elements.Where(Function(e) e IsNot Nothing)
+        Dim RealElements = Elements.Where(Function(e) e IsNot Nothing).ToArray()
         Dim AniList As New List(Of AniData)
         Dim Delay As Integer = 0
         For Each Element In RealElements
             For Each Control As FrameworkElement In GetAllAnimControls(Element)
                 If TypeOf Control Is MyExtraTextButton Then
                     CType(Control, MyExtraTextButton).Show = False
+                ElseIf Not ShouldAnimateControl(Control) Then
+                    Control.IsHitTestVisible = False
+                    Control.Opacity = 0
                 Else
                     Control.IsHitTestVisible = False
-                    AniList.Add(AaOpacity(Control, -1, 70, Delay))
-                    AniList.Add(AaTranslateY(Control, -6, 70, Delay))
-                    Delay += 15
+                    AniList.Add(AaOpacity(Control, -Control.Opacity, 80, Delay))
+                    AniList.Add(AaTranslateY(Control, -4, 80, Delay))
+                    Delay = Math.Min(24, Delay + 8)
                 End If
             Next
         Next
@@ -460,6 +466,18 @@ Public Class MyPageRight
         End Sub,, True))
         AniStart(AniList, "PageRight PageChange " & PageUuid)
     End Sub
+
+    Friend Function ShouldAnimateControl(Control As FrameworkElement) As Boolean
+        If Not UiMotionEnabled Then Return False
+        If ActualHeight <= 0 OrElse Control.ActualHeight <= 0 Then Return True
+        Try
+            Dim Bounds = Control.TransformToAncestor(Me).TransformBounds(New Rect(New Point(), Control.RenderSize))
+            Return Bounds.Bottom >= -32 AndAlso Bounds.Top <= ActualHeight + 32
+        Catch ex As InvalidOperationException
+            'A just-attached control can precede its first layout pass.
+            Return True
+        End Try
+    End Function
 
     ''' <summary>
     ''' 禁用页面切换动画的控件列表。

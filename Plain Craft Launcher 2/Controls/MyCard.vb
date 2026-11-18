@@ -64,12 +64,13 @@
     'UI 建立
     Public Sub New()
         MainChrome = New MyDropShadow With {
-            .Margin = New Thickness(-3, -3, -3, -3 - GetWPFSize(1)), .ShadowRadius = 10, .Opacity = DropShadowIdleOpacity, .CornerRadius = New CornerRadius(14)}
+            .Margin = New Thickness(-3, -3, -3, -3 - GetWPFSize(1)), .ShadowRadius = 10, .Opacity = DropShadowIdleOpacity, .CornerRadius = New CornerRadius(2)}
         MainChrome.SetResourceReference(MyDropShadow.ColorProperty, "ColorObject1")
         Children.Insert(0, MainChrome)
         MainBorder = New Border With {
-            .CornerRadius = New CornerRadius(14),
+            .CornerRadius = New CornerRadius(2),
             .BorderThickness = New Thickness(1),
+            .Opacity = 0.965,
             .IsHitTestVisible = False}
         '跟随主题资源，浅色/深色切换时卡片自动跟随
         MainBorder.SetResourceReference(Border.BackgroundProperty, "ColorBrush7")

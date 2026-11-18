@@ -75,7 +75,7 @@ Public Module ModModpack
                 If ex.GetDisplay(True).Contains("Error.WinIOError") Then
                     Throw New Exception("打开整合包文件失败", ex)
                 ElseIf File.EndsWithF(".rar", True) Then
-                    Throw New Exception("PCL 无法处理 rar 格式的压缩包，请在解压后重新压缩为 zip 格式再试", ex)
+                    Throw New Exception("BRCL 无法处理 rar 格式的压缩包，请在解压后重新压缩为 zip 格式再试", ex)
                 Else
                     Throw New Exception("打开整合包文件失败，文件可能损坏或为不支持的压缩包格式", ex)
                 End If
@@ -115,7 +115,7 @@ Public Module ModModpack
         FileUtils.ExtractToDirectory(FileAddress, InstallTemp, c, p)
     End Sub
     ''' <summary>
-    ''' 从整合包的 override 目录复制文件，同时设置 PCL 的配置文件与版本隔离。
+    ''' 从整合包的 override 目录复制文件，同时设置 BRCL 的配置文件与版本隔离。
     ''' 对路径末尾是否为 \ 没有要求。
     ''' </summary>
     Private Sub CopyOverrideDirectory(OverridesFolder As String, VersionFolder As String, Loader As LoaderBase)
@@ -366,6 +366,7 @@ Public Module ModModpack
 
     'Modrinth
     Private Function InstallPackModrinth(FileAddress As String, Archive As ZipArchive, ArchiveBaseFolder As String, Optional InstanceName As String = Nothing, Optional Logo As String = Nothing) As LoaderCombo(Of String)
+        Dim InstallRoot = McFolderSelected
 
         '读取 Json 文件
         Dim Json As JObject
@@ -397,7 +398,7 @@ Public Module ModModpack
         '获取版本名
         If InstanceName Is Nothing Then
             InstanceName = If(Json("name"), "")
-            Dim Validate As New ValidateFolderName(McFolderSelected & "versions")
+            Dim Validate As New ValidateFolderName(InstallRoot & "versions")
             If Validate.Validate(InstanceName) <> "" Then InstanceName = ""
             If InstanceName = "" Then InstanceName = MyMsgBoxInput("输入版本名称", "", "", New Collection(Of Validate) From {Validate})
             If String.IsNullOrEmpty(InstanceName) Then Throw New OperationCanceledException
@@ -410,10 +411,10 @@ Public Module ModModpack
             ExtractModpackFiles(InstallTemp, FileAddress, Task.CreateCancellationToken(), Task.CreateSyncProgressProvider(ToPercentage:=0.5))
             CopyOverrideDirectory(
                 InstallTemp & ArchiveBaseFolder & "overrides",
-                McFolderSelected & "versions\" & InstanceName, Task)
+                InstallRoot & "versions\" & InstanceName, Task)
             CopyOverrideDirectory(
                 InstallTemp & ArchiveBaseFolder & "client-overrides",
-                McFolderSelected & "versions\" & InstanceName, Task)
+                InstallRoot & "versions\" & InstanceName, Task)
         End Sub) With {.ProgressWeight = FileUtils.GetInfo(FileAddress).Length / 1024 / 1024 / 6, .Block = False}) '每 6M 需要 1s
         '获取下载文件列表
         Dim FileList As New List(Of NetFile)
@@ -436,8 +437,8 @@ Public Module ModModpack
             Urls = ResourceVersion.ParseModrinthTrackArguments(Urls,
                 ResourceVersion.DownloadReason.ModPack, TargetVersion.VanillaName, TargetVersion.ModLoaders).ToList 'Modrinth 来源追踪信息
             Urls = Urls.Distinct.ToList()
-            Dim TargetPath As String = Path.Combine(McFolderSelected, "versions", InstanceName, File("path").ToString().TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-            If Not PathUtils.IsParentOf($"{McFolderSelected}versions\{InstanceName}\", TargetPath) Then
+            Dim TargetPath As String = Path.Combine(InstallRoot, "versions", InstanceName, File("path").ToString().TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            If Not PathUtils.IsParentOf($"{InstallRoot}versions\{InstanceName}\", TargetPath) Then
                 MyMsgBox($"整合包的文件路径超出了版本文件夹，请向整合包作者反馈此问题！{vbCrLf}目标：{Path.GetFullPath(TargetPath)}{vbCrLf}错误的文件：{TargetPath}", "文件路径校验失败", IsWarn:=True)
                 Throw New OperationCanceledException
             End If
@@ -451,7 +452,7 @@ Public Module ModModpack
         '构造加载器
         Dim Request As New McInstallRequest With {
             .NewInstanceName = InstanceName,
-            .VersionFolder = $"{McFolderSelected}versions\{InstanceName}\",
+            .VersionFolder = $"{InstallRoot}versions\{InstanceName}\",
             .MinecraftName = TargetVersion.VanillaName,
             .ForgeVersion = TargetVersion.Forge,
             .NeoForgeVersion = TargetVersion.NeoForge,
@@ -465,7 +466,7 @@ Public Module ModModpack
         Loaders.Add(New LoaderTask(Of String, String)("最终整理文件",
         Sub(Task As LoaderTask(Of String, String))
             '设置图标
-            Dim VersionFolder As String = $"{McFolderSelected}versions\{InstanceName}\"
+            Dim VersionFolder As String = $"{InstallRoot}versions\{InstanceName}\"
             If Logo IsNot Nothing AndAlso FileUtils.Exists(Logo) Then
                 FileUtils.Copy(Logo, VersionFolder & "PCL\Logo.png")
                 WriteIni(VersionFolder & "PCL\Setup.ini", "Logo", "PCL\Logo.png")
@@ -720,7 +721,7 @@ Public Module ModModpack
         Next
         If Not Addons.ContainsKey("game") Then Throw New Exception("该 MCBBS 整合包未提供游戏版本信息，无法安装！")
         If Addons.ContainsKey("quilt") Then
-            Hint("PCL 不支持安装 Quilt 整合包！", HintType.Red)
+            Hint("BRCL 不支持安装 Quilt 整合包！", HintType.Red)
             Throw New OperationCanceledException
         End If
         Dim Request As New McInstallRequest With {
@@ -775,7 +776,7 @@ Public Module ModModpack
                     Logger.Info($"文件 {ExeFile} 的产品名标识为 {Info.ProductName}")
                     If Info.ProductName = "Plain Craft Launcher" Then
                         Launcher = ExeFile
-                        Logger.Info($"发现整合包附带的 PCL 启动器：{ExeFile}")
+                        Logger.Info($"发现整合包附带的 BRCL 启动器：{ExeFile}")
                     ElseIf (Info.ProductName.ContainsIgnoreCase("Launcher") OrElse Info.ProductName.Contains("启动")) AndAlso
                         Not Info.ProductName = "Plain Craft Launcher Admin Manager" Then
                         If Launcher Is Nothing Then
@@ -789,7 +790,7 @@ Public Module ModModpack
                 If Launcher IsNot Nothing Then
                     Logger.Info($"找到压缩包中附带的启动器：{Launcher}")
                     If MyMsgBox($"整合包里似乎自带了启动器，是否换用它继续安装？{vbCrLf}即将打开：{Launcher}", "换用整合包启动器？", "换用", "不换用") = 1 Then
-                        StartProcess(Launcher, "--wait") '要求等待已有的 PCL 退出
+                        StartProcess(Launcher, "--wait") '要求等待已有的 BRCL 退出
                         Logger.Info("为换用整合包中的启动器启动，强制结束程序")
                         FrmMain.EndProgram(False)
                         Return

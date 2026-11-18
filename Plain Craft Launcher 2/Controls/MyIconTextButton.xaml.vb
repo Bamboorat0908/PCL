@@ -69,18 +69,20 @@ Public Class MyIconTextButton
     Public Event Click(sender As Object, e As RouteEventArgs)
     Private IsMouseDown As Boolean = False
     Private Sub MyIconTextButton_MouseUp() Handles Me.MouseLeftButtonUp
-        If Not IsMouseDown Then Return
+        If Not IsEnabled OrElse Not IsMouseDown Then Return
         Logger.Info($"按下带图标按钮：{Text}")
         IsMouseDown = False
+        PlayUiSound()
         RaiseEvent Click(Me, New RouteEventArgs(True))
         RaiseCustomEvent() '自定义事件
         RefreshColor()
     End Sub
     Private Sub MyIconTextButton_MouseDown() Handles Me.MouseLeftButtonDown
+        If Not IsEnabled Then Return
         IsMouseDown = True
         RefreshColor()
     End Sub
-    Private Sub MyIconTextButton_MouseLeave() Handles Me.MouseLeave
+    Private Sub MyIconTextButton_MouseLeave() Handles Me.MouseLeave, Me.IsEnabledChanged, Me.Unloaded
         IsMouseDown = False
         RefreshColor()
     End Sub

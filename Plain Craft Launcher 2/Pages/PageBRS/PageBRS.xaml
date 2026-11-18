@@ -1,150 +1,240 @@
-﻿<local:MyPageRight
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:PCL" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             mc:Ignorable="d" x:Class="PageBRS"
-             d:DesignWidth="800" d:DesignHeight="800">
-    <Grid x:Name="PanBack" Margin="22,16,22,16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
-        <!-- 顶部：服务器状态 -->
-        <local:MyCard x:Name="CardHead" Grid.Row="0" UseAnimation="False">
-            <Grid Margin="16,14">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <Border Width="46" Height="46" CornerRadius="23" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                    <Border.Background>
-                        <ImageBrush ImageSource="/BRCL;component/Images/Heads/Logo.png" Stretch="UniformToFill" />
-                    </Border.Background>
-                </Border>
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="BRS" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <Border x:Name="BadgeState" Background="{DynamicResource ColorBrush2}" CornerRadius="6" Margin="8,0,0,0" Padding="7,1" VerticalAlignment="Center">
-                            <TextBlock x:Name="LabState" Text="读取中" Foreground="White" FontSize="11" />
-                        </Border>
-                        <TextBlock x:Name="LabSeason" Text="" FontSize="11" Margin="8,2,0,0" Foreground="{DynamicResource ColorBrush2}" VerticalAlignment="Center" />
-                    </StackPanel>
-                    <TextBlock x:Name="LabMotd" Text="正在获取服务器信息…" TextTrimming="CharacterEllipsis" MaxHeight="38" TextWrapping="Wrap" Margin="0,3,10,0" FontSize="12" />
-                </StackPanel>
-                <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock x:Name="LabPlayers" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource ColorBrush3}" VerticalAlignment="Bottom" />
-                        <TextBlock x:Name="LabPlayersMax" Text="/—" FontSize="12" Margin="2,0,0,4" Foreground="{DynamicResource ColorBrush2}" VerticalAlignment="Bottom" />
-                    </StackPanel>
-                    <TextBlock x:Name="LabUpdated" Text="尚未刷新" FontSize="10.5" HorizontalAlignment="Right" Foreground="{DynamicResource ColorBrush2}" />
-                    <local:MyButton x:Name="BtnRefresh" Text="刷新" Height="22" MinWidth="56" Padding="8,0" Margin="0,4,0,0" HorizontalAlignment="Right" />
-                </StackPanel>
-            </Grid>
-        </local:MyCard>
-
-        <!-- 中部：指标 -->
-        <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,12,0,0">
-            <local:MyCard x:Name="CardTps" Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="18,13">
-                    <TextBlock Text="TPS" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="LabTps" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="tps" FontSize="10.5" Margin="3,0,0,3" VerticalAlignment="Bottom" Foreground="{DynamicResource ColorBrush2}" />
-                    </StackPanel>
-                    <TextBlock x:Name="LabMspt" Text="— ms/tick" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
-                </StackPanel>
-            </local:MyCard>
-            <local:MyCard x:Name="CardUptime" Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="18,13">
-                    <TextBlock Text="运行时长" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabUptime" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="LabSeasonDay" Text="—" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
-                </StackPanel>
-            </local:MyCard>
-            <local:MyCard x:Name="CardEnt" Margin="0,0,8,0" UseAnimation="False">
-                <StackPanel Margin="18,13">
-                    <TextBlock Text="实体数" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabEntities" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="当前加载" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
+<local:MyPageRight xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:PCL"
+    x:Class="PageBRS" PanScroll="ScrollMain">
+    <local:MyPageRight.Resources>
+        <Style x:Key="BrsCaption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource ColorBrush2}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="BrsMetric" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ColorBrush1}" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style x:Key="BrsSection" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource ColorBrush1}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </local:MyPageRight.Resources>
+    <local:MyScrollViewer x:Name="ScrollMain" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="PanBack" Margin="20,16,20,20">
+            <!-- 连接信息与在线状态集中在首屏。 -->
+            <local:MyCard x:Name="CardHead" UseAnimation="False">
+                <StackPanel Margin="18,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Image Source="/BRCL;component/Images/BrsServerLogo.png" Width="46" Height="46" Margin="0,0,12,0" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock Text="BRS / 服务器概览" Style="{StaticResource BrsCaption}" FontSize="10" />
+                            <TextBlock x:Name="LabServerName" Text="BRS Minecraft 服务器" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
+                            <WrapPanel Margin="0,6,0,0">
+                                <Border x:Name="BadgeState" Background="{DynamicResource ColorBrush2}" Padding="7,2" CornerRadius="2" Margin="0,0,8,0">
+                                    <TextBlock x:Name="LabState" Text="读取中" Foreground="White" FontSize="10" />
+                                </Border>
+                                <TextBlock x:Name="LabSeason" Text="—" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource ColorBrush2}" />
+                            </WrapPanel>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                            <TextBlock x:Name="LabOnlineCaption" Text="当前在线" Style="{StaticResource BrsCaption}" HorizontalAlignment="Right" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock x:Name="LabPlayers" Text="—" FontSize="32" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush3}" />
+                                <TextBlock x:Name="LabPlayersMax" Text="/—" FontSize="12" Margin="4,0,0,6" VerticalAlignment="Bottom" Foreground="{DynamicResource ColorBrush2}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock x:Name="LabPack" Text="整合包信息读取中…" Style="{StaticResource BrsCaption}" Margin="0,12,0,0" />
+                    <Rectangle Height="1" Fill="{DynamicResource ColorBrushCardLine}" Margin="0,12,0,12" />
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="服务器地址 · 点击复制" Style="{StaticResource BrsCaption}" FontSize="10" />
+                            <TextBlock x:Name="LabAddress" Text="—" Cursor="Hand" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                            <TextBlock x:Name="LabCommunityHint" Text="玩家 QQ 群 · 点击复制" Style="{StaticResource BrsCaption}" FontSize="10" />
+                            <TextBlock x:Name="LabCommunity" Text="—" Cursor="Hand" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <local:MyButton x:Name="BtnRefresh" Grid.Column="2" Text="刷新" Icon="{StaticResource BrclGeometryRefresh}" Height="32" MinWidth="66" Padding="12,0" VerticalAlignment="Center" />
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBlock x:Name="LabUpdated" Text="尚未刷新" Style="{StaticResource BrsCaption}" FontSize="10" />
+                        <TextBlock x:Name="LabAutoRefresh" Grid.Column="1" Text="15 秒自动更新 · F5 刷新" Style="{StaticResource BrsCaption}" FontSize="10" Margin="12,0,0,0" />
+                    </Grid>
+                    <TextBlock x:Name="LabDataHint" Text="正在同步服务器状态与玩家统计…" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,5,0,0" />
                 </StackPanel>
             </local:MyCard>
-            <local:MyCard x:Name="CardWorld" UseAnimation="False">
-                <StackPanel Margin="18,13">
-                    <TextBlock Text="世界大小" FontSize="11.5" Foreground="{DynamicResource ColorBrush2}" />
-                    <TextBlock x:Name="LabWorld" Text="—" FontFamily="Consolas, Microsoft YaHei UI" FontSize="20" FontWeight="Bold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="LabCrash" Text="—" FontSize="10.5" Foreground="{DynamicResource ColorBrush2}" />
-                </StackPanel>
-            </local:MyCard>
-        </UniformGrid>
 
-        <!-- 底部：玩家 / 服务器信息 与 趋势 -->
-        <Grid Grid.Row="2" Margin="0,12,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1*" />
-                <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="1.35*" />
-            </Grid.ColumnDefinitions>
-
-            <!-- 在线玩家：列表式，底部固定信息条，随列高自适应 -->
-            <local:MyCard x:Name="CardPlayers" Grid.Column="0" UseAnimation="False">
-                <Grid Margin="16,12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="在线玩家" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock x:Name="LabPlayerCount" Text="" FontSize="11" Margin="6,1,0,0" Foreground="{DynamicResource ColorBrush2}" />
-                    </StackPanel>
-                    <local:MyScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,8,0,0">
-                        <StackPanel x:Name="PanPlayers" Margin="0,0,8,0" />
-                    </local:MyScrollViewer>
-                    <StackPanel Grid.Row="2" Margin="0,8,0,0">
-                        <Rectangle Height="1" Fill="{DynamicResource ColorBrushCardLine}" Margin="0,0,0,7" />
+            <Grid Margin="0,14,0,0" Height="250">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="1.28*" /></Grid.ColumnDefinitions>
+                <local:MyCard x:Name="CardPlayers" UseAnimation="False">
+                    <Grid Margin="16,14">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                         <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="LabPlayerFoot" Text="" FontSize="10" Foreground="{DynamicResource ColorBrush2}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                            <TextBlock x:Name="LabInfoStrip" Grid.Column="1" Text="zhushu.homes · 60 秒刷新" FontSize="10"
-                                       Foreground="{DynamicResource ColorBrush2}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="在线玩家" Style="{StaticResource BrsSection}" />
+                            <TextBlock x:Name="LabPlayerCount" Grid.Column="1" Text="" Style="{StaticResource BrsCaption}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </Grid>
+                        <local:MyScrollViewer x:Name="ScrollPlayers" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,12,0,0">
+                            <StackPanel x:Name="PanPlayers" Margin="0,0,6,0" />
+                        </local:MyScrollViewer>
+                        <StackPanel Grid.Row="2" Margin="0,10,0,0">
+                            <Rectangle Height="1" Fill="{DynamicResource ColorBrushCardLine}" Margin="0,0,0,8" />
+                            <TextBlock x:Name="LabPlayerFoot" Text="今日活跃 — 人 · 最高同时在线 — 人" Style="{StaticResource BrsCaption}" FontSize="10" />
+                            <TextBlock x:Name="LabInfoStrip" Text="等待在线名单" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Grid>
+                </local:MyCard>
+                <local:MyCard x:Name="CardTps" Grid.Column="2" UseAnimation="False">
+                    <StackPanel Margin="16,14">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="服务器运行" Style="{StaticResource BrsSection}" />
+                            <TextBlock x:Name="LabTps" Grid.Column="1" Text="—" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ColorBrush3}" VerticalAlignment="Center" />
+                        </Grid>
+                        <UniformGrid Columns="2" Rows="2" Margin="0,12,0,0">
+                            <StackPanel Margin="0,0,10,14">
+                                <TextBlock Text="整体 tick 耗时" Style="{StaticResource BrsCaption}" ToolTip="MSPT 越低越好，50 ms/tick 为保持 20 TPS 的参考线。" />
+                                <TextBlock x:Name="LabDashboardMspt" Text="—" Style="{StaticResource BrsMetric}" />
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,14">
+                                <TextBlock Text="估算 TPS / 20" Style="{StaticResource BrsCaption}" ToolTip="根据 tick 耗时估算，不代表网络延迟或客户端帧率。" />
+                                <TextBlock x:Name="LabDashboardTps" Text="—" Style="{StaticResource BrsMetric}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Text="本次连续运行" Style="{StaticResource BrsCaption}" />
+                                <TextBlock x:Name="LabUptime" Text="—" Style="{StaticResource BrsMetric}" FontSize="17" />
+                            </StackPanel>
+                            <StackPanel Margin="8,0,0,0">
+                                <TextBlock Text="服务端内存" Style="{StaticResource BrsCaption}" />
+                                <TextBlock x:Name="LabMemory" Text="—" Style="{StaticResource BrsMetric}" FontSize="17" />
+                            </StackPanel>
+                        </UniformGrid>
+                        <TextBlock x:Name="LabMspt" Text="主世界 tick —" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,12,0,0" />
+                        <TextBlock x:Name="LabLoadHint" Text="正在获取运行状态…" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,4,0,0" />
+                    </StackPanel>
+                </local:MyCard>
+            </Grid>
+
+            <local:MyCard x:Name="CardSeason" Margin="0,14,0,0" UseAnimation="False">
+                <StackPanel Margin="18,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="这一周目，我们一起留下的足迹" Style="{StaticResource BrsSection}" />
+                            <WrapPanel Margin="0,6,0,0">
+                                <TextBlock x:Name="LabSeasonDay" Text="周目信息读取中" Style="{StaticResource BrsCaption}" />
+                                <TextBlock x:Name="LabSeasonStart" Text="" Style="{StaticResource BrsCaption}" Margin="10,0,0,0" />
+                            </WrapPanel>
+                        </StackPanel>
+                        <TextBlock x:Name="LabSeasonProgress" Grid.Column="1" Text="—" Style="{StaticResource BrsMetric}" FontSize="22" Foreground="{DynamicResource ColorBrush3}" Margin="14,0,0,0" VerticalAlignment="Center" />
+                    </Grid>
+                    <UniformGrid Columns="4" Rows="1" Margin="0,18,0,16">
+                        <StackPanel Margin="0,0,10,0"><TextBlock Text="周目玩家" Style="{StaticResource BrsCaption}" /><TextBlock x:Name="LabSeasonPlayers" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                        <StackPanel Margin="0,0,10,0"><TextBlock Text="累计游玩 / 小时" Style="{StaticResource BrsCaption}" /><TextBlock x:Name="LabSeasonHours" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                        <StackPanel Margin="0,0,10,0"><TextBlock Text="世界体积" Style="{StaticResource BrsCaption}" /><TextBlock x:Name="LabWorldSize" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                        <StackPanel><TextBlock Text="当前实体" Style="{StaticResource BrsCaption}" ToolTip="服务器当前报告的实体数量。" /><TextBlock x:Name="LabEntities" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                    </UniformGrid>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBlock x:Name="LabAchievementCount" Text="暂无成就统计" Style="{StaticResource BrsCaption}" />
+                        <TextBlock x:Name="LabAchievementProgress" Grid.Column="1" Text="—" FontSize="12" FontWeight="SemiBold" Margin="12,0,0,0" />
+                    </Grid>
+                    <ProgressBar x:Name="BarAchievement" Height="5" Maximum="100" Value="0" BorderThickness="0" Background="{DynamicResource ColorBrush6}" Foreground="{DynamicResource ColorBrush3}" Margin="0,8,0,0" ToolTip="周目中全服至少一人解锁过的成就占比，不含配方。" />
+                </StackPanel>
+            </local:MyCard>
+
+            <Grid Margin="0,14,0,0" Height="288">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="1.28*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="1*" /></Grid.ColumnDefinitions>
+                <local:MyCard x:Name="CardTrend" UseAnimation="False">
+                    <Grid Margin="16,14">
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                        <TextBlock x:Name="LabTrendTitle" Text="近 7 天活跃玩家" Style="{StaticResource BrsSection}" />
+                        <Grid Grid.Row="1" Margin="0,9,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal">
+                                <local:MyButton x:Name="BtnTrendWeek" Text="7 天 · 当前" Height="24" MinWidth="66" Padding="8,0" />
+                                <local:MyButton x:Name="BtnTrendMonth" Text="30 天" Height="24" MinWidth="54" Padding="8,0" Margin="6,0,0,0" />
+                            </StackPanel>
+                            <TextBlock x:Name="LabTrendInfo" Grid.Column="1" Text="" Style="{StaticResource BrsCaption}" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="6,0,0,0" />
+                        </Grid>
+                        <Grid Grid.Row="2" x:Name="PanTrend" Margin="0,16,0,12" MinHeight="80" />
+                        <Grid Grid.Row="3">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <TextBlock x:Name="LabAxisStart" FontSize="10" Foreground="{DynamicResource ColorBrush2}" />
+                            <TextBlock x:Name="LabAxisMid" Grid.Column="1" FontSize="10" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="LabAxisEnd" Grid.Column="2" FontSize="10" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Right" />
+                        </Grid>
+                    </Grid>
+                </local:MyCard>
+                <local:MyCard x:Name="CardActivity" Grid.Column="2" UseAnimation="False">
+                    <StackPanel Margin="16,14">
+                        <TextBlock Text="本周动态" Style="{StaticResource BrsSection}" />
+                        <TextBlock x:Name="LabWeekRange" Text="等待统计数据" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,6,0,0" />
+                        <UniformGrid Columns="2" Rows="2" Margin="0,12,0,0">
+                            <StackPanel Margin="0,0,8,12"><TextBlock Text="活跃玩家" Style="{StaticResource BrsCaption}" /><TextBlock x:Name="LabWeekPlayers" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                            <StackPanel Margin="8,0,0,12"><TextBlock Text="累计游玩 / 小时" Style="{StaticResource BrsCaption}" /><TextBlock x:Name="LabWeekHours" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                            <StackPanel Margin="0,0,8,0"><TextBlock Text="新伙伴" Style="{StaticResource BrsCaption}" /><TextBlock x:Name="LabWeekNewcomers" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                            <StackPanel Margin="8,0,0,0"><TextBlock Text="新增成就" Style="{StaticResource BrsCaption}" /><TextBlock x:Name="LabWeekAchievements" Text="—" Style="{StaticResource BrsMetric}" FontSize="18" /></StackPanel>
+                        </UniformGrid>
+                        <Rectangle Height="1" Fill="{DynamicResource ColorBrushCardLine}" Margin="0,14,0,10" />
+                        <TextBlock Text="本周游玩最多" Style="{StaticResource BrsCaption}" FontSize="10" />
+                        <Grid Margin="0,7,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Grid x:Name="PanWeeklyTopAvatar" Margin="0,0,8,0" />
+                            <TextBlock x:Name="LabWeeklyTopName" Grid.Column="1" Text="暂无记录" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock x:Name="LabWeeklyTopHours" Grid.Column="2" Text="" Style="{StaticResource BrsCaption}" FontSize="10" VerticalAlignment="Center" Margin="8,0,0,0" />
                         </Grid>
                     </StackPanel>
-                </Grid>
-            </local:MyCard>
+                </local:MyCard>
+            </Grid>
 
-            <!-- 趋势 -->
-            <local:MyCard x:Name="CardTrend" Grid.Column="2" UseAnimation="False">
-                <Grid Margin="16,12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="近 14 天在线" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock x:Name="LabTrendInfo" Text="" FontSize="11" Margin="6,1,0,0" Foreground="{DynamicResource ColorBrush2}" />
+            <Grid Margin="0,14,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <local:MyCard x:Name="CardPlaytime" UseAnimation="False">
+                    <StackPanel Margin="16,14">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Text="周目游玩榜" Style="{StaticResource BrsSection}" VerticalAlignment="Center" />
+                            <local:MyButton x:Name="BtnRankMore" Grid.Column="1" Text="展开" Height="24" MinWidth="54" Padding="8,0" />
+                        </Grid>
+                        <TextBlock x:Name="LabPlaytimeSummary" Text="正在获取榜单…" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,8,0,14" />
+                        <StackPanel x:Name="PanPlaytime" />
                     </StackPanel>
-                    <Grid Grid.Row="1" x:Name="PanTrend" Margin="0,12,0,10" MinHeight="60" />
-                    <Rectangle Grid.Row="1" Height="1" VerticalAlignment="Bottom" Margin="0,0,0,9" IsHitTestVisible="False"
-                               Fill="{DynamicResource ColorBrushCardLine}" />
-                    <Grid Grid.Row="2" Margin="2,2,2,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="LabAxisStart" Grid.Column="0" FontSize="9.5" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Left" />
-                        <TextBlock x:Name="LabAxisMid" Grid.Column="1" FontSize="9.5" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Center" />
-                        <TextBlock x:Name="LabAxisEnd" Grid.Column="2" FontSize="9.5" Foreground="{DynamicResource ColorBrush2}" HorizontalAlignment="Right" />
-                    </Grid>
-                </Grid>
+                </local:MyCard>
+                <local:MyCard x:Name="CardAchievements" Grid.Column="2" UseAnimation="False">
+                    <StackPanel Margin="16,14">
+                        <TextBlock Text="周目成就榜" Style="{StaticResource BrsSection}" Margin="0,3,0,0" />
+                        <TextBlock x:Name="LabAchievementSummary" Text="正在获取榜单…" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,10,0,14" />
+                        <StackPanel x:Name="PanAchievements" />
+                    </StackPanel>
+                </local:MyCard>
+            </Grid>
+
+            <local:MyCard x:Name="CardWebsite" Margin="0,14,0,0" UseAnimation="False">
+                <StackPanel Margin="18,16">
+                    <TextBlock Text="常用入口" Style="{StaticResource BrsSection}" />
+                    <WrapPanel Margin="0,12,0,0">
+                        <local:MyButton x:Name="BtnMap" Text="卫星地图" Height="30" Padding="12,0" Margin="0,0,8,8" ColorType="Highlight" />
+                        <local:MyButton x:Name="BtnClientSettings" Text="客户端设置" Height="30" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnSponsors" Text="赞助鸣谢" Height="30" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnWebsite" Text="BRS 原站" Icon="{StaticResource BrclGeometryExternal}" Tag="" Height="30" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnSeasons" Text="周目档案" Icon="{StaticResource BrclGeometryExternal}" Tag="seasons" Height="30" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnWeekly" Text="本周数据" Icon="{StaticResource BrclGeometryExternal}" Tag="weekly" Height="30" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnMembers" Text="服务器成员" Icon="{StaticResource BrclGeometryExternal}" Tag="members" Height="30" Padding="12,0" Margin="0,0,8,8" />
+                        <local:MyButton x:Name="BtnPlayerArchive" Text="玩家档案" Icon="{StaticResource BrclGeometryExternal}" Tag="players" Height="30" Padding="12,0" Margin="0,0,8,8" />
+                    </WrapPanel>
+                    <Expander Header="服务器公告" Margin="0,6,0,0">
+                        <TextBlock x:Name="LabMotd" Text="正在获取服务器公告…" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,6" />
+                    </Expander>
+                    <TextBlock x:Name="LabActivityUpdated" Text="统计信息加载中…" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,12,0,0" />
+                    <TextBlock Text="数据来自 zhushu.homes/BRS · 停留本页时每 15 秒同步 · 运行数据与玩家统计的更新时间可能不同" Style="{StaticResource BrsCaption}" FontSize="10" Margin="0,5,0,0" />
+                </StackPanel>
             </local:MyCard>
-        </Grid>
-    </Grid>
+        </StackPanel>
+    </local:MyScrollViewer>
 </local:MyPageRight>

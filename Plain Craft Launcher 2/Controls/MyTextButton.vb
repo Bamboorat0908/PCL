@@ -36,16 +36,18 @@ Public Class MyTextButton
 
     Public IsMouseDown As Boolean = False
     Private Sub MyTextButton_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs) Handles Me.PreviewMouseLeftButtonDown
+        If Not IsEnabled Then Return
         IsMouseDown = True
         e.Handled = True
     End Sub
-    Private Sub MyTextButton_MouseLeave() Handles Me.MouseLeave
+    Private Sub MyTextButton_MouseLeave() Handles Me.MouseLeave, Me.IsEnabledChanged, Me.Unloaded
         IsMouseDown = False
     End Sub
     Private Sub MyTextButton_MouseLeftButtonUp(sender As Object, e As MouseButtonEventArgs) Handles Me.PreviewMouseLeftButtonUp
-        If Not IsMouseDown Then Return
+        If Not IsEnabled OrElse Not IsMouseDown Then Return
         IsMouseDown = False
         Logger.Info($"按下文本按钮：{Text}")
+        PlayUiSound()
         RaiseEvent Click(Me, Nothing)
         RaiseCustomEvent()
         e.Handled = True

@@ -78,6 +78,7 @@ Public Class MySliderDot
     Private Sub DragStart(sender As Object, e As MouseButtonEventArgs) Handles ShapeDot.MouseLeftButtonDown
         e.Handled = True '防止 ScrollViewer 失焦问题
         DragControl = Me
+        RequestMainTick()
         AniStart({
                  AaScaleTransform(ShapeDot, 2 - CType(ShapeDot.RenderTransform, ScaleTransform).ScaleX, 100,, New AniEaseOutFluent)
             }, "MySlider Scale " & Uuid)

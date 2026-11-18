@@ -99,6 +99,8 @@ public static class DirectoryUtils {
             var temp = Path.Combine(PathUtils.RemoveLastPart(sourceFolder), Path.GetRandomFileName());
             DirectoryUtils.Move(sourceFolder, temp);
             DirectoryUtils.Move(temp, destFolder);
+        } else if (PathUtils.IsParentOf(sourceFolder, destFolder) || PathUtils.IsParentOf(destFolder, sourceFolder)) {
+            throw new IOException($"不能在互相包含的目录之间剪切文件夹：{sourceFolder} → {destFolder}");
         } else if (PathUtils.GetDiskName(sourceFolder) == PathUtils.GetDiskName(destFolder)) {
             // 同一磁盘剪切，直接调用 Move（这只修改文件夹名，效率更高）
             Logger.Trace($"剪切文件夹到同一磁盘：{sourceFolder} → {destFolder}");
@@ -142,6 +144,10 @@ public static class DirectoryUtils {
         static void DeleteInternal(string folder) {
             try {
                 folder = PathUtils.ForApi(folder);
+                if ((File.GetAttributes(folder) & FileAttributes.ReparsePoint) != 0) {
+                    Directory.Delete(folder); // 仅移除链接，禁止递归删除链接指向的外部内容。
+                    return;
+                }
                 foreach (string filePath in DirectoryUtils.EnumerateFiles(folder)) FileUtils.Delete(filePath); // 删除文件
                 foreach (string str in DirectoryUtils.EnumerateDirectories(folder)) DeleteInternal(str); // 递归删除子文件夹
                 Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException, action: _ => {

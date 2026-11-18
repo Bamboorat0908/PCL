@@ -1,0 +1,29 @@
+[Unit]
+Description=BRS news and announcement service
+After=network.target
+
+[Service]
+Type=simple
+User=brs-news
+Group=brs-news
+WorkingDirectory=/opt/brs-news
+EnvironmentFile=/etc/brs-news.env
+ExecStart=/usr/bin/python3 /opt/brs-news/server.py
+Restart=on-failure
+RestartSec=3
+UMask=0077
+StateDirectory=brs-news
+StateDirectoryMode=0700
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/brs-news
+
+[Install]
+WantedBy=multi-user.target

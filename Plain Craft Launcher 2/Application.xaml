@@ -10,7 +10,37 @@
     ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/BRCL;component/Resources/IndustrialIcons.xaml" />
+            </ResourceDictionary.MergedDictionaries>
             
+            <sys:Boolean x:Key="BrclIsLightTheme">False</sys:Boolean>
+            <SolidColorBrush x:Key="IndustrialAccent">#F2D649</SolidColorBrush>
+            <SolidColorBrush x:Key="IndustrialOnAccent">#191D1F</SolidColorBrush>
+            <SolidColorBrush x:Key="IndustrialRailText">#B3BAB9</SolidColorBrush>
+            <SolidColorBrush x:Key="IndustrialRailActiveText">#F1F2E9</SolidColorBrush>
+            <Style x:Key="IndustrialAction" TargetType="Button">
+                <Setter Property="Background" Value="{DynamicResource ColorBrush7}" />
+                <Setter Property="Foreground" Value="{DynamicResource ColorBrush1}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource ColorBrushCardLine}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Padding" Value="14,10" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="Template">
+                    <Setter.Value><ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource ColorBrush3}" /></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource ColorBrush3}" /><Setter TargetName="Chrome" Property="BorderThickness" Value="2" /></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Opacity" Value="0.75" /></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate></Setter.Value>
+                </Setter>
+            </Style>
             <!-- Converter -->
             <corewpf:AdditionConverter x:Key="AdditionConverter"/>
             <corewpf:MultiplicationConverter x:Key="MultiplicationConverter"/>
@@ -19,14 +49,14 @@
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
             <!-- 颜色表 -->
-            <SolidColorBrush x:Key="ColorBrush1">#ECEBF5</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush2">#A9A4C4</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush3">#8B6CFF</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush4">#B39DFF</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush5">#D3C7FF</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush6">#221E33</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush7">#1A1727</SolidColorBrush>
-            <SolidColorBrush x:Key="ColorBrush8">#131120</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush1">#F1F2E9</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush2">#B3BAB9</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush3">#F2D649</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush4">#D1B848</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush5">#EEE3A3</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush6">#272C2E</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush7">#1C2022</SolidColorBrush>
+            <SolidColorBrush x:Key="ColorBrush8">#111416</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushBg0">#96c0f9</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrushBg1">#bee0eafd</SolidColorBrush>
             <Color x:Key="ColorObject1">#343d4a</Color>
@@ -166,7 +196,7 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-            <!-- BRCL：键盘焦点环。PCL 原有样式把 FocusVisualStyle 全部置空，纯键盘操作看不到焦点；
+            <!-- BRCL：键盘焦点环。BRCL 原有样式把 FocusVisualStyle 全部置空，纯键盘操作看不到焦点；
                  这里补一个 2px 品牌色描边，仅键盘导航时出现，鼠标操作不会闪现。 -->
             <Style x:Key="BrclFocusVisual">
                 <Setter Property="Control.Template">
@@ -177,6 +207,12 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
+            </Style>
+
+            <Style x:Key="BrclRailFocusVisual">
+                <Setter Property="Control.Template"><Setter.Value><ControlTemplate>
+                    <Border BorderBrush="{DynamicResource IndustrialAccent}" BorderThickness="2" CornerRadius="3" Margin="-2" SnapsToDevicePixels="True" />
+                </ControlTemplate></Setter.Value></Setter>
             </Style>
 
             <Style TargetType="local:MyScrollBar">

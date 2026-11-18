@@ -1,8 +1,41 @@
 Imports System.Windows.Markup
 
+Imports System.Windows.Automation
+Imports System.Windows.Automation.Peers
+Imports System.Windows.Automation.Provider
+
 <ContentProperty("Inlines")>
 Public Class MyCheckBox
     Implements ISettingControl
+
+    Protected Overrides Function OnCreateAutomationPeer() As AutomationPeer
+        Return New MyCheckBoxAutomationPeer(Me)
+    End Function
+
+    Friend Sub ToggleFromInput()
+        If Not IsEnabled Then Return
+        PlayUiSound(UiSoundCue.Toggle)
+        SetChecked(Not Checked, True)
+    End Sub
+
+    Private PressedKey As Key = Key.None
+    Private Sub Checkbox_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
+        If e.Handled OrElse (e.Key <> Key.Space AndAlso e.Key <> Key.Enter) Then Return
+        e.Handled = True
+        If Not IsEnabled OrElse e.IsRepeat OrElse PressedKey <> Key.None Then Return
+        PressedKey = e.Key
+    End Sub
+    Private Sub Checkbox_KeyUp(sender As Object, e As KeyEventArgs) Handles Me.KeyUp
+        If e.Handled OrElse (e.Key <> Key.Space AndAlso e.Key <> Key.Enter) Then Return
+        e.Handled = True
+        Dim Activate = PressedKey = e.Key AndAlso IsEnabled
+        PressedKey = Key.None
+        If Activate Then ToggleFromInput()
+    End Sub
+    Private Sub Checkbox_CancelKey() Handles Me.LostKeyboardFocus, Me.IsEnabledChanged, Me.Unloaded
+        PressedKey = Key.None
+        Checkbox_MouseLeave()
+    End Sub
 
     '基础
 
@@ -28,6 +61,8 @@ Public Class MyCheckBox
         Sub(d As MyCheckBox, e As DependencyPropertyChangedEventArgs)
             '在使用 XAML 设置 Checked 属性时，不会触发 Checked_Set 方法，所以需要在这里手动触发 UI 改变
             If Not d.IsLoaded Then d.SyncUI()
+            Dim Peer = TryCast(UIElementAutomationPeer.FromElement(d), MyCheckBoxAutomationPeer)
+            If Peer IsNot Nothing Then Peer.RaisePropertyChangedEvent(TogglePatternIdentifiers.ToggleStateProperty, If(CBool(e.OldValue), ToggleState.On, ToggleState.Off), If(CBool(e.NewValue), ToggleState.On, ToggleState.Off))
         End Sub))
 
     Private Const AnimationTimeOfCheck As Integer = 150 '勾选状态变更动画长度
@@ -132,14 +167,17 @@ Public Class MyCheckBox
     Private MouseDowned As Boolean = False
     Private AllowMouseDown As Boolean = True
     Private Sub Checkbox_MouseUp() Handles Me.MouseLeftButtonUp
+        If Not IsEnabled Then Return
         If Not MouseDowned Then Return
         Logger.Info($"按下复选框（{(Not Checked)}）：{Text}")
         MouseDowned = False
+        PlayUiSound(UiSoundCue.Toggle)
         SetChecked(Not Checked, True)
         AniStart(AaColor(ShapeBorder, Border.BackgroundProperty, "ColorBrushHalfWhite", 100), "MyCheckBox Background " & Uuid)
     End Sub
-    Private Sub Checkbox_MouseDown() Handles Me.MouseLeftButtonDown
-        If Not AllowMouseDown Then Return
+    Private Sub Checkbox_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
+        If Not IsEnabled OrElse Not AllowMouseDown Then Return
+        e.Handled = True
         MouseDowned = True
         Focus()
         AniStart(AaColor(ShapeBorder, Border.BackgroundProperty, "ColorBrushBg1", 100), "MyCheckBox Background " & Uuid)
@@ -227,4 +265,41 @@ Public Class MyCheckBox
 
 #End Region
 
+End Class
+
+Public Class MyCheckBoxAutomationPeer
+    Inherits FrameworkElementAutomationPeer
+    Implements IToggleProvider
+
+    Public Sub New(owner As MyCheckBox)
+        MyBase.New(owner)
+    End Sub
+    Protected Overrides Function GetClassNameCore() As String
+        Return NameOf(MyCheckBox)
+    End Function
+    Protected Overrides Function GetAutomationControlTypeCore() As AutomationControlType
+        Return AutomationControlType.CheckBox
+    End Function
+    Protected Overrides Function GetNameCore() As String
+        Dim ExplicitName = MyBase.GetNameCore()
+        If Not String.IsNullOrWhiteSpace(ExplicitName) Then Return ExplicitName
+        Dim Label = DirectCast(Owner, MyCheckBox).LabText
+        Return New TextRange(Label.ContentStart, Label.ContentEnd).Text
+    End Function
+    Protected Overrides Function GetChildrenCore() As List(Of AutomationPeer)
+        Return Nothing
+    End Function
+    Public Overrides Function GetPattern(patternInterface As PatternInterface) As Object
+        If patternInterface = PatternInterface.Toggle Then Return Me
+        Return MyBase.GetPattern(patternInterface)
+    End Function
+    Public ReadOnly Property ToggleState As ToggleState Implements IToggleProvider.ToggleState
+        Get
+            Return If(DirectCast(Owner, MyCheckBox).Checked, Automation.ToggleState.On, Automation.ToggleState.Off)
+        End Get
+    End Property
+    Public Sub Toggle() Implements IToggleProvider.Toggle
+        If Not IsEnabled() Then Throw New ElementNotEnabledException()
+        DirectCast(Owner, MyCheckBox).ToggleFromInput()
+    End Sub
 End Class

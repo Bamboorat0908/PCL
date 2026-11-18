@@ -13,10 +13,19 @@ Public Class MyMsgText
             MyConverter = Converter
             LabTitle.Text = Converter.Title
             LabCaption.Text = Converter.Text
+            Dim IsError As Boolean = Converter.ErrorDetails IsNot Nothing
+            LabKind.Text = If(IsError, "错误", If(Converter.IsWarn, "注意", "提示"))
+            If IsError Then
+                LabAdvice.Text = Converter.RecoveryAdvice
+                PanAdvice.Visibility = If(String.IsNullOrWhiteSpace(Converter.RecoveryAdvice), Visibility.Collapsed, Visibility.Visible)
+                LabDetails.Text = Converter.ErrorDetails
+                PanDetails.Visibility = Visibility.Visible
+                PanDiagnostics.Visibility = Visibility.Visible
+                LabCode.Text = Converter.ErrorCode
+            End If
             Btn1.Text = Converter.Button1
-            If Converter.IsWarn Then
+            If Converter.IsWarn AndAlso Not IsError Then
                 Btn1.ColorType = MyButton.ColorState.Red
-                LabTitle.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrushRedLight")
             End If
             Btn2.Text = Converter.Button2
             Btn3.Text = Converter.Button3
@@ -33,24 +42,26 @@ Public Class MyMsgText
         Try
 
             'UI 初始化
-            If Btn2.IsVisible AndAlso Not Btn1.ColorType = MyButton.ColorState.Red Then Btn1.ColorType = MyButton.ColorState.Highlight
+            If Not Btn1.ColorType = MyButton.ColorState.Red Then Btn1.ColorType = MyButton.ColorState.Highlight
+            UpdateBounds()
+            AddHandler FrmMain.PanMsg.SizeChanged, AddressOf OwnerSizeChanged
             Btn1.Focus()
             '动画
             Opacity = 0
-            AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, If(MyConverter.IsWarn, New MyColor(140, 80, 0, 0), New MyColor(90, 0, 0, 0)) - FrmMain.PanMsg.Background, 200), "PanMsg Background")
+            AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, New MyColor(160, 0, 0, 0) - FrmMain.PanMsg.Background, 160), "PanMsg Background")
             AniStart({
-                AaOpacity(Me, 1, 120, 60),
-                AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, 300, 60, New AniEaseOutBack(AniEasePower.Weak)),
-                AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 300, 60, New AniEaseOutFluent(AniEasePower.Weak))
+                AaOpacity(Me, 1, If(SystemParameters.ClientAreaAnimation, 150, 1)),
+                AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, If(SystemParameters.ClientAreaAnimation, 180, 1),, New AniEaseOutFluent)
             }, "MyMsgBox " & Uuid)
             '记录日志
-            Logger.Info($"普通弹窗：{LabTitle.Text}{vbCrLf}{LabCaption.Text}")
+            Logger.Info($"BRCL 弹窗：{LabTitle.Text}{vbCrLf}{LabCaption.Text}")
 
         Catch ex As Exception
             Logger.Error(ex, "普通弹窗加载失败", LogBehavior.Toast)
         End Try
     End Sub
     Private Sub Close()
+        If FrmMain?.PanMsg IsNot Nothing Then RemoveHandler FrmMain.PanMsg.SizeChanged, AddressOf OwnerSizeChanged
         '结束线程阻塞
         If MyConverter.ForceWait OrElse Not MyConverter.Button2 = "" Then MyConverter.WaitFrame.Continue = False
         Interop.ComponentDispatcher.PopModal()
@@ -62,11 +73,39 @@ Public Class MyMsgText
                     AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, New MyColor(0, 0, 0, 0) - FrmMain.PanMsg.Background, 200, Ease:=New AniEaseOutFluent(AniEasePower.Weak)))
                 End If
             End Sub, 30),
-            AaOpacity(Me, -Opacity, 80, 20),
-            AaDouble(Sub(i) TransformPos.Y += i, 20 - TransformPos.Y, 150, 0, New AniEaseOutFluent),
-            AaDouble(Sub(i) TransformRotate.Angle += i, 6 - TransformRotate.Angle, 150, 0, New AniEaseInFluent(AniEasePower.Weak)),
+            AaOpacity(Me, -Opacity, If(SystemParameters.ClientAreaAnimation, 100, 1)),
+            AaDouble(Sub(i) TransformPos.Y += i, 6 - TransformPos.Y, If(SystemParameters.ClientAreaAnimation, 100, 1),, New AniEaseOutFluent),
             AaCode(Sub() CType(Parent, Grid).Children.Remove(Me), , True)
         }, "MyMsgBox " & Uuid)
+    End Sub
+
+    Private Sub OwnerSizeChanged(Sender As Object, E As SizeChangedEventArgs)
+        UpdateBounds()
+    End Sub
+
+    Private Sub UpdateBounds()
+        Width = Math.Max(280, Math.Min(620, FrmMain.PanMsg.ActualWidth - 40))
+        MinWidth = Math.Min(340, Width)
+        MaxHeight = Math.Max(210, FrmMain.PanMsg.ActualHeight - 40)
+        PanCaption.MaxHeight = Math.Max(70, MaxHeight - If(MyConverter.ErrorDetails Is Nothing, 155, 210))
+    End Sub
+
+    Private Sub CopyDetails(Sender As Object, E As RoutedEventArgs) Handles BtnCopyDetails.Click
+        If MyConverter.ErrorDetails Is Nothing Then Return
+        Try
+            Clipboard.SetText(MyConverter.ErrorCode & vbCrLf & MyConverter.Title & vbCrLf & MyConverter.Text & vbCrLf & MyConverter.RecoveryAdvice & vbCrLf & MyConverter.ErrorDetails)
+            LabCode.Text = MyConverter.ErrorCode & " · 已复制"
+        Catch
+            LabCode.Text = "复制失败，请稍后再试"
+        End Try
+    End Sub
+
+    Private Sub OpenLogs(Sender As Object, E As RoutedEventArgs) Handles BtnOpenLogs.Click
+        If IO.Directory.Exists(Paths.BaseThenName) Then
+            OpenExplorer(Paths.BaseThenName)
+        Else
+            LabCode.Text = "日志目录尚未创建"
+        End If
     End Sub
 
     Public Sub Btn1_Click() Handles Btn1.Click

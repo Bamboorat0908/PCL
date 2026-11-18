@@ -1,4 +1,4 @@
-Public Class MyMsgSelect
+﻿Public Class MyMsgSelect
 
     Private ReadOnly MyConverter As MyMsgBoxConverter
     Private ReadOnly Uuid As Integer = GetUuid()
@@ -42,15 +42,17 @@ Public Class MyMsgSelect
     Private Sub Load(sender As Object, e As EventArgs) Handles MyBase.Loaded
         Try
 
+            UpdateBounds()
+            AddHandler FrmMain.PanMsg.SizeChanged, AddressOf OwnerSizeChanged
             'UI 初始化
             If Btn2.IsVisible AndAlso Not Btn1.ColorType = MyButton.ColorState.Red Then Btn1.ColorType = MyButton.ColorState.Highlight
             '动画
             Opacity = 0
-            AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, If(MyConverter.IsWarn, New MyColor(140, 80, 0, 0), New MyColor(90, 0, 0, 0)) - FrmMain.PanMsg.Background, 200), "PanMsg Background")
+            AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, New MyColor(160, 0, 0, 0) - FrmMain.PanMsg.Background, 200), "PanMsg Background")
             AniStart({
-                AaOpacity(Me, 1, 120, 60),
-                AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, 300, 60, New AniEaseOutBack(AniEasePower.Weak)),
-                AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 300, 60, New AniEaseOutFluent(AniEasePower.Weak))
+                AaOpacity(Me, 1, If(SystemParameters.ClientAreaAnimation, 150, 1)),
+                AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, If(SystemParameters.ClientAreaAnimation, 180, 1),, New AniEaseOutFluent),
+                AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 1)
             }, "MyMsgBox " & Uuid)
             '记录日志
             Logger.Info($"选择弹窗：{LabTitle.Text}")
@@ -59,7 +61,24 @@ Public Class MyMsgSelect
             Logger.Error(ex, "选择弹窗加载失败", LogBehavior.Toast)
         End Try
     End Sub
+    Private Sub OwnerSizeChanged(Sender As Object, E As SizeChangedEventArgs)
+        UpdateBounds()
+    End Sub
+
+    Private Sub DetachOwner() Handles Me.Unloaded
+        If FrmMain?.PanMsg IsNot Nothing Then RemoveHandler FrmMain.PanMsg.SizeChanged, AddressOf OwnerSizeChanged
+    End Sub
+
+    Private Sub UpdateBounds()
+        If FrmMain?.PanMsg Is Nothing Then Return
+        Width = Math.Max(280, Math.Min(620, FrmMain.PanMsg.ActualWidth - 40))
+        MinWidth = Math.Min(340, Width)
+        MaxHeight = Math.Max(210, FrmMain.PanMsg.ActualHeight - 40)
+        PanCaption.MaxHeight = Math.Max(50, MaxHeight - 210)
+    End Sub
+
     Private Sub Close()
+        DetachOwner()
         '结束线程阻塞
         MyConverter.WaitFrame.Continue = False
         Interop.ComponentDispatcher.PopModal()
@@ -71,9 +90,9 @@ Public Class MyMsgSelect
                     AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, New MyColor(0, 0, 0, 0) - FrmMain.PanMsg.Background, 200, Ease:=New AniEaseOutFluent(AniEasePower.Weak)))
                 End If
             End Sub, 30),
-            AaOpacity(Me, -Opacity, 80, 20),
-            AaDouble(Sub(i) TransformPos.Y += i, 20 - TransformPos.Y, 150, 0, New AniEaseOutFluent),
-            AaDouble(Sub(i) TransformRotate.Angle += i, 6 - TransformRotate.Angle, 150, 0, New AniEaseInFluent(AniEasePower.Weak)),
+            AaOpacity(Me, -Opacity, If(SystemParameters.ClientAreaAnimation, 100, 1)),
+            AaDouble(Sub(i) TransformPos.Y += i, 6 - TransformPos.Y, If(SystemParameters.ClientAreaAnimation, 100, 1),, New AniEaseOutFluent),
+            AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 1),
             AaCode(Sub() CType(Parent, Grid).Children.Remove(Me), , True)
         }, "MyMsgBox " & Uuid)
     End Sub

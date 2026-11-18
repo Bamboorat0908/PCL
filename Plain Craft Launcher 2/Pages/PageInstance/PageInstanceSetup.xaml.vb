@@ -1,4 +1,5 @@
 Public Class PageInstanceSetup
+    Private ReadOnly RamTimer As New Threading.DispatcherTimer(Threading.DispatcherPriority.Background) With {.Interval = TimeSpan.FromSeconds(1)}
 
     Private LoadedFirst As Boolean = False
     Private Sub PageSetupSystem_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
@@ -11,6 +12,10 @@ Public Class PageInstanceSetup
         AniControlEnabled += 1
         Reload()
         AniControlEnabled -= 1
+
+        RemoveHandler RamTimer.Tick, AddressOf RamTimerTick
+        AddHandler RamTimer.Tick, AddressOf RamTimerTick
+        RamTimer.Start()
 
         '非重复加载部分
         If LoadedFirst Then Return
@@ -39,13 +44,19 @@ Public Class PageInstanceSetup
         End Function)}
 
         '内存自动刷新
-        Dim timer As New Threading.DispatcherTimer With {.Interval = New TimeSpan(0, 0, 0, 1)}
-        AddHandler timer.Tick, AddressOf RefreshRam
-        timer.Start()
 
+    End Sub
+    Private Sub StopRamRefresh() Handles Me.Unloaded
+        RamTimer.Stop()
+        RemoveHandler RamTimer.Tick, AddressOf RamTimerTick
+        AniStop("VersionSetup Ram Grid")
+    End Sub
+    Private Sub RamTimerTick(sender As Object, e As EventArgs)
+        RefreshRam()
     End Sub
     Public Sub Reload()
         Try
+            LabInstanceName.Text = PageInstanceLeft.Instance.Name & " · 修改后自动保存，仅对此实例生效"
 
             '启动参数
             Dim _unused = PageInstanceLeft.Instance.PathIndie '触发自动判定
@@ -111,6 +122,7 @@ Public Class PageInstanceSetup
     ''' 刷新 UI 上的 RAM 显示。
     ''' </summary>
     Public Sub RefreshRam(ShowAnim As Boolean)
+        If Not IsLoaded OrElse Not IsVisible OrElse FrmMain Is Nothing OrElse FrmMain.WindowState = WindowState.Minimized Then Return
         If LabRamGame Is Nothing OrElse LabRamUsed Is Nothing OrElse FrmMain.PageCurrent <> FormMain.PageType.InstanceSetup OrElse FrmInstanceLeft.PageID <> FormMain.PageSubType.InstanceSetup Then Return
         '获取内存情况
         Dim RamGame As Double = Math.Round(GetRam(PageInstanceLeft.Instance), 5)
@@ -407,7 +419,7 @@ PreFin:
                     HintArgumentJava.Theme = MyHint.Themes.Blue
                 ElseIf JavaWorker.LastResult Is Nothing Then
                     If ComboArgumentJava.SelectedIndex = 0 Then
-                        HintArgumentJava.Text = $"你的电脑上没有可供该版本使用的 Java，PCL 会在启动游戏时自动下载。"
+                        HintArgumentJava.Text = $"你的电脑上没有可供该版本使用的 Java，BRCL 会在启动游戏时自动下载。"
                         HintArgumentJava.Theme = MyHint.Themes.Yellow
                     Else
                         HintArgumentJava.Text = $"该版本的版本文件夹中没有发现任何 Java！{vbCrLf}请点击此处打开版本文件夹，然后将 Java 文件夹复制进去。"
@@ -439,7 +451,7 @@ PreFin:
                     HintArgumentJava.Text = $"正在查找 Java……"
                     HintArgumentJava.Theme = MyHint.Themes.Blue
                 ElseIf JavaWorker.LastResult Is Nothing Then
-                    HintArgumentJava.Text = $"你的电脑上没有任何 Java 符合该版本范围！{vbCrLf}如果 Mojang 提供了对应版本的 Java，PCL 会在启动游戏时自动下载。"
+                    HintArgumentJava.Text = $"你的电脑上没有任何 Java 符合该版本范围！{vbCrLf}如果 Mojang 提供了对应版本的 Java，BRCL 会在启动游戏时自动下载。"
                     HintArgumentJava.Theme = MyHint.Themes.Yellow
                 Else
                     HintArgumentJava.Text = $"将会使用：{JavaWorker.LastResult}"

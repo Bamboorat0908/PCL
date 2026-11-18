@@ -5,6 +5,11 @@ Public Class Settings
     Public Shared ReadOnly Entries As Dictionary(Of String, Setting) = (New List(Of Setting) From {
         New Setting("Identify", "", Source:=Sources.Registry),
         New Setting("UiThemeMode", 2), 'BRCL：1=浅色，2=深色
+        New Setting("UiReduceMotion", False),
+        New Setting("UiSoundEnabled", True, OnChanged:=Sub() UiSoundPreferencesChanged()),
+        New Setting("UiSoundInteraction", True, OnChanged:=Sub() UiSoundPreferencesChanged()),
+        New Setting("UiSoundStartup", True, OnChanged:=Sub() UiSoundPreferencesChanged()),
+        New Setting("UiSoundVolume", 35, OnChanged:=Sub() UiSoundPreferencesChanged()),
         New Setting("WindowHeight", 550),
         New Setting("WindowWidth", 900),
         New Setting("AprilYear", 0, Source:=Sources.Registry, Encrypted:=True),
@@ -39,6 +44,9 @@ Public Class Settings
         New Setting("SystemSystemUpdate", 0),
         New Setting("SystemSystemActivity", 0),
         New Setting("SystemSystemTelemetry", True, Source:=Sources.Registry),
+        New Setting("SystemBrclCrashUpload", True, Source:=Sources.Registry, OnChanged:=Sub() CrashUploadSettingChanged()),
+        New Setting("BrclCrashMode", 3, Source:=Sources.Registry, OnChanged:=Sub() CrashUploadSettingChanged()),
+        New Setting("BrclUsageEnabled", False, OnChanged:=Sub() UsageChanged()),
         New Setting("CacheDrops", "", Source:=Sources.Registry),
         New Setting("CacheConfig", 0, Source:=Sources.Registry),
         New Setting("CacheExportConfig", "", Source:=Sources.Registry),

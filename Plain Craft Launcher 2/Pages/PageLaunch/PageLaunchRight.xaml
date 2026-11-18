@@ -1,18 +1,105 @@
-﻿<local:MyPageRight x:Class="PageLaunchRight"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-    xmlns:local="clr-namespace:PCL" PanScroll="PanBack">
-    <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
-        <StackPanel Name="PanMain" Margin="25,25,25,10" Grid.IsSharedSizeScope="True">
-            <local:MyHint x:Name="PanHint" RelativeSetup="HintSnapshot" Theme="Blue" CanClose="True" Margin="0,0,0,15"
-                          Text="快照版 BRCL 包含尚未正式发布的测试功能，仅限赞助者自己使用。&#xa;请不要随意发给其他人，或是用来制作整合包哦！" />
-            <StackPanel x:Name="PanCustom">
-            </StackPanel>
-            <local:MyCard Margin="0,0,0,15" Title="启动日志" x:Name="PanLog">
-                <TextBlock x:Name="LabLog" Margin="20,38,20,18" TextTrimming="None" TextWrapping="Wrap" />
-            </local:MyCard>
-        </StackPanel>
-    </local:MyScrollViewer>
+<local:MyPageRight x:Class="PageLaunchRight"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:local="clr-namespace:PCL" PanScroll="PanBack">
+ <local:MyScrollViewer x:Name="PanBack" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+  <StackPanel x:Name="PanMain" Margin="20,18,20,14">
+   <Grid x:Name="HomeHeader" Margin="0,0,0,12">
+    <StackPanel><TextBlock Text="BRS  /  COMMUNITY SERVER" FontFamily="Consolas" FontSize="10" Foreground="{DynamicResource ColorBrush2}"/><TextBlock Text="欢迎回到 BRS" FontSize="23" FontWeight="SemiBold" Margin="0,5,0,0"/></StackPanel>
+    <Button x:Name="BtnRefresh" AutomationProperties.Name="刷新 BRS 周目和服务器状态" Style="{StaticResource IndustrialAction}" HorizontalAlignment="Right" VerticalAlignment="Center" Padding="12,7"><StackPanel Orientation="Horizontal"><Path Data="{StaticResource BrclGeometryRefresh}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" Width="14" Height="14" Stretch="Uniform" Margin="0,0,7,0"/><TextBlock Text="刷新"/></StackPanel></Button>
+   </Grid>
+   <Grid x:Name="Hero" Height="330" ClipToBounds="True" Background="Transparent">
+    <Grid IsHitTestVisible="False">
+     <Grid.OpacityMask><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#FFFFFFFF" Offset="0.60"/><GradientStop Color="#C0FFFFFF" Offset="0.77"/><GradientStop Color="#00FFFFFF" Offset="1"/></LinearGradientBrush></Grid.OpacityMask>
+    <Image Source="pack://application:,,,/BRCL;component/Images/BrsMachinist.png" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" IsHitTestVisible="False"/>
+    <Rectangle IsHitTestVisible="False"><Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#E610191C" Offset="0"/><GradientStop Color="#9910191C" Offset="0.45"/><GradientStop Color="#1010191C" Offset="1"/></LinearGradientBrush></Rectangle.Fill></Rectangle>
+    <Rectangle IsHitTestVisible="False"><Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#00101416" Offset="0.4"/><GradientStop Color="#D9101416" Offset="1"/></LinearGradientBrush></Rectangle.Fill></Rectangle>
+    </Grid>
+    <Grid Margin="24,20">
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+     <StackPanel Orientation="Horizontal">
+      <Border Background="#F2D649" Padding="10,4"><TextBlock x:Name="LabHomeSeason" Text="周目同步中" Foreground="#191D1F" FontSize="12" FontWeight="Bold"/></Border>
+      <Border BorderBrush="#80FFFFFF" BorderThickness="1" Padding="9,3" Margin="8,0,0,0"><TextBlock Text="BRS 专属整合包" FontSize="11" Foreground="#F1F2E9"/></Border>
+     </StackPanel>
+     <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,12,0,0">
+      <WrapPanel Margin="0,0,0,8">
+       <TextBlock x:Name="LabHomeState" Text="● 状态同步中" FontSize="12" Foreground="#D9DFD7"/>
+       <TextBlock Text="·" Margin="10,0" Foreground="#99D9DFD7"/>
+       <TextBlock x:Name="LabHomePlayers" Text="当前人数 —" FontSize="12" Foreground="#D9DFD7"/>
+      </WrapPanel>
+      <TextBlock x:Name="LabHomePack" Text="BRS 的新旅程" FontSize="35" FontWeight="Bold" Foreground="#F1F2E9" TextWrapping="Wrap" MaxWidth="430" HorizontalAlignment="Left"/>
+      <TextBlock x:Name="LabHomePackEnglish" Text="YOUR NEXT CHAPTER STARTS HERE" FontSize="11" FontFamily="Consolas" Foreground="#E2D292" Margin="0,6,0,0" TextWrapping="Wrap"/>
+     </StackPanel>
+     <Grid Grid.Row="2" Margin="0,14,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="3"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <Rectangle Fill="#F2D649"/>
+      <TextBlock x:Name="LabHomeTagline" Grid.Column="1" Text="让齿轮转动，让故事继续。" FontSize="12" Foreground="#D9DFD7" Margin="10,0,12,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+      <TextBlock x:Name="LabHomeDay" Grid.Column="2" Text="正在同步周目信息" Foreground="{DynamicResource ColorBrush2}" FontSize="11" VerticalAlignment="Center"/>
+     </Grid>
+    </Grid>
+    <Path Data="M0 0H20 M0 0V20" Stroke="#F2D649" StrokeThickness="2" Margin="8" HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False"/>
+    <TextBlock Text="BRS" FontFamily="Consolas" FontSize="72" FontWeight="Bold" Foreground="#F1F2E9" Opacity="0.1" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,20,0" IsHitTestVisible="False"/>
+    <Path Data="M0 0L-12 12 M12 0L0 12 M24 0L12 12 M36 0L24 12 M48 0L36 12 M60 0L48 12 M72 0L60 12 M84 0L72 12 M96 0L84 12 M108 0L96 12" Stroke="#F2D649" StrokeThickness="2" Opacity="0.30" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,18,0" IsHitTestVisible="False"/>
+   </Grid>
+   <Border x:Name="CalendarCard" Margin="0,12,0,0" Background="{DynamicResource ColorBrush7}" BorderBrush="{DynamicResource ColorBrushCardLine}" BorderThickness="1" CornerRadius="8" Padding="16,14">
+    <Grid>
+     <Grid.ColumnDefinitions><ColumnDefinition Width="104"/><ColumnDefinition Width="18"/><ColumnDefinition x:Name="CalendarWeekColumn" Width="*"/><ColumnDefinition x:Name="CalendarIdeaColumn" Width="0"/></Grid.ColumnDefinitions>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+     <Border Grid.RowSpan="2" Background="#F2D649" CornerRadius="5" Padding="8,9,8,8" Margin="0,0,0,2">
+      <Grid>
+       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+       <TextBlock Text="冒 险 日 历" HorizontalAlignment="Center" FontSize="10" Foreground="#5A5124" FontWeight="SemiBold"/>
+       <TextBlock x:Name="LabCalendarDay" Grid.Row="1" Text="—" FontFamily="Bahnschrift, Segoe UI" FontSize="52" FontWeight="Bold" Foreground="#24281D" HorizontalAlignment="Center" Margin="0,-2,0,-3"/>
+       <TextBlock x:Name="LabCalendarWeekday" Grid.Row="2" Text="今天也要开心" FontSize="11" Foreground="#5A5124" HorizontalAlignment="Center"/>
+       <Rectangle Width="5" Height="9" Fill="{DynamicResource ColorBrush7}" RadiusX="2" RadiusY="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8,-14,0,0"/>
+       <Rectangle Width="5" Height="9" Fill="{DynamicResource ColorBrush7}" RadiusX="2" RadiusY="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-14,8,0"/>
+      </Grid>
+     </Border>
+     <StackPanel Grid.Column="2" Margin="0,0,0,8">
+       <TextBlock x:Name="LabCalendarMonth" Text="今天的冒险" FontSize="15" FontWeight="SemiBold"/>
+       <TextBlock x:Name="LabCalendarLunar" Text="每天，都是新的存档。" FontSize="11" Foreground="{DynamicResource ColorBrush2}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+     </StackPanel>
+     <UniformGrid x:Name="PanCalendarWeek" Grid.Row="1" Grid.Column="2" Rows="1" Columns="7" VerticalAlignment="Bottom" MaxWidth="280" HorizontalAlignment="Left"/>
+     <Border x:Name="CalendarIdea" Grid.Row="2" Grid.ColumnSpan="4" BorderBrush="{DynamicResource ColorBrushCardLine}" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,10,0,0">
+      <Grid>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+       <Border x:Name="CalendarIdeaLabel" Background="#F2D649" CornerRadius="3" Padding="6,3" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,1,10,0"><TextBlock Text="今日运势" Foreground="#24281D" FontSize="10" FontWeight="Bold"/></Border>
+       <StackPanel x:Name="CalendarIdeaText" Grid.Column="1">
+       <Grid MinHeight="36">
+        <Button x:Name="BtnDrawFortune" Content="抽取今日运势" AutomationProperties.Name="抽取今日运势，每天一次" ToolTip="每天可抽一次，结果与祝福语会保留到当天结束" Style="{StaticResource IndustrialAction}" Background="{DynamicResource IndustrialAccent}" Foreground="{DynamicResource IndustrialOnAccent}" Padding="11,5" FontSize="12" HorizontalAlignment="Left" IsEnabled="False">
+         <Button.ContentTemplate><DataTemplate><TextBlock Text="{Binding}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" FontWeight="SemiBold"/></DataTemplate></Button.ContentTemplate>
+        </Button>
+        <Grid x:Name="PanFortuneDrawing" Visibility="Collapsed" Height="36" IsHitTestVisible="False" AutomationProperties.Name="正在摇签，等待运势揭晓">
+         <Viewbox Width="34" Height="36" HorizontalAlignment="Left" Stretch="Uniform" Margin="0,0,0,0">
+          <Grid Width="42" Height="44" RenderTransformOrigin="0.5,0.85">
+           <Grid.RenderTransform><RotateTransform x:Name="FortuneShakeTransform"/></Grid.RenderTransform>
+           <Canvas>
+            <Canvas.RenderTransform><TranslateTransform x:Name="FortuneStickRise"/></Canvas.RenderTransform>
+            <Rectangle Canvas.Left="10" Canvas.Top="2" Width="5" Height="27" RadiusX="1" RadiusY="1" Fill="#E2D292" RenderTransformOrigin="0.5,1"><Rectangle.RenderTransform><RotateTransform Angle="-16"/></Rectangle.RenderTransform></Rectangle>
+            <Rectangle Canvas.Left="18" Canvas.Top="0" Width="5" Height="29" RadiusX="1" RadiusY="1" Fill="#F2D649"/>
+            <Rectangle Canvas.Left="27" Canvas.Top="3" Width="5" Height="26" RadiusX="1" RadiusY="1" Fill="#E2D292" RenderTransformOrigin="0.5,1"><Rectangle.RenderTransform><RotateTransform Angle="16"/></Rectangle.RenderTransform></Rectangle>
+           </Canvas>
+           <Path Data="M5,19 L37,19 L33,43 L9,43 Z" Fill="#F2D649"/>
+           <Border Background="#24281D" CornerRadius="2" Width="18" Height="16" Margin="0,22,0,0" VerticalAlignment="Top"><TextBlock Text="签" Foreground="#F2D649" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+          </Grid>
+         </Viewbox>
+         <Path x:Name="FortuneSparkle" Data="M5,0 L6.5,3.5 L10,5 L6.5,6.5 L5,10 L3.5,6.5 L0,5 L3.5,3.5 Z" Fill="{DynamicResource ColorBrush3}" Width="9" Height="9" Stretch="Uniform" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="32,0,0,0" Opacity="0.6"/>
+         <TextBlock Text="摇一摇，好运正在赶来…" FontSize="11" Foreground="{DynamicResource ColorBrush2}" Margin="48,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </Grid>
+        <WrapPanel x:Name="PanFortuneResult" Visibility="Collapsed">
+         <WrapPanel.RenderTransform><TransformGroup><ScaleTransform x:Name="FortuneRevealScale"/><TranslateTransform x:Name="FortuneRevealOffset"/></TransformGroup></WrapPanel.RenderTransform>
+         <TextBlock x:Name="LabCalendarIdea" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource ColorBrush3}"/>
+         <TextBlock Text="今日已抽 · 明日再来" FontSize="10" Foreground="{DynamicResource ColorBrush2}" Margin="10,0,0,4" VerticalAlignment="Bottom"/>
+        </WrapPanel>
+       </Grid>
+        <TextBlock x:Name="LabCalendarHint" Text="每天一签，收下一句专属祝福。" Foreground="{DynamicResource ColorBrush2}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap" LineHeight="17"><TextBlock.RenderTransform><TranslateTransform x:Name="FortuneBlessingOffset"/></TextBlock.RenderTransform></TextBlock>
+       </StackPanel>
+      </Grid>
+     </Border>
+    </Grid>
+   </Border>
+   <TextBlock x:Name="LabHomeUpdated" Text="周目与整合包信息来自 BRS · 每 60 秒自动更新" FontSize="10" Foreground="{DynamicResource ColorBrush2}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+   <local:MyCard x:Name="PanLog" Title="启动日志" Margin="0,16,0,0" Visibility="Collapsed"><TextBlock x:Name="LabLog" Margin="20,38,20,18" TextWrapping="Wrap"/></local:MyCard>
+  </StackPanel>
+ </local:MyScrollViewer>
 </local:MyPageRight>

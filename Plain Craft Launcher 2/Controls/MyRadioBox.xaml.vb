@@ -1,9 +1,40 @@
 Imports System.Windows.Markup
 Imports System.Windows.Shapes
 
+Imports System.Windows.Automation
+Imports System.Windows.Automation.Peers
+Imports System.Windows.Automation.Provider
+
 <ContentProperty("Inlines")>
 Public Class MyRadioBox
     Implements IMyRadio, ISettingControl
+
+    Protected Overrides Function OnCreateAutomationPeer() As AutomationPeer
+        Return New BrclRadioAutomationPeer(Me, Function() Checked, AddressOf SelectFromInput)
+    End Function
+    Friend Sub SelectFromInput()
+        If Not IsEnabled OrElse Checked Then Return
+        PlayUiSound(UiSoundCue.Toggle)
+        SetChecked(True, True)
+    End Sub
+    Private PressedKey As Key = Key.None
+    Private Sub Radiobox_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
+        If e.Handled OrElse (e.Key <> Key.Space AndAlso e.Key <> Key.Enter) Then Return
+        e.Handled = True
+        If Not IsEnabled OrElse e.IsRepeat OrElse PressedKey <> Key.None Then Return
+        PressedKey = e.Key
+    End Sub
+    Private Sub Radiobox_KeyUp(sender As Object, e As KeyEventArgs) Handles Me.KeyUp
+        If e.Handled OrElse (e.Key <> Key.Space AndAlso e.Key <> Key.Enter) Then Return
+        e.Handled = True
+        Dim Activate = PressedKey = e.Key AndAlso IsEnabled
+        PressedKey = Key.None
+        If Activate Then SelectFromInput()
+    End Sub
+    Private Sub Radiobox_CancelKey() Handles Me.LostKeyboardFocus, Me.IsEnabledChanged, Me.Unloaded
+        PressedKey = Key.None
+        Radiobox_MouseLeave()
+    End Sub
 
     '基础
 
@@ -27,6 +58,8 @@ Public Class MyRadioBox
         Sub(d As MyRadioBox, e As DependencyPropertyChangedEventArgs)
             '在使用 XAML 设置 Checked 属性时，不会触发 Checked_Set 方法，所以需要在这里手动触发 UI 改变
             If Not d.IsLoaded Then d.SyncUI()
+            Dim Peer = TryCast(UIElementAutomationPeer.FromElement(d), BrclRadioAutomationPeer)
+            If Peer IsNot Nothing Then Peer.NotifySelectionChanged(CBool(e.OldValue), CBool(e.NewValue))
         End Sub))
 
     ''' <summary>
@@ -169,13 +202,17 @@ Public Class MyRadioBox
     Private MouseDowned As Boolean = False
     Private AllowMouseDown As Boolean = True
     Private Sub Radiobox_MouseUp() Handles Me.MouseLeftButtonUp
+        If Not IsEnabled Then Return
         If Not MouseDowned Then Return
         Logger.Info($"按下单选框：{Text}")
+        PlayUiSound(UiSoundCue.Toggle)
         SetChecked(True, True)
         MouseDowned = False
         AniStart(AaColor(ShapeBorder, Ellipse.FillProperty, "ColorBrushHalfWhite", 100), "MyRadioBox Background " & Uuid)
     End Sub
-    Private Sub Radiobox_MouseDown() Handles Me.MouseLeftButtonDown
+    Private Sub Radiobox_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
+        If Not IsEnabled Then Return
+        e.Handled = True
         MouseDowned = True
         Focus()
         AniStart(AaColor(ShapeBorder, Ellipse.FillProperty, "ColorBrushBg1", 100), "MyRadioBox Background " & Uuid)
@@ -249,4 +286,75 @@ Public Class MyRadioBox
 
 #End Region
 
+End Class
+
+'Both radio styles keep their existing same-parent grouping. As with WPF's
+'RadioButtonAutomationPeer, Select replaces the selection and removal is invalid.
+Public Class BrclRadioAutomationPeer
+    Inherits FrameworkElementAutomationPeer
+    Implements ISelectionItemProvider
+
+    Private ReadOnly IsChecked As Func(Of Boolean)
+    Private ReadOnly SelectAction As Action
+    Public Sub New(owner As FrameworkElement, checked As Func(Of Boolean), selectAction As Action)
+        MyBase.New(owner)
+        IsChecked = checked
+        Me.SelectAction = selectAction
+    End Sub
+    Protected Overrides Function GetClassNameCore() As String
+        Return Owner.GetType().Name
+    End Function
+    Protected Overrides Function GetAutomationControlTypeCore() As AutomationControlType
+        Return AutomationControlType.RadioButton
+    End Function
+    Protected Overrides Function GetNameCore() As String
+        Dim ExplicitName = MyBase.GetNameCore()
+        If Not String.IsNullOrWhiteSpace(ExplicitName) Then Return ExplicitName
+        Dim Label = If(TypeOf Owner Is MyRadioBox, DirectCast(Owner, MyRadioBox).LabText, DirectCast(Owner, MyRadioButton).LabText)
+        Return New TextRange(Label.ContentStart, Label.ContentEnd).Text
+    End Function
+    Protected Overrides Function GetChildrenCore() As List(Of AutomationPeer)
+        Return Nothing
+    End Function
+    Private Function GroupItems() As List(Of FrameworkElement)
+        Dim ParentPanel = TryCast(DirectCast(Owner, FrameworkElement).Parent, Panel)
+        If ParentPanel Is Nothing Then Return New List(Of FrameworkElement) From {DirectCast(Owner, FrameworkElement)}
+        Return ParentPanel.Children.OfType(Of FrameworkElement)().Where(Function(item) Owner.GetType().IsInstanceOfType(item)).ToList()
+    End Function
+    Protected Overrides Function GetPositionInSetCore() As Integer
+        Return GroupItems().IndexOf(DirectCast(Owner, FrameworkElement)) + 1
+    End Function
+    Protected Overrides Function GetSizeOfSetCore() As Integer
+        Return GroupItems().Count
+    End Function
+    Public Overrides Function GetPattern(patternInterface As PatternInterface) As Object
+        If patternInterface = PatternInterface.SelectionItem Then Return Me
+        Return MyBase.GetPattern(patternInterface)
+    End Function
+    Public ReadOnly Property IsSelected As Boolean Implements ISelectionItemProvider.IsSelected
+        Get
+            Return IsChecked()
+        End Get
+    End Property
+    Public ReadOnly Property SelectionContainer As IRawElementProviderSimple Implements ISelectionItemProvider.SelectionContainer
+        Get
+            Return Nothing 'Same as native RadioButton: sibling group is exposed by position/size.
+        End Get
+    End Property
+    Public Sub SelectItem() Implements ISelectionItemProvider.Select
+        If Not IsEnabled() Then Throw New ElementNotEnabledException()
+        SelectAction()
+    End Sub
+    Public Sub AddToSelection() Implements ISelectionItemProvider.AddToSelection
+        If Not IsEnabled() Then Throw New ElementNotEnabledException()
+        If Not IsSelected Then Throw New InvalidOperationException("单选项请使用 Select 进行切换。")
+    End Sub
+    Public Sub RemoveFromSelection() Implements ISelectionItemProvider.RemoveFromSelection
+        If Not IsEnabled() Then Throw New ElementNotEnabledException()
+        If IsSelected Then Throw New InvalidOperationException("单选组必须保留一个选中项。")
+    End Sub
+    Public Sub NotifySelectionChanged(oldValue As Boolean, newValue As Boolean)
+        RaisePropertyChangedEvent(SelectionItemPatternIdentifiers.IsSelectedProperty, oldValue, newValue)
+        If newValue Then RaiseAutomationEvent(AutomationEvents.SelectionItemPatternOnElementSelected)
+    End Sub
 End Class

@@ -6,6 +6,25 @@ Public Class PageInstanceLeft
     ''' </summary>
     Public Shared Instance As McInstance = Nothing
 
+    ''' <summary>打开指定实例的 BRCL 独立设置，不改变首页的实例选择。</summary>
+    Public Shared Sub OpenSettings(Target As McInstance)
+        If McLaunchLoader.State = LoadState.Loading OrElse IsBrsPackInstalling Then
+            Hint("请等待当前启动或整合包安装完成后再修改实例设置。", HintType.Blue)
+            Return
+        End If
+        If Target Is Nothing Then
+            Hint("还没有可设置的实例，请先安装服务器整合包或在版本选择中添加已有实例。", HintType.Blue)
+            Return
+        End If
+        Try
+            Target.Load()
+            Instance = Target
+            FrmMain.PageChange(FormMain.PageType.InstanceSetup, FormMain.PageSubType.InstanceOverall)
+        Catch ex As Exception
+            Logger.Error(ex, "打开版本设置失败", LogBehavior.Alert)
+        End Try
+    End Sub
+
     Public Sub RefreshModDisabled() Handles Me.Loaded
         If Instance IsNot Nothing AndAlso Instance.Modable Then
             ItemMod.Visibility = Visibility.Visible
@@ -22,11 +41,12 @@ Public Class PageInstanceLeft
     ''' 当前页面的编号。从 0 开始计算。
     ''' </summary>
     Public PageID As FormMain.PageSubType = FormMain.PageSubType.Default
+    Private ReadOnly ContentPages As New Dictionary(Of FormMain.PageSubType, PageInstanceContent)
 
     ''' <summary>
     ''' 勾选事件改变页面。
     ''' </summary>
-    Private Sub PageCheck(sender As FrameworkElement, e As RouteEventArgs) Handles ItemOverall.Check, ItemMod.Check, ItemModDisabled.Check, ItemSetup.Check, ItemExport.Check
+    Private Sub PageCheck(sender As FrameworkElement, e As RouteEventArgs) Handles ItemOverall.Check, ItemMod.Check, ItemModDisabled.Check, ItemSetup.Check, ItemExport.Check, ItemSaves.Check, ItemResources.Check, ItemShaders.Check, ItemScreenshots.Check, ItemSchematics.Check
         '尚未初始化控件属性时，sender.Tag 为 Nothing，会导致切换到页面 0
         '若使用 IsLoaded，则会导致模拟点击不被执行（模拟点击切换页面时，控件的 IsLoaded 为 False）
         If sender.Tag IsNot Nothing Then PageChange(Val(sender.Tag))
@@ -50,6 +70,9 @@ Public Class PageInstanceLeft
             Case FormMain.PageSubType.InstanceExport
                 If FrmInstanceExport Is Nothing Then FrmInstanceExport = New PageInstanceExport
                 Return FrmInstanceExport
+            Case FormMain.PageSubType.InstanceSaves To FormMain.PageSubType.InstanceSchematics
+                If Not ContentPages.ContainsKey(ID) Then ContentPages(ID) = New PageInstanceContent(CType(CInt(ID), InstanceContentKind))
+                Return ContentPages(ID)
             Case Else
                 Throw New Exception("未知的版本设置子页面种类：" & ID)
         End Select
@@ -105,6 +128,8 @@ Public Class PageInstanceLeft
             Case FormMain.PageSubType.InstanceExport
                 If FrmInstanceExport IsNot Nothing Then FrmInstanceExport.RefreshAll()
                 ItemExport.Checked = True
+            Case FormMain.PageSubType.InstanceSaves To FormMain.PageSubType.InstanceSchematics
+                If ContentPages.ContainsKey(SubType) Then ContentPages(SubType).RefreshEntries()
         End Select
     End Sub
 

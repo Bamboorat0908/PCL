@@ -1,0 +1,17 @@
+# Place inside the existing zhushu.homes HTTPS server block.
+# Keep this ^~ location ahead of generic /BRS handling; do not alter BRS itself.
+location = /BRS/news {
+    return 308 /BRS/news/$is_args$args;
+}
+location ^~ /BRS/news/ {
+    proxy_pass http://127.0.0.1:8094;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_http_version 1.1;
+    proxy_cache off;
+    proxy_buffering on;
+    proxy_read_timeout 30s;
+    client_max_body_size 256k;
+}

@@ -1,5 +1,6 @@
 ﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <ItemGroup><Resource Include="Images\BrsMachinist.png" /><Resource Include="Images\LauncherLogo.png" /><Resource Include="Images\LauncherSplash.png" /><Resource Include="Images\BrsServerLogo.png" /><Compile Include="Modules\BrclErrorPresentation.vb" /><Compile Include="Controls\MyMsg\BrclErrorWindow.vb" /></ItemGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -184,6 +185,7 @@
     </Reference>
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.Security" />
     <Reference Include="System.ServiceModel" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
@@ -193,6 +195,8 @@
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
     <Reference Include="WindowsBase" />
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="UIAutomationTypes" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
   </ItemGroup>
@@ -201,12 +205,51 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Modules\BrclAudio.vb" />
+    <Compile Include="Controls\BrsPlayerAvatar.vb" />
+    <Compile Include="Pages\PageBRS\BrsDashboardData.vb" />
+    <Compile Include="Pages\PageSetup\PageSetupSponsors.xaml.vb">
+      <DependentUpon>PageSetupSponsors.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PageSetup\PageSetupChangelog.xaml.vb">
+      <DependentUpon>PageSetupChangelog.xaml</DependentUpon>
+    </Compile>
+    <Page Include="Pages\PageSetup\PageSetupChangelog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <EmbeddedResource Include="Pages\PageSetup\Changelog.json">
+      <LogicalName>BRCL.Changelog.json</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\LICENCE">
+      <Link>Resources\LICENCE</Link>
+      <LogicalName>BRCL.LICENCE</LogicalName>
+    </EmbeddedResource>
+    <Page Include="Pages\PageSetup\PageSetupSponsors.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="Pages\PageSetup\PageSetupPrivacy.xaml.vb">
+      <DependentUpon>PageSetupPrivacy.xaml</DependentUpon>
+    </Compile>
+    <Page Include="Pages\PageSetup\PageSetupPrivacy.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="Pages\PageSetup\PageSetupSound.xaml.vb">
+      <DependentUpon>PageSetupSound.xaml</DependentUpon>
+    </Compile>
+    <Page Include="Pages\PageSetup\PageSetupSound.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Compile Include="Controls\Behaviors\ClipboardInterceptor.vb" />
     <Compile Include="Controls\Behaviors\Interfaces.vb" />
     <Compile Include="Controls\Behaviors\LazyLoadBehavior.vb" />
     <Compile Include="Controls\MyComboBox.vb" />
     <Compile Include="Controls\MyComboBoxItem.vb" />
     <Compile Include="Controls\MyCard.vb" />
+    <Compile Include="Controls\IndustrialBackdrop.vb" />
     <Compile Include="Controls\MyExtraTextButton.xaml.vb">
       <DependentUpon>MyExtraTextButton.xaml</DependentUpon>
     </Compile>
@@ -221,6 +264,7 @@
 
     <Compile Include="Controls\MyVirtualizingElement.vb" />
     <Compile Include="Modules\Base\PclLogger.vb" />
+    <Compile Include="Modules\MicrosoftDeviceLogin.vb" />
     <Compile Include="Modules\Resource\LocalResourceFile.vb" />
     <Compile Include="Modules\Resource\ResourceProject.vb" />
     <Compile Include="Modules\Resource\ResourceVersion.vb" />
@@ -254,6 +298,9 @@
     <Compile Include="Controls\MyMsg\MyMsgSelect.xaml.vb">
       <DependentUpon>MyMsgSelect.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\MyMsg\BrclUsageConsentWindow.xaml.vb">
+      <DependentUpon>BrclUsageConsentWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Controls\MyScrollBar.vb" />
     <Compile Include="Controls\MyScrollViewer.vb" />
     <Compile Include="Controls\MySearchBox.xaml.vb">
@@ -267,6 +314,14 @@
     <Compile Include="Modules\ModDevelop.vb" />
     <Compile Include="Modules\Minecraft\ModWatcher.vb" />
     <Compile Include="Modules\ModSecret.vb" />
+    <Compile Include="Modules\ModBrclUpdate.vb" />
+    <Compile Include="Modules\ModBrsPack.vb" /><Compile Include="Controls\MyMsg\BrsPackPresetWindow.vb" />
+    <Compile Include="Modules\ModCrashReports.vb" />
+    <Compile Include="Modules\ModExperience.vb" />
+    <Compile Include="Modules\BrclWebViewRuntime.vb" />
+    <EmbeddedResource Include="Modules\BrclInstall.ps1">
+      <LogicalName>PCL.BrclInstall.ps1</LogicalName>
+    </EmbeddedResource>
     <Compile Include="Pages\PageDownload\Resource\PageResource.xaml.vb">
       <DependentUpon>PageResource.xaml</DependentUpon>
     </Compile>
@@ -315,6 +370,17 @@
     </Compile>
     <Compile Include="Pages\PageStock\PageStock.xaml.vb">
       <DependentUpon>PageStock.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PageMap\PageMap.xaml.vb">
+      <DependentUpon>PageMap.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\PageNews\PageNews.xaml.vb">
+      <DependentUpon>PageNews.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Modules\BrclBank.vb" />
+    <Compile Include="Modules\BrclDailyFortune.vb" />
+    <Compile Include="Pages\PageBank\PageBank.xaml.vb">
+      <DependentUpon>PageBank.xaml</DependentUpon>
     </Compile>
     <Compile Include="Pages\PageBRS\PageBRS.xaml.vb">
       <DependentUpon>PageBRS.xaml</DependentUpon>
@@ -453,6 +519,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Controls\MyMsg\BrclUsageConsentWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Controls\MyRadioBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -576,10 +646,26 @@
       <SubType>Designer</SubType>
     </Page>
     <None Include="app.manifest" />
+    <Page Include="Resources\IndustrialIcons.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <None Include="Resources\Custom.xaml">
       <SubType>Designer</SubType>
     </None>
     <Page Include="Pages\PageStock\PageStock.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\PageMap\PageMap.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\PageNews\PageNews.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Pages\PageBank\PageBank.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -729,6 +815,11 @@
     <Import Include="ThrottleDebounce" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Pages\PageInstance\InstanceContentStore.vb" />
+    <Compile Include="Pages\PageInstance\PageInstanceContent.xaml.vb"><DependentUpon>PageInstanceContent.xaml</DependentUpon></Compile>
+    <Page Include="Pages\PageInstance\PageInstanceContent.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
+    <Compile Include="Controls\DinoRunnerModel.vb" />
+    <Compile Include="Controls\DownloadMiniGame.vb" />
     <Compile Include="Modules\Base\ModAnimation.vb" />
     <Compile Include="Modules\Base\MyBitmap.vb" />
     <Compile Include="Modules\ModMain.vb" />
@@ -775,6 +866,9 @@
   <ItemGroup>
     <Resource Include="Images\icon.ico" />
     <Resource Include="Images\TitleLogo.png" />
+    <EmbeddedResource Include="Pages\PageStock\StockEmbedded.js">
+      <LogicalName>BRCL.StockEmbedded.js</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Font.ttf" />
@@ -888,9 +982,6 @@
     <Resource Include="Images\Blocks\OptiFabric.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\java-wrapper.jar" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Images\Skins\Ari.png" />
     <Resource Include="Images\Skins\Efe.png" />
     <Resource Include="Images\Skins\Kai.png" />
@@ -938,9 +1029,6 @@
     <Resource Include="Images\Heads\EasyTier.png" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\lwjgl-unsafe-agent.jar" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\MeloongCore\Shared\MeloongCore.csproj">
       <Project>{d22bbf3c-2177-0208-4e29-8466aa41ac6f}</Project>
       <Name>MeloongCore</Name>
@@ -979,4 +1067,37 @@
 
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <ItemGroup>
+    <PackedDependency Include="Resources\NAudio.dll;Resources\WebView2\Microsoft.Web.WebView2.Core.dll;Resources\WebView2\Microsoft.Web.WebView2.Wpf.dll;Resources\WebView2\WebView2Loader.dll;Resources\WebView2\WebView2Loader.x86.dll" />
+    <PackedDependency Include="Resources\CacheCow.Client.dll;Resources\CacheCow.Client.FileStore.dll;Resources\CacheCow.Common.dll;Resources\ThrottleDebounce.dll;Resources\Imazen.WebP.dll;Resources\libwebp64.dll;Resources\Newtonsoft.Json.dll;Resources\Ookii.Dialogs.Wpf.dll;Resources\System.Net.Http.Formatting.dll" />
+    <PackedDependency Include="..\PCLCS\bin\PCLCS.dll;..\PCLCS\bin\MeloongCore.dll;..\PCLCS\bin\MeloongCore.Wpf.dll;..\PCLCS\bin\Microsoft.Win32.Registry.dll" />
+    <EmbeddedResource Include="@(PackedDependency->'$(IntermediateOutputPath)packed\%(Filename).deflate')">
+      <LogicalName>BRCL.Packed.%(Filename)</LogicalName>
+      <WithCulture>false</WithCulture>
+    </EmbeddedResource>
+  </ItemGroup>
+  <UsingTask TaskName="PackLauncherDependency" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Source ParameterType="System.String" Required="true" />
+      <Destination ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.IO.Compression" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        using (var input = File.OpenRead(Source))
+        using (var output = File.Create(Destination))
+        using (var header = new BinaryWriter(output)) {
+            header.Write(checked((int)input.Length));
+            using (var compressor = new DeflateStream(output, CompressionLevel.Optimal, true))
+                input.CopyTo(compressor);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+  <Target Name="PackLauncherDependencies" BeforeTargets="SplitResourcesByCulture" DependsOnTargets="ResolveProjectReferences" Inputs="%(PackedDependency.FullPath);$(MSBuildProjectFullPath)" Outputs="$(IntermediateOutputPath)packed\%(PackedDependency.Filename).deflate">
+    <MakeDir Directories="$(IntermediateOutputPath)packed" />
+    <PackLauncherDependency Source="%(PackedDependency.FullPath)" Destination="$(IntermediateOutputPath)packed\%(PackedDependency.Filename).deflate" />
+    <ItemGroup><FileWrites Include="$(IntermediateOutputPath)packed\%(PackedDependency.Filename).deflate" /></ItemGroup>
+  </Target>
 </Project>

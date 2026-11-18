@@ -319,6 +319,7 @@ Public Module ModLoader
                 SyncLock LockState
                     State = LoadState.Failed
                 End SyncLock
+                Return False '输入获取失败时不得启动工作线程或覆盖原始错误。
             End Try
             '检验输入以确定情况
             If IsForceRestart Then Return True '强制要求重启
@@ -676,15 +677,19 @@ Restart:
     Public Sub LoaderTaskbarAdd(Of T)(Loader As LoaderCombo(Of T))
         If FrmSpeedLeft IsNot Nothing Then FrmSpeedLeft.TaskRemove(Loader)
         LoaderTaskbar.Add(Loader)
+        RequestMainTick()
         Logger.Info($"{Loader.Name} 已加入任务列表")
     End Sub
     Public Sub LoaderTaskbarProgressRefresh()
         Try
+            If LoaderTaskbar.Count = 0 AndAlso LoaderTaskbarProgress = 1 AndAlso LoaderTaskbarProgressLast = Shell.TaskbarItemProgressState.None Then Return
             Dim NewState As Shell.TaskbarItemProgressState
-            Dim NewProgress As Double = LoaderTaskbarProgressGet()
+            Dim tasks As List(Of LoaderBase) = CType(LoaderTaskbar, List(Of LoaderBase))
+            Dim NewProgress As Double = TaskProgressAverage(tasks)
+            Dim hasLoading = tasks.Exists(Function(task) task.State = LoadState.Loading)
             '若单个任务已中止，或全部任务已完成，则刷新并移除
-            For Each Task In LoaderTaskbar
-                If LoaderTaskbar.All(Function(l) l.State <> LoadState.Loading) OrElse
+            For Each Task In tasks
+                If (Not hasLoading AndAlso Task.State <> LoadState.Loading) OrElse
                    (Task.State = LoadState.Waiting OrElse Task.State = LoadState.Canceled) Then
                     FrmSpeedLeft?.TaskRefresh(Task)
                     LoaderTaskbar.Remove(Task)
@@ -697,9 +702,11 @@ Restart:
             Else
                 LoaderTaskbarProgress = LoaderTaskbarProgress * 0.9 + NewProgress * 0.1
             End If
-            RunInUi(Sub() FrmMain.BtnExtraDownload.Progress = LoaderTaskbarProgress)
+            If FrmMain.BtnExtraDownload.Progress <> LoaderTaskbarProgress Then
+                RunInUi(Sub() FrmMain.BtnExtraDownload.Progress = LoaderTaskbarProgress)
+            End If
             '更新任务栏信息
-            If Not LoaderTaskbar.Any() OrElse LoaderTaskbarProgress = 1 Then
+            If LoaderTaskbar.Count = 0 OrElse LoaderTaskbarProgress = 1 Then
                 NewState = Shell.TaskbarItemProgressState.None
             ElseIf LoaderTaskbarProgress < 0.015 Then
                 NewState = Shell.TaskbarItemProgressState.Indeterminate
@@ -717,9 +724,17 @@ Restart:
         End Try
     End Sub
     Public Function LoaderTaskbarProgressGet() As Double
+        If LoaderTaskbar.Count = 0 Then Return 1
+        Return TaskProgressAverage(CType(LoaderTaskbar, List(Of LoaderBase)))
+    End Function
+    Private Function TaskProgressAverage(tasks As List(Of LoaderBase)) As Double
         Try
-            If Not LoaderTaskbar.Any Then Return 1
-            Return LoaderTaskbar.Select(Function(l) l.Progress).Average().Clamp(0, 1)
+            If tasks.Count = 0 Then Return 1
+            Dim total As Double = 0
+            For Each task In tasks
+                total += task.Progress
+            Next
+            Return (total / tasks.Count).Clamp(0, 1)
         Catch ex As Exception
             Logger.Error(ex, "获取任务栏进度出错")
             Return 0.5

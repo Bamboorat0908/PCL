@@ -10,6 +10,12 @@ Public Class Application
             MeloongCore.Main.Init("BRCL")
             MeloongCore.Wpf.Main.Init()
             Logger.Instance = New PclLogger With {.logFolder = Paths.BaseThenName, .MinLevel = If(ModeDebug, LogLevel.Trace, LogLevel.Info)}
+            If Not HasValidStartupArguments(e.Args) Then
+                Logger.Warn("启动参数不完整或格式无效：" & e.Args(0))
+                Environment.Exit(ProcessReturnValues.Fail)
+                Return
+            End If
+            If Not ConfigureBundledNetworkSettings() Then Logger.Warn("未能应用内置网络兼容设置")
             '提升主线程优先级
             Thread.CurrentThread.Priority = ThreadPriority.Highest
             '执行开发版测试
@@ -53,7 +59,7 @@ Public Class Application
                     Try
                         PageOtherTest.MemoryOptimizeInternal(False)
                     Catch ex As Exception
-                        MsgBox(ex.Message, MsgBoxStyle.Critical, "内存优化失败")
+                        ShowBrclError("内存优化失败", ex)
                         Environment.Exit(-1)
                     End Try
                     If My.Computer.Info.AvailablePhysicalMemory < Ram Then '避免 ULong 相减出现负数
@@ -82,11 +88,7 @@ Public Class Application
                 DirectoryUtils.Create(Paths.Base & "BRCL\Musics\")
                 CheckPermissionWithException(Paths.Base & "BRCL\")
             Catch ex As Exception
-                MsgBox($"BRCL 没有对当前文件夹的权限（{Paths.Base}BRCL\），请尝试：" & vbCrLf &
-                  "1. 将 BRCL 移动到其他文件夹" & If(Paths.Base.StartsWithF("C:", True), "，例如 C 盘和桌面以外的其他位置。", "。") & vbCrLf &
-                  "2. 删除当前目录中的 BRCL 文件夹，然后再试。" & vbCrLf &
-                  "3. 右键 BRCL 选择属性，打开 兼容性 中的 以管理员身份运行此程序。",
-                MsgBoxStyle.Critical, "运行环境错误")
+                ShowBrclError("启动目录访问失败", ex)
                 Environment.[Exit](ProcessReturnValues.Cancel)
             End Try
 RetryCacheCheck:
@@ -107,6 +109,7 @@ RetryCacheCheck:
             DirectoryUtils.Create(Paths.AppDataThenName)
             '要求单例
             WaitingMutex(e)
+            InitializeCrashReports()
             '设置 ToolTipService 默认值
             ToolTipService.InitialShowDelayProperty.OverrideMetadata(GetType(DependencyObject), New FrameworkPropertyMetadata(100))
             '设置网络配置默认值
@@ -120,7 +123,7 @@ RetryCacheCheck:
             End If
             '设置初始窗口
             If Settings.Get(Of Boolean)("UiLauncherLogo") Then
-                FrmStart = New SplashScreen("Images\icon.ico")
+                FrmStart = New SplashScreen("Images\LauncherSplash.png")
                 FrmStart.Show(False, True)
             End If
             '基础信息
@@ -152,16 +155,33 @@ RetryCacheCheck:
                 FilePath = PathExe
             Catch
             End Try
-            MsgBox(ex.GetDisplay(True) & vbCrLf & "BRCL 所在路径：" & If(String.IsNullOrEmpty(FilePath), "获取失败", FilePath), MsgBoxStyle.Critical, "BRCL 初始化错误")
+            ShowBrclError("BRCL 初始化错误", ex, ex.GetDisplay(True) & vbCrLf & "启动器路径：" & If(String.IsNullOrEmpty(FilePath), "无法获取", FilePath), Fatal:=True)
             FormMain.EndProgramForce(ProcessReturnValues.Exception)
         End Try
     End Sub
+    Private Shared Function HasValidStartupArguments(Arguments As String()) As Boolean
+        If Arguments Is Nothing OrElse Arguments.Length = 0 Then Return True
+        Select Case Arguments(0)
+            Case "--update"
+                If Arguments.Length < 5 Then Return False
+                Dim ProcessId As Integer, Restart As Boolean
+                Return Integer.TryParse(Arguments(1), ProcessId) AndAlso ProcessId > 0 AndAlso
+                    Not String.IsNullOrWhiteSpace(Arguments(2)?.Trim(""""c)) AndAlso
+                    Not String.IsNullOrWhiteSpace(Arguments(3)?.Trim(""""c)) AndAlso
+                    Boolean.TryParse(Arguments(4), Restart)
+            Case "--gpu"
+                Return Arguments.Length >= 2 AndAlso Not String.IsNullOrWhiteSpace(Arguments(1)?.Trim(""""c))
+            Case Else
+                Return True
+        End Select
+    End Function
     ''' <summary>
     ''' 要求程序以单例运行。
     ''' 如果已在运行，则将其窗口拖出来并播放提示音，然后结束当前进程。
     ''' </summary>
     Private Shared Sub WaitingMutex(e As StartupEventArgs)
         If BuildType = BuildTypes.Debug Then Return
+        If Environment.GetEnvironmentVariable("BRCL_UI_PREVIEW") = "1" Then Return
         Try
             Dim MutexCreatedNew As Boolean
             PclMutex = New Mutex(True, "BRCL_SingletonMutex", MutexCreatedNew)
@@ -196,6 +216,7 @@ RetryCacheCheck:
     '异常
     Private Sub Application_DispatcherUnhandledException(sender As Object, e As DispatcherUnhandledExceptionEventArgs) Handles Me.DispatcherUnhandledException
         On Error Resume Next
+        Logger.Warn(e.Exception, "UI 未处理异常")
         '触发页面的 Dispatcher
         If FrmMain?.PageLeft IsNot Nothing AndAlso TypeOf FrmMain.PageLeft Is IDispatcherUnhandledException Then
             CType(FrmMain.PageLeft, IDispatcherUnhandledException).DispatcherUnhandledException(sender, e)
@@ -218,31 +239,69 @@ RetryCacheCheck:
         End If
     End Sub
     Private Shared Sub OldEnvironmentAssert(Optional ex As Exception = Nothing)
-        OpenWebsite("https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer")
         If ex Is Nothing Then
-            Logger.Error($"你的 .NET Framework 版本过低或损坏，请下载并重新安装 .NET Framework 4.8！{vbCrLf}若安装失败，可以先卸载高版本的 .NET Framework 然后再试。", LogBehavior.AlertThenCrash)
+            Logger.Error("BRCL 所需的 .NET Framework 4.8 组件暂不可用。请检查系统组件后重新启动。", LogBehavior.AlertThenCrash)
         Else
-            Logger.Error(ex, $"你的 .NET Framework 版本过低或损坏，请下载并重新安装 .NET Framework 4.8！{vbCrLf}若安装失败，可以先卸载高版本的 .NET Framework 然后再试。", LogBehavior.AlertThenCrash)
+            Logger.Error(ex, "BRCL 无法使用当前 .NET Framework 组件。请检查 .NET Framework 4.8 安装状态后重新启动。", LogBehavior.AlertThenCrash)
         End If
     End Sub
 
     '动态 DLL 加载
+    Friend Shared Function ConfigureBundledNetworkSettings() As Boolean
+        Try
+            'Preserve the legacy App.config HTTP behavior in an EXE-only install.
+            'This changes this process's Framework setting, never machine.config.
+            Dim SettingsType = GetType(Global.System.Net.HttpWebRequest).Assembly.GetType("System.Net.Configuration.SettingsSectionInternal")
+            If SettingsType Is Nothing Then Return False
+            Dim SectionProperty = SettingsType.GetProperty("Section", BindingFlags.Static Or BindingFlags.NonPublic)
+            Dim HeaderField = SettingsType.GetField("useUnsafeHeaderParsing", BindingFlags.Instance Or BindingFlags.NonPublic)
+            If SectionProperty Is Nothing OrElse HeaderField Is Nothing Then Return False
+            Dim Section = SectionProperty.GetValue(Nothing, Nothing)
+            If Section Is Nothing Then Return False
+            HeaderField.SetValue(Section, True)
+            Return True
+        Catch
+            Return False
+        End Try
+    End Function
+
     Private Sub New() '这里必须尽早调用，且不能使用任何库，否则加载 MeloongCore 就会导致崩溃
-        Static Prefixes As String() = {"NAudio", "Newtonsoft.Json", "Ookii.Dialogs.Wpf", "Imazen.WebP", "CacheCow.Common", "CacheCow.Client.FileStore", "CacheCow.Client", "ThrottleDebounce", "System.Net.Http.Formatting", "Microsoft.Win32.Registry", "PCLCS", "MeloongCore.Wpf", "MeloongCore"}
+        Static Prefixes As String() = {"NAudio", "Newtonsoft.Json", "Ookii.Dialogs.Wpf", "Imazen.WebP", "CacheCow.Common", "CacheCow.Client.FileStore", "CacheCow.Client", "ThrottleDebounce", "System.Net.Http.Formatting", "Microsoft.Web.WebView2.Core", "Microsoft.Web.WebView2.Wpf", "Microsoft.Win32.Registry", "PCLCS", "MeloongCore.Wpf", "MeloongCore"}
         Static LoadedAssemblies As New ConcurrentDictionary(Of String, Lazy(Of Assembly))(StringComparer.Ordinal) '缓存
         AddHandler AppDomain.CurrentDomain.AssemblyResolve,
         Function(sender As Object, Args As ResolveEventArgs) As Assembly
-            Dim Prefix As String = Prefixes.FirstOrDefault(Function(p) Args.Name.StartsWith(p, StringComparison.Ordinal))
+            Dim requested = New AssemblyName(Args.Name).Name
+            Dim Prefix = Prefixes.FirstOrDefault(Function(item) item.Equals(requested, StringComparison.OrdinalIgnoreCase))
             If Prefix Is Nothing Then Return Nothing
             Dim LazyAssembly = LoadedAssemblies.GetOrAdd(Prefix, Function(p) New Lazy(Of Assembly)(
             Function()
-                Dim LoadedAssembly = Assembly.Load(DirectCast(My.Resources.ResourceManager.GetObject(p), Byte()))
+                Dim LoadedAssembly = Assembly.Load(ReadPackedBytes(p))
                 If p = "Imazen.WebP" Then ExtractLibwebp() 'WebP 特判
                 Return LoadedAssembly
             End Function, LazyThreadSafetyMode.ExecutionAndPublication))
             Return LazyAssembly.Value
         End Function
     End Sub
+    Friend Shared Function ReadPackedBytes(name As String) As Byte()
+        Using packed = GetType(Application).Assembly.GetManifestResourceStream("BRCL.Packed." & name)
+            If packed Is Nothing Then Throw New IO.FileNotFoundException(name)
+            Using reader As New IO.BinaryReader(packed)
+                Dim length = reader.ReadInt32()
+                If length <= 0 Then Throw New IO.InvalidDataException(name)
+                Dim bytes(length - 1) As Byte
+                Using inflater As New IO.Compression.DeflateStream(packed, IO.Compression.CompressionMode.Decompress)
+                    Dim offset = 0
+                    While offset < length
+                        Dim count = inflater.Read(bytes, offset, length - offset)
+                        If count = 0 Then Throw New IO.EndOfStreamException(name)
+                        offset += count
+                    End While
+                    If inflater.ReadByte() <> -1 Then Throw New IO.InvalidDataException(name)
+                End Using
+                Return bytes
+            End Using
+        End Using
+    End Function
     Private Shared Sub ExtractLibwebp() '这个方法会调用 ModBase，进而调用 MeloongCore，所以不能放在 New 里
         SetDllDirectory(PathPure.Value.TrimEnd("\"c))
         Try

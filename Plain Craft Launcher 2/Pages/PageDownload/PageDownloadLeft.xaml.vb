@@ -1,6 +1,10 @@
 Public Class PageDownloadLeft
     Implements IRefreshable
 
+    Private Sub BrsPack_Click(sender As Object, e As MouseButtonEventArgs) Handles ItemBrsPack.Click
+        InstallBrsPack()
+    End Sub
+
 #Region "页面切换"
 
     ''' <summary>

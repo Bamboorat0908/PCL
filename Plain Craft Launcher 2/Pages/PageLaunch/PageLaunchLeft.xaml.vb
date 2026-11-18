@@ -1,4 +1,4 @@
-Imports System.Windows.Threading
+﻿Imports System.Windows.Threading
 
 Public Class PageLaunchLeft
 
@@ -486,7 +486,7 @@ UseDefault:
                 End Try
             Case 4 '自定义
                 If Not FileUtils.Exists(Paths.AppDataThenName & "CustomSkin.png") Then
-                    Hint("未找到离线皮肤自定义文件，可能它已被删除。PCL 将使用默认的 Steve 皮肤！")
+                    Hint("未找到离线皮肤自定义文件，可能它已被删除。BRCL 将使用默认的 Steve 皮肤！")
                     Settings.Set("LaunchSkinType", 1)
                     GoTo UseDefault
                 End If
@@ -623,8 +623,16 @@ Finish:
             FrmMain.BtnExtraApril.ShowRefresh()
         End If
         '实际的启动
-        If BtnLaunch.Text = "启动游戏" Then
+        If BtnLaunch.Text = "启动 BRS" Then
+            Dim BrsInstance = FindBrsInstance()
+            If BrsInstance Is Nothing Then
+                RefreshButtonsUI()
+                Return
+            End If
+            McInstanceSelected = BrsInstance
             McLaunchStart()
+        ElseIf BtnLaunch.Text = "下载服务器整合包" Then
+            InstallBrsPack()
         ElseIf BtnLaunch.Text = "下载游戏" Then
             FrmMain.PageChange(FormMain.PageType.Download, FormMain.PageSubType.DownloadInstall)
         End If
@@ -635,11 +643,14 @@ Finish:
         If Not BtnLaunch.IsLoaded Then Return
         '获取当前状态
         Dim CurrentState As Integer
-        If (Not IsLoadFinished) OrElse McInstanceListLoader.State = LoadState.Loading OrElse McFolderListLoader.State = LoadState.Loading Then
+        Dim BrsInstance As McInstance = Nothing
+        If IsBrsPackInstalling Then
+            CurrentState = 4
+        ElseIf (Not IsLoadFinished) OrElse McInstanceListLoader.State = LoadState.Loading OrElse McFolderListLoader.State = LoadState.Loading Then
             CurrentState = 0
         Else
-            If McInstanceSelected Is Nothing Then
-                'BRCL：下载功能已移除，无版本时固定为“下载已禁用”状态
+            BrsInstance = FindBrsInstance()
+            If BrsInstance Is Nothing Then
                 CurrentState = 1
             Else
                 CurrentState = 3
@@ -647,8 +658,8 @@ Finish:
         End If
         '更新状态
         If CurrentState = BtnLaunchState AndAlso
-           If(McInstanceSelected Is Nothing, "", McInstanceSelected.PathVersion) = If(BtnLaunchInstance Is Nothing, "", BtnLaunchInstance.PathVersion) Then GoTo ExitRefresh
-        BtnLaunchInstance = McInstanceSelected
+           If(BrsInstance Is Nothing, "", BrsInstance.PathVersion) = If(BtnLaunchInstance Is Nothing, "", BtnLaunchInstance.PathVersion) Then GoTo ExitRefresh
+        BtnLaunchInstance = BrsInstance
         BtnLaunchState = CurrentState
         Select Case CurrentState
             Case 0
@@ -659,10 +670,10 @@ Finish:
                 FrmLaunchLeft.BtnVersion.IsEnabled = False
                 FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
             Case 1
-                Logger.Info("启动按钮：无 Minecraft 版本，下载已禁用")
-                FrmLaunchLeft.BtnLaunch.Text = "启动游戏"
-                FrmLaunchLeft.BtnLaunch.IsEnabled = False
-                FrmLaunchLeft.LabVersion.Text = "未找到可用的游戏版本"
+                Logger.Info("启动按钮：未找到 TRM 实例，可下载服务器整合包")
+                FrmLaunchLeft.BtnLaunch.Text = "下载服务器整合包"
+                FrmLaunchLeft.BtnLaunch.IsEnabled = True
+                FrmLaunchLeft.LabVersion.Text = BrsPackName
                 FrmLaunchLeft.BtnVersion.IsEnabled = True
                 FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
             Case 2
@@ -673,12 +684,18 @@ Finish:
                 FrmLaunchLeft.BtnVersion.IsEnabled = True
                 FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
             Case 3
-                Logger.Info($"启动按钮：Minecraft 版本：{McInstanceSelected.PathVersion}")
-                FrmLaunchLeft.BtnLaunch.Text = "启动游戏"
+                Logger.Info($"启动按钮：TRM 实例：{BrsInstance.PathVersion}")
+                FrmLaunchLeft.BtnLaunch.Text = "启动 BRS"
                 FrmLaunchLeft.BtnVersion.IsEnabled = True
                 FrmLaunchLeft.BtnLaunch.IsEnabled = True
-                FrmLaunchLeft.LabVersion.Text = McInstanceSelected.Name
+                FrmLaunchLeft.LabVersion.Text = BrsInstance.Name
                 'FrmLaunchLeft.BtnMore.Visibility = Visibility.Visible '由功能隐藏设置修改
+            Case 4
+                FrmLaunchLeft.BtnLaunch.Text = "正在安装整合包"
+                FrmLaunchLeft.BtnLaunch.IsEnabled = False
+                FrmLaunchLeft.LabVersion.Text = "可在下载任务中查看进度或取消"
+                FrmLaunchLeft.BtnVersion.IsEnabled = False
+                FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
         End Select
 ExitRefresh:
         '功能隐藏
@@ -705,10 +722,7 @@ ExitRefresh:
     End Sub
     '版本设置按钮
     Private Sub BtnMore_Click() Handles BtnMore.Click
-        If McLaunchLoader.State = LoadState.Loading Then Return
-        McInstanceSelected.Load()
-        PageInstanceLeft.Instance = McInstanceSelected
-        FrmMain.PageChange(FormMain.PageType.InstanceSetup, 0)
+        PageInstanceLeft.OpenSettings(FindBrsInstance())
     End Sub
     ''' <summary>
     ''' 每 0.1s 执行一次，刷新启动的数据 UI 显示。

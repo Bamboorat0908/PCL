@@ -1,5 +1,13 @@
 ﻿Public Class PageSetupLeft
 
+    Private Sub ItemInstance_Click(sender As Object, e As MouseButtonEventArgs) Handles ItemInstance.Click
+        PageInstanceLeft.OpenSettings(If(FindBrsInstance(), McInstanceSelected))
+    End Sub
+
+    Private Sub ItemUpdate_Click(sender As Object, e As MouseButtonEventArgs) Handles ItemUpdate.Click
+        UpdateCheckByButton()
+    End Sub
+
     Private IsLoad As Boolean = False
     Private IsPageSwitched As Boolean = False '如果在 Loaded 前切换到其他页面，会导致触发 Loaded 时再次切换一次
     Private Sub PageSetupLeft_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
@@ -17,10 +25,8 @@
         If IsPageSwitched Then Return
         If Not Settings.Get(Of Boolean)("UiHiddenSetupLaunch") Then
             ItemLaunch.SetChecked(True, False, False)
-        ElseIf Not Settings.Get(Of Boolean)("UiHiddenSetupLink") Then
-            ItemLink.SetChecked(True, False, False)
         Else
-            ItemLaunch.SetChecked(True, False, False)
+            ItemAbout.SetChecked(True, False, False)
         End If
     End Sub
     Private Sub PageOtherLeft_Unloaded(sender As Object, e As RoutedEventArgs) Handles Me.Unloaded
@@ -30,7 +36,7 @@
 #Region "页面切换"
 
     ''' <summary>
-    ''' 当前页面的编号。从左往右从 0 开始计算。
+    ''' 当前设置子页面的编号，与导航项的 Tag 对应。
     ''' </summary>
     Public PageID As FormMain.PageSubType
     Public Sub New()
@@ -38,17 +44,15 @@
         '选择第一个未被禁用的子页面
         If Not Settings.Get(Of Boolean)("UiHiddenSetupLaunch") Then
             PageID = FormMain.PageSubType.SetupLaunch
-        ElseIf Not Settings.Get(Of Boolean)("UiHiddenSetupLink") Then
-            PageID = FormMain.PageSubType.SetupLink
         Else
-            PageID = FormMain.PageSubType.SetupLaunch
+            PageID = FormMain.PageSubType.SetupAbout
         End If
     End Sub
 
     ''' <summary>
     ''' 勾选事件改变页面。
     ''' </summary>
-    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemAbout.Check, ItemLink.Check
+    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemPrivacy.Check, ItemAbout.Check, ItemLink.Check, ItemSound.Check, ItemSponsors.Check, ItemChangelog.Check
         '尚未初始化控件属性时，sender.Tag 为 Nothing，会跳过切换，且由于 PageID 默认为 0 而切换到第一个页面
         '若使用 IsLoaded，则会导致模拟点击不被执行（模拟点击切换页面时，控件的 IsLoaded 为 False）
         If sender.Tag IsNot Nothing Then PageChange(Val(sender.Tag))
@@ -63,12 +67,24 @@
             Case FormMain.PageSubType.SetupLaunch
                 If FrmSetupLaunch Is Nothing Then FrmSetupLaunch = New PageSetupLaunch
                 Return FrmSetupLaunch
+            Case FormMain.PageSubType.SetupPrivacy
+                If FrmSetupPrivacy Is Nothing Then FrmSetupPrivacy = New PageSetupPrivacy
+                Return FrmSetupPrivacy
             Case FormMain.PageSubType.SetupLink
                 If FrmSetupLink Is Nothing Then FrmSetupLink = New PageSetupLink
                 Return FrmSetupLink
             Case FormMain.PageSubType.SetupAbout
                 If FrmSetupAbout Is Nothing Then FrmSetupAbout = New PageOtherAbout
                 Return FrmSetupAbout
+            Case FormMain.PageSubType.SetupSound
+                If FrmSetupSound Is Nothing Then FrmSetupSound = New PageSetupSound
+                Return FrmSetupSound
+            Case FormMain.PageSubType.SetupSponsors
+                If FrmSetupSponsors Is Nothing Then FrmSetupSponsors = New PageSetupSponsors
+                Return FrmSetupSponsors
+            Case FormMain.PageSubType.SetupChangelog
+                If FrmSetupChangelog Is Nothing Then FrmSetupChangelog = New PageSetupChangelog
+                Return FrmSetupChangelog
             Case Else
                 Throw New Exception("未知的设置子页面种类：" & ID)
         End Select
@@ -87,12 +103,23 @@
                 Case FormMain.PageSubType.SetupLaunch
                     If IsNothing(FrmSetupLaunch) Then FrmSetupLaunch = New PageSetupLaunch
                     PageChangeRun(FrmSetupLaunch)
+                Case FormMain.PageSubType.SetupPrivacy
+                    PageChangeRun(PageGet(ID))
                 Case FormMain.PageSubType.SetupLink
                     If IsNothing(FrmSetupLink) Then FrmSetupLink = New PageSetupLink
                     PageChangeRun(FrmSetupLink)
                 Case FormMain.PageSubType.SetupAbout
                     If IsNothing(FrmSetupAbout) Then FrmSetupAbout = New PageOtherAbout
                     PageChangeRun(FrmSetupAbout)
+                Case FormMain.PageSubType.SetupSound
+                    If IsNothing(FrmSetupSound) Then FrmSetupSound = New PageSetupSound
+                    PageChangeRun(FrmSetupSound)
+                Case FormMain.PageSubType.SetupSponsors
+                    If IsNothing(FrmSetupSponsors) Then FrmSetupSponsors = New PageSetupSponsors
+                    PageChangeRun(FrmSetupSponsors)
+                Case FormMain.PageSubType.SetupChangelog
+                    If IsNothing(FrmSetupChangelog) Then FrmSetupChangelog = New PageSetupChangelog
+                    PageChangeRun(FrmSetupChangelog)
                 Case Else
                     Throw New Exception("未知的设置子页面种类：" & ID)
             End Select

@@ -121,7 +121,7 @@ Public Module LocalResourceLoaders
         Logger.Info($"有 {Mods.Where(Function(m) m.Project Is Nothing).Count} 个 Mod 需要联网获取信息，{Mods.Where(Function(m) m.Project IsNot Nothing).Count} 个 Mod 需要更新信息")
         If Not Mods.Any Then Return
         '获取作为检查目标的版本
-        '此处不应向下扩展检查的 MC 小版本，例如 Mod 在更新 1.16.5 后，对早期的 1.16.2 版本发布了修补补丁，这会导致 PCL 将 1.16.5 版本的 Mod 降级到 1.16.2
+        '此处不应向下扩展检查的 MC 小版本，例如 Mod 在更新 1.16.5 后，对早期的 1.16.2 版本发布了修补补丁，这会导致 BRCL 将 1.16.5 版本的 Mod 降级到 1.16.2
         Dim TargetMcVersion As McVersion = Loader.Input.Target
         Dim VanillaVersion = TargetMcVersion.VanillaName
         '开始网络获取

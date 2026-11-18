@@ -1,5 +1,6 @@
 Public Class PageSpeedLeft
     Private Const WatcherInterval As Integer = 300
+    Private ReadOnly WatcherTimer As New Threading.DispatcherTimer(Threading.DispatcherPriority.Background) With {.Interval = TimeSpan.FromMilliseconds(WatcherInterval)}
 
     '初始化
     Private IsLoad As Boolean = False
@@ -11,13 +12,14 @@ Public Class PageSpeedLeft
         '如果在页面切换动画的 “上一页消失” 部分已经完成了下载，就直接尝试返回
         TryReturnToHome()
 
+        RemoveHandler WatcherTimer.Tick, AddressOf WatcherTick
+        AddHandler WatcherTimer.Tick, AddressOf WatcherTick
+        WatcherTimer.Start()
+
         If IsLoad Then Return
         IsLoad = True
 
         '监控定时器
-        Dim timer As New Threading.DispatcherTimer With {.Interval = New TimeSpan(0, 0, 0, 0, WatcherInterval)}
-        AddHandler timer.Tick, AddressOf Watcher
-        timer.Start()
 
         '非调试模式隐藏线程数
         If Not ModeDebug Then
@@ -29,9 +31,18 @@ Public Class PageSpeedLeft
 
     End Sub
 
+    Private Sub StopWatcher() Handles Me.Unloaded
+        WatcherTimer.Stop()
+        RemoveHandler WatcherTimer.Tick, AddressOf WatcherTick
+    End Sub
+    Private Sub WatcherTick(sender As Object, e As EventArgs)
+        Watcher()
+    End Sub
+
     '定时器任务
     Private ReadOnly RightCards As New Dictionary(Of String, MyCard)
     Private Sub Watcher()
+        If Not IsLoaded OrElse Not IsVisible OrElse FrmMain Is Nothing OrElse FrmMain.WindowState = WindowState.Minimized Then Return
         If Not FrmMain.PageCurrent = FormMain.PageType.TaskManager Then Return
         Try
 
@@ -62,6 +73,7 @@ Public Class PageSpeedLeft
             For Each Loader In LoaderTaskbar.ToList
                 TaskRefresh(Loader)
             Next
+            FrmSpeedRight.RefreshGameStatus()
         Catch ex As Exception
             Logger.Error(ex, "任务管理右栏监视出错")
         End Try
@@ -190,7 +202,7 @@ Public Class PageSpeedLeft
                     AddHandler Cancel.Click,
                     Sub(sender As MyIconButton, e As EventArgs)
                         AniDispose(sender, False)
-                        AniDispose(Card, True, Sub() If FrmSpeedRight.PanMain.Children.Count = 0 AndAlso FrmMain.PageCurrent = FormMain.PageType.TaskManager Then FrmMain.PageBack())
+                        AniDispose(Card, True, AddressOf TryReturnToHome)
                         RightCards.Remove(Loader.Name)
                         LoaderTaskbar.Remove(Loader)
                         Logger.Info($"关闭任务管理卡片：{Loader.Name}，且移出任务列表")
@@ -226,8 +238,8 @@ Public Class PageSpeedLeft
     ''' <summary>
     ''' 若没有任务，尝试返回主页。
     ''' </summary>
-    Private Sub TryReturnToHome()
-        If FrmSpeedRight.PanMain.Children.Count = 0 AndAlso FrmMain.PageCurrent = FormMain.PageType.TaskManager Then
+    Public Sub TryReturnToHome()
+        If FrmSpeedRight.PanMain.Children.Count = 0 AndAlso Not FrmSpeedRight.KeepOpenForGame AndAlso FrmMain.PageCurrent = FormMain.PageType.TaskManager Then
             FrmMain.PageBack()
         End If
     End Sub

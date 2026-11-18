@@ -1,4 +1,5 @@
-Public Class PageSetupLaunch
+﻿Public Class PageSetupLaunch
+    Private ReadOnly RamTimer As New Threading.DispatcherTimer(Threading.DispatcherPriority.Background) With {.Interval = TimeSpan.FromSeconds(1)}
 
     Private Sub PageSetupLaunch_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         '重复加载部分
@@ -11,15 +12,25 @@ Public Class PageSetupLaunch
         Refresh()
         AniControlEnabled -= 1
 
+        RemoveHandler RamTimer.Tick, AddressOf RamTimerTick
+        AddHandler RamTimer.Tick, AddressOf RamTimerTick
+        RamTimer.Start()
+
         '非重复加载部分
         Static Reloaded As Boolean = False
         If Reloaded Then Return
         Reloaded = True
 
         '内存自动刷新
-        Dim timer As New Threading.DispatcherTimer With {.Interval = New TimeSpan(0, 0, 0, 1)}
-        AddHandler timer.Tick, AddressOf RefreshRam
-        timer.Start()
+    End Sub
+
+    Private Sub StopRamRefresh() Handles Me.Unloaded
+        RamTimer.Stop()
+        RemoveHandler RamTimer.Tick, AddressOf RamTimerTick
+        AniStop("SetupLaunch Ram Grid")
+    End Sub
+    Private Sub RamTimerTick(sender As Object, e As EventArgs)
+        RefreshRam()
     End Sub
     Public Sub Refresh()
         Try
@@ -126,7 +137,8 @@ Public Class PageSetupLaunch
                 FrmSetupLaunch.PanSkinID.Visibility = Visibility.Collapsed
                 FrmSetupLaunch.PanSkinChange.Visibility = Visibility.Visible
         End Select
-        FrmSetupLaunch.CardSkin.TriggerForceResize()
+        'Expander 由 WPF 自动测量展开内容，皮肤选项变化不再依赖卡片高度动画。
+        FrmSetupLaunch.CardSkin.InvalidateMeasure()
     End Sub
 
 #End Region
@@ -142,6 +154,7 @@ Public Class PageSetupLaunch
     ''' 刷新 UI 上的 RAM 显示。
     ''' </summary>
     Public Sub RefreshRam(ShowAnim As Boolean)
+        If Not IsLoaded OrElse Not IsVisible OrElse FrmMain Is Nothing OrElse FrmMain.WindowState = WindowState.Minimized Then Return
         If LabRamGame Is Nothing OrElse LabRamUsed Is Nothing OrElse FrmMain.PageCurrent <> FormMain.PageType.Setup OrElse FrmSetupLeft.PageID <> FormMain.PageSubType.SetupLaunch Then Return
         '获取内存情况
         Dim RamGame As Double = Math.Round(GetRam(McInstanceSelected, False), 5)
@@ -378,7 +391,7 @@ PreFin:
                     .FontSize = 13, .Height = 24, .IsScaleAnimationEnabled = False, .Type = MyListItem.CheckType.Clickable,
                     .Tag = JavaEntry, .Title = JavaEntry.ToString}
                 AddHandler JavaItem.MouseLeftButtonUp, Sub(sender As Object, e As MouseButtonEventArgs) e.Handled = True
-                AddHandler JavaItem.Click, Sub() Hint("点击选项右侧的箭头可以进行排序，以控制 PCL 优先选择哪个 Java！")
+                AddHandler JavaItem.Click, Sub() Hint("点击选项右侧的箭头可以进行排序，以控制 BRCL 优先选择哪个 Java！")
                 ComboAdvanceJava.Items.Add(JavaItem)
                 Dim Buttons As New List(Of MyIconButton)
                 '向上移动按钮
@@ -465,7 +478,7 @@ PreFin:
         If Not CheckArgumentRam.Checked Then Return
         If MyMsgBox("内存优化会显著延长启动耗时，建议仅在内存不足时开启。" & vbCrLf &
                     "如果你在使用机械硬盘，这还可能导致一小段时间的严重卡顿。" &
-                    If(WindowsUtils.HasAdminRole(), "", $"{vbCrLf}{vbCrLf}每次启动游戏，PCL 都需要申请管理员权限以进行内存优化。{vbCrLf}若想自动授予权限，可以右键 PCL，打开 属性 → 兼容性 → 以管理员身份运行此程序。"),
+                    If(WindowsUtils.HasAdminRole(), "", $"{vbCrLf}{vbCrLf}每次启动游戏，BRCL 都需要申请管理员权限以进行内存优化。{vbCrLf}若想自动授予权限，可以右键 BRCL，打开 属性 → 兼容性 → 以管理员身份运行此程序。"),
                     "提醒", "确定", "取消") = 2 Then
             CheckArgumentRam.Checked = False
         End If

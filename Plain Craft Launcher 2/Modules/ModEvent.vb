@@ -282,7 +282,7 @@ Public Class CustomEvent
                 Case EventType.下载文件
                     Arg0 = Arg0.Replace("\", "/")
                     If Not (Arg0.StartsWithF("http://", True) OrElse Arg0.StartsWithF("https://", True)) Then
-                        MyMsgBox("EventData 必须为以 http:// 或 https:// 开头的网址。" & vbCrLf & "PCL 不支持其他乱七八糟的下载协议。", "事件执行失败")
+                        MyMsgBox("EventData 必须为以 http:// 或 https:// 开头的网址。" & vbCrLf & "BRCL 不支持其他乱七八糟的下载协议。", "事件执行失败")
                         Return
                     End If
                     If Not EventSafetyConfirm("即将从该网址下载文件：" & vbCrLf & Arg0) Then Return
@@ -331,7 +331,7 @@ Public Class CustomEvent
                     UpdateCheckByButton()
 
                 Case Else
-                    MyMsgBox("未知的事件类型：" & Type & vbCrLf & "请检查事件类型填写是否正确，或者 PCL 是否为最新版本。", "事件执行失败")
+                    MyMsgBox("未知的事件类型：" & Type & vbCrLf & "请检查事件类型填写是否正确，或者 BRCL 是否为最新版本。", "事件执行失败")
             End Select
         Catch ex As Exception
             Logger.Error(ex, $"事件执行失败（{Type}, {Arg}）", LogBehavior.Alert)
@@ -385,19 +385,19 @@ Public Class CustomEvent
             Location = RelativeUrl
             Logger.Info($"自定义事件中由绝对路径{Type}：{Location}")
         ElseIf FileUtils.Exists(Paths.Base & "BRCL\" & RelativeUrl) Then
-            '相对 PCL 文件夹的路径
+            '相对 BRCL 文件夹的路径
             Location = Paths.Base & "BRCL\" & RelativeUrl
-            Logger.Info($"自定义事件中由相对 PCL 文件夹的路径{Type}：{Location}")
+            Logger.Info($"自定义事件中由相对 BRCL 文件夹的路径{Type}：{Location}")
         ElseIf FileUtils.Exists(Paths.Base & "BRCL\Help\" & RelativeUrl) Then
-            '相对 PCL 本地帮助文件夹的路径
+            '相对 BRCL 本地帮助文件夹的路径
             Location = Paths.Base & "BRCL\Help\" & RelativeUrl
             WorkingDir = Paths.Base & "BRCL\Help\"
-            Logger.Info($"自定义事件中由相对 PCL 本地帮助文件夹的路径{Type}：{Location}")
+            Logger.Info($"自定义事件中由相对 BRCL 本地帮助文件夹的路径{Type}：{Location}")
         ElseIf Type = EventType.打开帮助 AndAlso FileUtils.Exists(PathTemp & "Help\" & RelativeUrl) Then
-            '相对 PCL 自带帮助文件夹的路径
+            '相对 BRCL 自带帮助文件夹的路径
             Location = PathTemp & "Help\" & RelativeUrl
             WorkingDir = PathTemp & "Help\"
-            Logger.Info($"自定义事件中由相对 PCL 自带帮助文件夹的路径{Type}：{Location}")
+            Logger.Info($"自定义事件中由相对 BRCL 自带帮助文件夹的路径{Type}：{Location}")
         ElseIf Type = EventType.打开文件 OrElse Type = EventType.执行命令 Then
             '直接使用原有路径启动程序
             Location = RelativeUrl

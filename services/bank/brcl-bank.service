@@ -1,0 +1,19 @@
+[Unit]
+Description=BRCL player-scoped bank queries
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/brcl-bank
+ExecStart=/usr/bin/python3 %h/brcl-bank/bank_service.py
+Environment=TRM_API_TOKEN_FILE=/opt/main/minecraft/TRM/config/trm-http-api.properties
+Environment=BANK_PORT=8786
+Environment=BANK_TRUST_PROXY=1
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

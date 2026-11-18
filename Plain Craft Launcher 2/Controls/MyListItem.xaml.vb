@@ -504,7 +504,8 @@ Public Class MyListItem
 
     '触发点击事件
     Private Sub Button_MouseUp(sender As Object, e As MouseButtonEventArgs) Handles Me.PreviewMouseLeftButtonUp
-        If Not IsMouseDown Then Return
+        If Not IsEnabled OrElse Not IsMouseDown Then Return
+        If Type <> CheckType.None Then PlayUiSound(UiSoundCue.Navigate)
         RaiseEvent Click(sender, e)
         If e.Handled Then Return
         '触发自定义事件
@@ -529,13 +530,15 @@ Public Class MyListItem
     '鼠标点击判定
     Private IsMouseDown As Boolean = False
     Private Sub Button_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.PreviewMouseLeftButtonDown
+        If Not IsEnabled Then Return
         If IsMouseDirectlyOver AndAlso Not Type = CheckType.None Then
             IsMouseDown = True
             If ButtonStack IsNot Nothing Then ButtonStack.IsHitTestVisible = False
         End If
     End Sub
-    Private Sub Button_MouseLeave(sender As Object, e As Object) Handles Me.MouseLeave, Me.PreviewMouseLeftButtonUp
+    Private Sub Button_MouseLeave(sender As Object, e As Object) Handles Me.MouseLeave, Me.PreviewMouseLeftButtonUp, Me.IsEnabledChanged, Me.Unloaded
         IsMouseDown = False
+        IsLogoDown = False
         If ButtonStack IsNot Nothing Then ButtonStack.IsHitTestVisible = True
     End Sub
 

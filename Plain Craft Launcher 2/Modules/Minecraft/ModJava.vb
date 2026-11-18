@@ -28,7 +28,7 @@ Public Module ModJava
                     '完成迁移
                     Configs.JavaConfigVersion.Set(Versions.JavaConfigVersion)
                 Catch ex As Exception
-                    Logger.Error(ex, "从老版本 PCL 迁移 Java 列表失败")
+                    Logger.Error(ex, "从老版本 BRCL 迁移 Java 列表失败")
                 End Try
             End If
             '读取缓存
@@ -338,7 +338,7 @@ Public Module ModJava
                     Dim RecommendedComponent As String =
                         If(Target.Is(Of McInstance), GetJavaRequirement(Instance).RecommendedComponent, Nothing)
                     Logger.Info($"自动选择以下范围的 Java：{Range} {RecommendedComponent}")
-                    If Range.IsEmpty Then Throw New Exception("Java 版本需求存在冲突，导致没有任何可能适配的 Java，请查看 PCL 的日志了解详细信息！")
+                    If Range.IsEmpty Then Throw New Exception("Java 版本需求存在冲突，导致没有任何可能适配的 Java，请查看 BRCL 的日志了解详细信息！")
 
                     '搜索 Java
                     Dim SelectJavaFromJavaList =
@@ -444,7 +444,7 @@ Public Module ModJava
                                     Description = $"版本低于 {Range.Upper} 的 Java"
                                 End If
                             End If
-                            MyMsgBox($"PCL 没能找到合适的 Java。{vbCrLf}请在网上搜索并手动安装{Description}， 然后在【设置 → 启动 → 高级选项 → Java 列表】中导入它。", "需要手动安装 Java")
+                            MyMsgBox($"BRCL 没能找到合适的 Java。{vbCrLf}请在网上搜索并手动安装{Description}， 然后在【设置 → 启动 → 高级选项 → Java 列表】中导入它。", "需要手动安装 Java")
                             Return Nothing
                         End If
 
@@ -476,7 +476,7 @@ Public Module ModJava
     Private ReadOnly JavaLock As New Object
 
     ''' <summary>
-    ''' 从老版本 PCL 迁移版本独立的 Java 设置。
+    ''' 从老版本 BRCL 迁移版本独立的 Java 设置。
     ''' </summary>
     Private Sub MigrateInstanceJavaSettings(Instance As McInstance, Optional c As CancellationToken = Nothing, Optional p As ProgressProvider = Nothing)
         If Configs.JavaMigrated.Get(Instance.Config) Then p?.Skip() : Return

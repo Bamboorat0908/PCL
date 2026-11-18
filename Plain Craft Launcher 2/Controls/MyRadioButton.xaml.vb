@@ -1,7 +1,39 @@
 Imports System.Windows.Markup
 
+Imports System.Windows.Automation.Peers
+
 <ContentProperty("Inlines")>
 Public Class MyRadioButton
+
+    Protected Overrides Function OnCreateAutomationPeer() As AutomationPeer
+        Return New BrclRadioAutomationPeer(Me, Function() Checked, AddressOf SelectFromInput)
+    End Function
+    Friend Sub SelectFromInput()
+        If Not IsEnabled OrElse Checked Then Return
+        Dim Args As New RouteEventArgs(True)
+        RaiseEvent PreviewClick(Me, Args)
+        If Args.Handled Then Return
+        PlayUiSound(UiSoundCue.Toggle)
+        SetChecked(True, True, True)
+    End Sub
+    Private PressedKey As Key = Key.None
+    Private Sub Radiobox_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
+        If e.Handled OrElse (e.Key <> Key.Space AndAlso e.Key <> Key.Enter) Then Return
+        e.Handled = True
+        If Not IsEnabled OrElse e.IsRepeat OrElse PressedKey <> Key.None Then Return
+        PressedKey = e.Key
+    End Sub
+    Private Sub Radiobox_KeyUp(sender As Object, e As KeyEventArgs) Handles Me.KeyUp
+        If e.Handled OrElse (e.Key <> Key.Space AndAlso e.Key <> Key.Enter) Then Return
+        e.Handled = True
+        Dim Activate = PressedKey = e.Key AndAlso IsEnabled
+        PressedKey = Key.None
+        If Activate Then SelectFromInput()
+    End Sub
+    Private Sub Radiobox_CancelKey() Handles Me.LostKeyboardFocus, Me.IsEnabledChanged, Me.Unloaded
+        PressedKey = Key.None
+        Radiobox_MouseLeave()
+    End Sub
 
     '基础
 
@@ -51,7 +83,10 @@ Public Class MyRadioButton
 
             Dim IsChanged As Boolean = False
             If _Checked <> value Then
+                Dim OldValue = _Checked
                 _Checked = value
+                Dim Peer = TryCast(UIElementAutomationPeer.FromElement(Me), BrclRadioAutomationPeer)
+                If Peer IsNot Nothing Then Peer.NotifySelectionChanged(OldValue, value)
                 IsChanged = True
             End If
 
@@ -143,6 +178,7 @@ Public Class MyRadioButton
     Public Event PreviewClick(sender As Object, e As RouteEventArgs)
     Private IsMouseDown As Boolean = False
     Private Sub Radiobox_MouseUp() Handles Me.MouseLeftButtonUp
+        If Not IsEnabled Then Return
         If Checked Then Return
         If Not IsMouseDown Then Return
         Logger.Info($"按下单选按钮：{Text}")
@@ -150,9 +186,13 @@ Public Class MyRadioButton
         Dim e As New RouteEventArgs(True)
         RaiseEvent PreviewClick(Me, e)
         If e.Handled Then Return
+        PlayUiSound(UiSoundCue.Toggle)
         SetChecked(True, True, True)
     End Sub
-    Private Sub Radiobox_MouseDown() Handles Me.MouseLeftButtonDown
+    Private Sub Radiobox_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
+        If Not IsEnabled Then Return
+        e.Handled = True
+        Focus()
         If Checked Then Return
         IsMouseDown = True
         RefreshColor()
@@ -168,6 +208,14 @@ Public Class MyRadioButton
     Private Const AnimationTimeOfCheck As Integer = 120 '勾选状态变更动画长度
     Private Sub RefreshColor(Optional obj = Nothing, Optional e = Nothing) Handles Me.MouseEnter, Me.MouseLeave, Me.Loaded
         Try
+            If ColorType = ColorState.Highlight Then
+                AniStop("MyRadioButton Color " & Uuid)
+                AniStop("MyRadioButton Checked " & Uuid)
+                SetResourceReference(BackgroundProperty, If(Checked, "IndustrialAccent", If(IsMouseOver, "ColorBrush6", "ColorBrush7")))
+                ShapeLogo.SetResourceReference(Shapes.Path.FillProperty, If(Checked, "IndustrialOnAccent", "ColorBrush2"))
+                LabText.SetResourceReference(TextBlock.ForegroundProperty, If(Checked, "IndustrialOnAccent", "ColorBrush2"))
+                Return
+            End If
             If IsLoaded AndAlso AniControlEnabled = 0 AndAlso Not False.Equals(e) Then '防止默认属性变更触发动画，若强制不执行动画，则 e 为 False
 
                 Select Case ColorType

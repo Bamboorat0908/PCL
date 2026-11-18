@@ -30,6 +30,7 @@ Public Module ModMain
     ''' </summary>
     Public Sub Hint(Text As String, Optional Type As HintType = HintType.Blue, Optional Log As Boolean = True)
         HintWaiting.Enqueue(New HintMessage With {.Text = If(Text, ""), .Type = Type, .Log = Log})
+        RequestMainTick()
     End Sub
 
     Private Sub HintTick()
@@ -51,20 +52,9 @@ Public Module ModMain
                 For Each stack As Border In FrmMain.PanHint.Children
                     If stack.Tag(0) AndAlso CType(stack.Child, TextBlock).Text = CurrentHint.Text Then DoubleStack = stack
                 Next
-                '获取渐变颜色
-                Dim TargetColor0, TargetColor1 As MyColor
-                Dim Percent As Double = 0.3
-                Select Case CurrentHint.Type
-                    Case HintType.Blue
-                        TargetColor0 = New MyColor(215, 37, 155, 252)
-                        TargetColor1 = New MyColor(215, 10, 142, 252)
-                    Case HintType.Green
-                        TargetColor0 = New MyColor(215, 33, 177, 33)
-                        TargetColor1 = New MyColor(215, 29, 160, 29)
-                    Case Else 'HintType.Red
-                        TargetColor0 = New MyColor(215, 255, 53, 11)
-                        TargetColor1 = New MyColor(215, 255, 43, 0)
-                End Select
+                '各类弹出提示统一使用不透明黄底，动画期间保持白字清晰。
+                Dim TargetColor0 As New MyColor(255, 224, 181, 36)
+                Dim TargetColor1 As New MyColor(255, 208, 164, 26)
                 If Not IsNothing(DoubleStack) Then
                     '有重复提示，且该提示的进入动画已播放
                     If Not AniIsRun("Hint Show " & DoubleStack.Tag(1)) Then
@@ -75,12 +65,6 @@ Public Module ModMain
                             AaX(DoubleStack, -8, 50, 50, New AniEaseInFluent),
                             AaX(DoubleStack, 8, 50, 100, New AniEaseOutFluent),
                             AaX(DoubleStack, -8, 50, 150, New AniEaseInFluent),
-                            AaDouble(Sub(i)
-                                         Percent += i
-                                         Dim Gradient As LinearGradientBrush = DoubleStack.Background
-                                         Gradient.GradientStops(0).Color = TargetColor0 * Percent + New MyColor(255, 255, 255) * (1 - Percent)
-                                         Gradient.GradientStops(1).Color = TargetColor1 * Percent + New MyColor(255, 255, 255) * (1 - Percent)
-                                     End Sub, 0.7, 250),
                             AaX(DoubleStack, -50, 200, Delay, New AniEaseInFluent),
                             AaOpacity(DoubleStack, -1, 150, Delay),
                             AaCode(Sub() DoubleStack.Tag(0) = False, Delay),
@@ -92,8 +76,8 @@ Public Module ModMain
                     '准备控件
                     Dim NewHintControl As New Border With {.Tag = {True, GetUuid()}, .Margin = New Thickness(-70, 0, 20, 0), .Opacity = 0, .Height = 0, .HorizontalAlignment = HorizontalAlignment.Left, .CornerRadius = New CornerRadius(0, 6, 6, 0)}
                     NewHintControl.Background = New LinearGradientBrush(New GradientStopCollection(New List(Of GradientStop) From {
-                        New GradientStop(TargetColor0 * Percent + New MyColor(255, 255, 255) * (1 - Percent), 0),
-                        New GradientStop(TargetColor1 * Percent + New MyColor(255, 255, 255) * (1 - Percent), 1)}), 90)
+                        New GradientStop(TargetColor0, 0),
+                        New GradientStop(TargetColor1, 1)}), 90)
                     NewHintControl.Child = New TextBlock With {.TextTrimming = TextTrimming.CharacterEllipsis, .FontSize = 13, .Text = CurrentHint.Text, .Foreground = New MyColor(255, 255, 255), .Margin = New Thickness(33, 5, 8, 5)}
                     'AddHandler NewHintControl.MouseLeftButtonDown, AddressOf HideAllHint
                     FrmMain.PanHint.Children.Add(NewHintControl)
@@ -110,13 +94,7 @@ Public Module ModMain
                     Animations.AddRange({
                         AaX(NewHintControl, 30, 400, , New AniEaseOutElastic(AniEasePower.Weak)),
                         AaX(NewHintControl, 20, 200, , New AniEaseOutFluent),
-                        AaOpacity(NewHintControl, 1, 100),
-                        AaDouble(Sub(i)
-                                     Percent += i
-                                     Dim Gradient As LinearGradientBrush = NewHintControl.Background
-                                     Gradient.GradientStops(0).Color = TargetColor0 * Percent + New MyColor(255, 255, 255) * (1 - Percent)
-                                     Gradient.GradientStops(1).Color = TargetColor1 * Percent + New MyColor(255, 255, 255) * (1 - Percent)
-                                 End Sub, 0.7, 250, 100)
+                        AaOpacity(NewHintControl, 1, 100)
                     })
                     AniStart(Animations, "Hint Show " & NewHintControl.Tag(1))
                     '结束动画
@@ -161,6 +139,9 @@ EndHint:
         Public Type As MyMsgBoxType
         Public Title As String
         Public Text As String
+        Public ErrorDetails As String
+        Public ErrorCode As String
+        Public RecoveryAdvice As String
         ''' <summary>
         ''' 输入模式：文本框的文本。
         ''' 选择模式：需要放进去的 IEnumberable(Of IMyRadio)。
@@ -230,9 +211,22 @@ EndHint:
     Public Function MyMsgBox(Caption As String, Optional Title As String = "提示",
                              Optional Button1 As String = "确定", Optional Button2 As String = "", Optional Button3 As String = "",
                              Optional IsWarn As Boolean = False, Optional HighLight As Boolean = True, Optional ForceWait As Boolean = False,
-                             Optional Button1Action As Action = Nothing, Optional Button2Action As Action = Nothing, Optional Button3Action As Action = Nothing) As Integer
+                             Optional Button1Action As Action = Nothing, Optional Button2Action As Action = Nothing, Optional Button3Action As Action = Nothing,
+                             Optional ErrorDetails As String = Nothing, Optional ErrorCode As String = Nothing, Optional RecoveryAdvice As String = Nothing) As Integer
         '将弹窗列入队列
         Dim Converter As New MyMsgBoxConverter With {.Type = MyMsgBoxType.Text, .Button1 = Button1, .Button2 = Button2, .Button3 = Button3, .Text = Caption, .IsWarn = IsWarn, .Title = Title, .HighLight = HighLight, .ForceWait = True, .Button1Action = Button1Action, .Button2Action = Button2Action, .Button3Action = Button3Action}
+        If ErrorDetails Is Nothing AndAlso IsErrorTitle(Title) Then
+            Dim Content = BuildBrclError(Title, RawDetails:=Caption)
+            Converter.Title = Content.Title
+            Converter.Text = Content.Summary
+            ErrorDetails = Content.Details
+            ErrorCode = Content.Code
+            RecoveryAdvice = Content.Advice
+        End If
+        Converter.ErrorDetails = If(ErrorDetails Is Nothing, Nothing, SanitizeBrclDetails(ErrorDetails))
+        Converter.ErrorCode = ErrorCode
+        Converter.RecoveryAdvice = RecoveryAdvice
+        If ErrorDetails IsNot Nothing AndAlso Button1 = "确定" AndAlso Button2 = "" Then Converter.Button1 = "知道了"
         If Button2.Length > 0 OrElse ForceWait Then
             '若有多个按钮则开始等待
             If FrmMain Is Nothing OrElse FrmMain.PanMsg Is Nothing AndAlso RunInUi() Then
@@ -255,6 +249,7 @@ EndHint:
                 Logger.Warn($"主窗体加载完成前出现意料外的等待弹窗：{Button1},{Button2},{Button3}")
             Else
                 WaitingMyMsgBox.Enqueue(Converter)
+                RequestMainTick()
                 Try
                     FrmMain.DragStop()
                     If RunInUi() Then MyMsgBoxTick()
@@ -269,6 +264,7 @@ EndHint:
         Else
             '不进行等待，直接返回
             WaitingMyMsgBox.Enqueue(Converter)
+            RequestMainTick()
             Return 1
         End If
     End Function
@@ -287,6 +283,7 @@ EndHint:
         '将弹窗列入队列
         Dim Converter As New MyMsgBoxConverter With {.Text = If(Text, ""), .HintText = If(HintText, ""), .Type = MyMsgBoxType.Input, .ValidateRules = If(ValidateRules, New Collection(Of Validate)), .Button1 = Button1, .Button2 = Button2, .Content = DefaultInput, .IsWarn = IsWarn, .Title = Title}
         WaitingMyMsgBox.Enqueue(Converter)
+        RequestMainTick()
         '虽然我也不知道这是啥但是能用就成了 :)
         Try
             If FrmMain IsNot Nothing Then FrmMain.DragStop()
@@ -310,6 +307,7 @@ EndHint:
         '将弹窗列入队列
         Dim Converter As New MyMsgBoxConverter With {.Type = MyMsgBoxType.Select, .Button1 = Button1, .Button2 = Button2, .Content = Selections, .IsWarn = IsWarn, .Title = Title}
         WaitingMyMsgBox.Enqueue(Converter)
+        RequestMainTick()
         '虽然我也不知道这是啥但是能用就成了 :)
         Try
             If FrmMain IsNot Nothing Then FrmMain.DragStop()
@@ -336,6 +334,7 @@ EndHint:
                 FrmMain.PanMsg.Visibility = Visibility.Visible
             ElseIf WaitingMyMsgBox.TryDequeue(TargetMsgBox) Then
                 '没有弹窗，显示一个等待的弹窗
+                If TargetMsgBox.IsExited Then Return '排队期间已取消的登录不再打开浏览器。
                 FrmMain.PanMsg.Visibility = Visibility.Visible
                 Select Case TargetMsgBox.Type
                     Case MyMsgBoxType.Input
@@ -377,6 +376,7 @@ EndHint:
     Public FrmLinkMain As PageLinkMain
     Public FrmBrs As PageBRS
     Public FrmStock As PageStock
+    Public FrmMap As PageMap
 
     '下载页面声明
     Public FrmDownloadLeft As PageDownloadLeft
@@ -390,8 +390,12 @@ EndHint:
     '设置页面声明
     Public FrmSetupLeft As PageSetupLeft
     Public FrmSetupLaunch As PageSetupLaunch
+    Public FrmSetupPrivacy As PageSetupPrivacy
     Public FrmSetupUI As PageSetupUI
     Public FrmSetupAbout As PageOtherAbout
+    Public FrmSetupSound As PageSetupSound
+    Public FrmSetupSponsors As PageSetupSponsors
+    Public FrmSetupChangelog As PageSetupChangelog
     Public FrmSetupLink As PageSetupLink
 
     '其他页面声明
@@ -460,11 +464,11 @@ EndHint:
         ''' </summary>
         Public ShowInSearch As Boolean = True
         ''' <summary>
-        ''' 是否在公开版的 PCL 中显示（这会影响主页与搜索）。默认为 True。
+        ''' 是否在公开版的 BRCL 中显示（这会影响主页与搜索）。默认为 True。
         ''' </summary>
         Public ShowInPublic As Boolean = True
         ''' <summary>
-        ''' 是否在快照版的 PCL 中显示（这会影响主页与搜索）。默认为 True。
+        ''' 是否在快照版的 BRCL 中显示（这会影响主页与搜索）。默认为 True。
         ''' </summary>
         Public ShowInSnapshot As Boolean = True
 
@@ -594,7 +598,7 @@ EndHint:
                             End Select
                         Next
                     End If
-                    Logger.Info($"已扫描 PCL 文件夹下的帮助文件，目前总计 {FileList.Count} 条")
+                    Logger.Info($"已扫描 BRCL 文件夹下的帮助文件，目前总计 {FileList.Count} 条")
                     '读取自带文件
                     For Each File In DirectoryUtils.EnumerateFiles(PathTemp & "Help", True)
                         '跳过非 json 文件与以 . 开头的文件夹
@@ -782,7 +786,7 @@ NextFile:
 #Region "系统"
 
     ''' <summary>
-    ''' 把某个 PCL 窗口拖到最前面。
+    ''' 把某个 BRCL 窗口拖到最前面。
     ''' </summary>
     Public Sub ShowWindowToTop(Handle As IntPtr)
         Try
@@ -1006,9 +1010,13 @@ NextFile:
 #End Region
 
     Public DragControl = Nothing
-    Private Timer4Count As Integer = 0
     Private Timer150Count As Integer = 0
+    Private MainTimer As DispatcherTimer
+    Private MainTickPending As Integer
+    Private LastMediumTick As Long
+    Private LastLongTick As Long
     Private Sub TimerMain()
+        Dim NowTick = GetTimeMs()
         Try
 #Region "每 50ms 执行一次的代码"
             HintTick()
@@ -1020,9 +1028,8 @@ NextFile:
         Catch ex As Exception
             Logger.Error(ex, "短程主时钟执行异常", LogBehavior.AlertThenCrash)
         End Try
-        Timer4Count += 1
-        If Timer4Count = 4 Then
-            Timer4Count = 0
+        If NowTick - LastMediumTick >= 200 Then
+            LastMediumTick = NowTick
             Try
 #Region "每 250ms 执行一次的代码"
                 If ThemeNow = 12 Then ThemeRefresh()
@@ -1031,9 +1038,9 @@ NextFile:
                 Logger.Warn(ex, "中程主时钟执行异常")
             End Try
         End If
-        Timer150Count += 1
-        If Timer150Count = 150 Then
-            Timer150Count = 0
+        Timer150Count = CInt((NowTick Mod 7500) / 50)
+        If NowTick - LastLongTick >= 7500 Then
+            LastLongTick = NowTick
             Try
 #Region "每 7.5s 执行一次的代码"
                 If FrmMain.BtnExtraApril_ShowCheck AndAlso AprilDifficultiedDistance <> 0 Then FrmMain.BtnExtraApril.Ribble()
@@ -1050,19 +1057,33 @@ NextFile:
                 Logger.Error(ex, "长程主时钟执行异常", LogBehavior.AlertThenCrash)
             End Try
         End If
+        Dim Busy = DragControl IsNot Nothing OrElse Not HintWaiting.IsEmpty OrElse Not WaitingMyMsgBox.IsEmpty OrElse
+            FrmMain.PanHint.Children.Count > 0 OrElse FrmMain.PanMsg.Children.Count > 0 OrElse LoaderTaskbar.Count > 0 OrElse
+            ThemeDontClick = 2 OrElse ThemeNow = 12 OrElse IsAprilEnabled
+        Dim Interval As Long = If(Busy, If(Not FrmMain.IsVisible OrElse FrmMain.WindowState = WindowState.Minimized, 1000, 50),
+                                  Math.Max(1L, 7500L - (NowTick - LastLongTick)))
+        If MainTimer IsNot Nothing AndAlso MainTimer.Interval.TotalMilliseconds <> Interval Then MainTimer.Interval = TimeSpan.FromMilliseconds(Interval)
+    End Sub
+    Public Sub RequestMainTick()
+        'Wake for new messages immediately; coalesce bursts into one UI operation.
+        If MainTimer Is Nothing OrElse MainTimer.Dispatcher.HasShutdownStarted Then Return
+        If Global.System.Threading.Interlocked.Exchange(MainTickPending, 1) <> 0 Then Return
+        MainTimer.Dispatcher.BeginInvoke(DispatcherPriority.Background, New Action(
+            Sub()
+                Global.System.Threading.Interlocked.Exchange(MainTickPending, 0)
+                If MainTimer.IsEnabled Then TimerMain()
+            End Sub))
     End Sub
     Public Sub TimerMainStart()
-        RunInNewThread(
-        Sub()
-            Try
-                Do While True
-                    RunInUiWait(AddressOf TimerMain)
-                    Thread.Sleep(50 * 0.98)
-                Loop
-            Catch ex As Exception
-                Logger.Error(ex, "程序主时钟出错")
-            End Try
-        End Sub, "Timer Main")
+        If MainTimer IsNot Nothing Then Return
+        LastMediumTick = GetTimeMs()
+        LastLongTick = LastMediumTick
+        MainTimer = New DispatcherTimer(DispatcherPriority.Background) With {.Interval = TimeSpan.FromMilliseconds(50)}
+        AddHandler MainTimer.Tick, Sub() TimerMain()
+        AddHandler FrmMain.StateChanged, Sub() TimerMain()
+        AddHandler FrmMain.IsVisibleChanged, Sub() TimerMain()
+        AddHandler FrmMain.Closed, Sub() MainTimer.Stop()
+        MainTimer.Start()
         If Not IsAprilEnabled Then Return
         RunInNewThread(
         Sub()

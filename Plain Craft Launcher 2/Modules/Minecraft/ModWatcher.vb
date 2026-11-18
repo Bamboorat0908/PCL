@@ -61,6 +61,10 @@
         Public GameProcess As Process
         Public Instance As McInstance
         Private WindowTitle As String = ""
+        Private ReadOnly SessionId As String = Guid.NewGuid().ToString("N")
+        Private ReadOnly JavaInfo As String = If(McLaunchJavaSelected?.Version?.ToString(), "")
+        Private StartedUtc As DateTime = DateTime.UtcNow
+        Private SharedInstanceDuringSession As Boolean
         Private PID As Integer
         Public Loader As LoaderTask(Of Process, Integer)
         Public Sub New(Loader As LoaderTask(Of Process, Integer), Instance As McInstance, WindowTitle As String)
@@ -75,6 +79,10 @@
             Dim NewWatcherList As New List(Of Watcher)
             For Each Watch In McWatcherList
                 If Watch.State = MinecraftState.Crashed OrElse Watch.State = MinecraftState.Ended OrElse Watch.State = MinecraftState.Canceled Then Continue For
+                If String.Equals(Watch.Instance.PathIndie, Instance.PathIndie, StringComparison.OrdinalIgnoreCase) Then
+                    Watch.SharedInstanceDuringSession = True
+                    SharedInstanceDuringSession = True
+                End If
                 NewWatcherList.Add(Watch)
             Next
             NewWatcherList.Add(Me)
@@ -83,6 +91,11 @@
 
             '初始化进程与日志读取
             GameProcess = Loader.Input
+            Try
+                StartedUtc = GameProcess.StartTime.ToUniversalTime()
+            Catch
+            End Try
+            RecordUsage(SessionId)
             GameProcess.BeginOutputReadLine()
             GameProcess.BeginErrorReadLine()
             AddHandler GameProcess.OutputDataReceived, AddressOf LogReceived
@@ -270,7 +283,7 @@
                     MinecraftWindow = TryGetMinecraftWindow()
                 Catch ex As ComponentModel.Win32Exception
                     '拒绝访问（#1062）
-                    Logger.Error(ex, "由于反作弊或安全软件拦截，PCL 无法操作游戏窗口", LogBehavior.Toast)
+                    Logger.Error(ex, "由于反作弊或安全软件拦截，BRCL 无法操作游戏窗口", LogBehavior.Toast)
                     IsWindowFinished = True
                 End Try
                 If MinecraftWindow Is Nothing Then Return
@@ -360,6 +373,13 @@
             Sub()
                 Try
                     Thread.Sleep(2000)
+                    Dim ExitText As String = "未知"
+                    Try
+                        If GameProcess.HasExited Then ExitText = GameProcess.ExitCode.ToString()
+                    Catch
+                    End Try
+                    QueueMinecraftCrash(Instance, LatestLog.ToList(), StartedUtc, PID, SessionId, ExitText, SharedInstanceDuringSession, JavaInfo)
+                    If CrashMode() = 1 Then RunInNewThread(Sub() OfferPendingReports(), "询问游戏崩溃报告")
                     WatcherLog("崩溃分析开始")
                     Dim Analyzer As New CrashAnalyzer(Instance)
                     Analyzer.Collect(Instance.PathIndie, LatestLog.ToList)

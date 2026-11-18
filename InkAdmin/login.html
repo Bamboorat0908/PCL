@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>管理登录 · BRCL 用户体验改善计划</title>
+  <link rel="stylesheet" href="/BRCL/InkAdmin/login.css">
+  <script src="/BRCL/InkAdmin/login.js" defer></script>
+</head>
+<body>
+  <header><strong>BRCL</strong><span>用户体验改善计划</span></header>
+  <main>
+    <section aria-labelledby="heading">
+      <h1 id="heading">管理登录</h1>
+      <p class="hint">输入管理密钥，查看使用统计与崩溃报告。</p>
+      <form id="login" action="/BRCL/InkAdmin/api/login" method="post">
+        <label for="key">管理密钥</label>
+        <input id="key" type="password" autocomplete="current-password" spellcheck="false" autocapitalize="none" maxlength="256" required>
+        <button type="submit">进入管理页</button>
+        <p id="message" role="status" aria-live="polite"></p>
+      </form>
+      <noscript>请启用 JavaScript 后登录。</noscript>
+    </section>
+  </main>
+</body>
+</html>

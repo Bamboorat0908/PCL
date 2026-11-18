@@ -242,7 +242,7 @@ Public Module ModDownload
                 DlPreferMojang = DeltaTime < 4000
                 Logger.Info($"Mojang 官方源加载耗时：{DeltaTime}ms，{If(DlPreferMojang, "可优先使用官方源", "不优先使用官方源")}")
             End If
-            '添加 PCL 特供项
+            '添加 BRCL 特供项
             If FileUtils.Exists(PathTemp & "Cache\download.json") Then Versions.Merge(FileUtils.ReadAsJson(PathTemp & "Cache\download.json"))
             '返回
             Loader.Output = New DlClientListResult With {.IsOfficial = True, .SourceName = "Mojang 官方源", .Value = Json}
@@ -278,7 +278,7 @@ Public Module ModDownload
         Try
             Dim Versions As JArray = Json("versions")
             If Versions.Count < 200 Then Throw New Exception("获取到的版本列表长度不足（" & Json.ToString & "）")
-            '添加 PCL 特供项
+            '添加 BRCL 特供项
             If FileUtils.Exists(PathTemp & "Cache\download.json") Then Versions.Merge(FileUtils.ReadAsJson(PathTemp & "Cache\download.json"))
             '检查是否有要求的版本（#5195）
             If Not String.IsNullOrEmpty(Loader.Input) Then

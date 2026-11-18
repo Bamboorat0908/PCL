@@ -59,6 +59,7 @@ Public Class MyExtraTextButton
             _Show = value
             RunInUi(
             Sub()
+                If Not value Then CancelPress()
                 If value Then
                     '有了
                     Opacity = 0
@@ -81,8 +82,9 @@ Public Class MyExtraTextButton
 
     '触发点击事件
     Private Sub Button_LeftMouseUp(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonUp
-        If Not IsLeftMouseHeld Then Return
+        If Not IsEnabled OrElse Not IsLeftMouseHeld Then Return
         Logger.Info($"按下附加图标按钮：{Text}")
+        PlayUiSound()
         RaiseEvent Click(sender, e)
         e.Handled = True
         RaiseCustomEvent()
@@ -92,6 +94,7 @@ Public Class MyExtraTextButton
     '鼠标点击判定（务必放在点击事件之后，以使得 Button_MouseUp 先于 Button_MouseLeave 执行）
     Private IsLeftMouseHeld As Boolean = False
     Private Sub Button_LeftMouseDown(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonDown
+        If Not IsEnabled Then Return
         If Not IsLeftMouseHeld Then
             AniStart({
                 AaScaleTransform(PanScale, 0.85 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 800,, New AniEaseOutFluent(AniEasePower.Strong)),
@@ -122,6 +125,14 @@ Public Class MyExtraTextButton
             AaScaleTransform(PanScale, 1 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 500,, New AniEaseOutFluent)
         }, "MyExtraTextButton Scale " & Uuid)
         RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+    End Sub
+    Private Sub CancelPress() Handles Me.IsEnabledChanged, Me.Unloaded
+        IsLeftMouseHeld = False
+        AniStop("MyExtraTextButton Scale " & Uuid)
+        If PanScale IsNot Nothing Then
+            CType(PanScale.RenderTransform, ScaleTransform).ScaleX = 1
+            CType(PanScale.RenderTransform, ScaleTransform).ScaleY = 1
+        End If
     End Sub
 
     '自定义事件

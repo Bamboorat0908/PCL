@@ -29,13 +29,14 @@
     ''' 返回是否实际开始了启动（如果没有，则一定弹出了错误提示）。
     ''' </summary>
     Public Function McLaunchStart(Optional Options As McLaunchOptions = Nothing) As Boolean
-        CurrentLaunchOptions = If(Options, New McLaunchOptions)
         '预检查
         If Not RunInUi() Then Throw New Exception("McLaunchStart 必须在 UI 线程调用！")
         If McLaunchLoader.State = LoadState.Loading Then
             Hint("已有游戏正在启动中！", HintType.Red)
             Return False
         End If
+        '拒绝重复启动后再替换参数，避免改写正在运行的启动任务所使用的选项。
+        CurrentLaunchOptions = If(Options, New McLaunchOptions)
         '强制切换需要启动的版本
         If CurrentLaunchOptions.Instance IsNot Nothing AndAlso McInstanceSelected <> CurrentLaunchOptions.Instance Then
             McLaunchLog("在启动前切换到版本 " & CurrentLaunchOptions.Instance.Name)
@@ -241,11 +242,10 @@ NextInner:
             Sub()
                 Select Case Settings.Get(Of Integer)("SystemLaunchCount")
                     Case 10, 20, 40, 60, 80, 100, 120, 150, 200, 250, 300, 350, 400, 500, 600, 700, 800, 900, 1000, 1200, 1400, 1600, 1800, 2000
-                        If MyMsgBox("PCL 已经为你启动了 " & Settings.Get(Of Integer)("SystemLaunchCount") & " 次游戏啦！" & vbCrLf &
-                                    "如果 PCL 还算好用的话，能不能考虑赞助一下 PCL……" & vbCrLf &
-                                    "如果没有大家的支持，PCL 很难在免费、无任何广告的情况下维持数年的更新（磕头）……！",
-                                    Settings.Get(Of Integer)("SystemLaunchCount") & " 次启动！", "支持 PCL！", "但是我拒绝") = 1 Then
-                            OpenWebsite("https://meloong.com/afd/a/LTCat")
+                        If MyMsgBox("BRCL 已经为你启动了 " & Settings.Get(Of Integer)("SystemLaunchCount") & " 次游戏啦！" & vbCrLf &
+                                    "感谢你使用我们的启动器！本启动器为BRS服务器专门打造，如果在使用过程中有任何问题或者建议，欢迎反馈给我们！为了更好的建设我们的公益服务器和玩家社区，我们还开通了爱发电赞助通道，欢迎各位前来支持。每一份赞助都将切实用于服务器的运营和维护！",
+                                    Settings.Get(Of Integer)("SystemLaunchCount") & " 次启动！", "支持 BRCL！", "但是我拒绝") = 1 Then
+                            OpenWebsite("https://afdian.com/a/brszz")
                         End If
                 End Select
             End Sub, "Donate")
@@ -538,7 +538,7 @@ NextInner:
         '检查是否已经登录完成
         Dim ExpiresAt = Settings.Get(Of Long)("CacheMsV2Expires")
         If Not Data.IsForceRestarting AndAlso '不要求强行重启
-           ExpiresAt > 0 AndAlso ExpiresAt > GetUnixTimestampUtc() AndAlso 'AccessToken 尚未过期
+           ExpiresAt > 0 AndAlso ExpiresAt > GetUnixTimestampUtc() + 120 AndAlso 'AccessToken 尚未过期
            Input.UserName = Settings.Get(Of String)("CacheMsV2Name") Then
             Data.Output = New McLoginResult With {
                 .Name = Input.UserName, .Type = "Microsoft",
@@ -551,6 +551,9 @@ NextInner:
             GoTo SkipLogin
         End If
         '尝试登录
+        EnsureMicrosoftClientId()
+        Dim LoginTimer = Stopwatch.StartNew()
+        Dim StepTimer = Stopwatch.StartNew()
         Dim OAuthTokens As (OAuthAccessToken As String, OAuthRefreshToken As String)
         If Input.OAuthRefreshToken = "" Then
             '无 RefreshToken
@@ -561,25 +564,31 @@ Relogin:
             OAuthTokens = MsLoginStep1Refresh(Input.OAuthRefreshToken)
             If OAuthTokens.OAuthAccessToken = "Relogin" Then GoTo Relogin '要求重新打开登录网页认证
         End If
+        McLaunchLog($"微软登录步骤 1/6 完成，用时 {StepTimer.ElapsedMilliseconds} ms（含网页授权等待）")
         If Data.IsCanceled Then Throw New OperationCanceledException
         Data.Progress = 0.25
         If Data.IsCanceled Then Throw New OperationCanceledException
         Dim OAuthAccessToken As String = OAuthTokens.OAuthAccessToken
         Dim OAuthRefreshToken As String = OAuthTokens.OAuthRefreshToken
+        StepTimer.Restart()
         Dim XBLToken As String = MsLoginStep2(OAuthAccessToken)
+        McLaunchLog($"微软登录步骤 2/6 完成，用时 {StepTimer.ElapsedMilliseconds} ms")
         Data.Progress = 0.4
         If Data.IsCanceled Then Throw New OperationCanceledException
+        StepTimer.Restart()
         Dim Tokens = MsLoginStep3(XBLToken)
+        McLaunchLog($"微软登录步骤 3/6 完成，用时 {StepTimer.ElapsedMilliseconds} ms")
         Data.Progress = 0.55
         If Data.IsCanceled Then Throw New OperationCanceledException
+        StepTimer.Restart()
         Dim LoginResult = MsLoginStep4(Tokens)
+        McLaunchLog($"微软登录步骤 4/6 完成，用时 {StepTimer.ElapsedMilliseconds} ms")
         ExpiresAt = LoginResult.ExpiresAt
         Data.Progress = 0.7
         If Data.IsCanceled Then Throw New OperationCanceledException
-        MsLoginStep5(LoginResult.AccessToken)
-        Data.Progress = 0.85
-        If Data.IsCanceled Then Throw New OperationCanceledException
-        Dim Result = MsLoginStep6(LoginResult.AccessToken)
+        StepTimer.Restart()
+        Dim Result = MsLoginStep5And6(LoginResult.AccessToken, Data)
+        McLaunchLog($"微软登录步骤 5–6/6 完成，用时 {StepTimer.ElapsedMilliseconds} ms；本次登录共 {LoginTimer.ElapsedMilliseconds} ms")
         Data.Progress = 0.98
         '输出登录结果
         Settings.Set("CacheMsV2OAuthRefresh", OAuthRefreshToken)
@@ -869,6 +878,34 @@ LoginFinish:
         End Try
     End Function
 
+    '登录只重试短暂的网络/服务故障，避免把限流、账号或应用错误拖成长时间等待。
+    Private Function MsLoginRequest(Url As String, Optional Method As HttpMethod = Nothing,
+            Optional Content As String = Nothing, Optional ContentType As String = Nothing,
+            Optional Headers As String(,) = Nothing) As String
+        For Attempt = 1 To 2
+            Dim Timer = Stopwatch.StartNew()
+            Dim Outcome = "失败"
+            Try
+                Dim Result = NetRequestByClient(Url, Method, Content:=Content, ContentType:=ContentType,
+                    Headers:=Headers, RequireJson:=True, Timeout:=If(Attempt = 1, 10000, 15000), MakeLog:=False)
+                Outcome = "成功"
+                Return Result
+            Catch ex As HttpRequestCodeException
+                Dim Status = CInt(ex.StatusCode)
+                Outcome = "HTTP " & Status
+                If Attempt = 2 OrElse (Status <> 408 AndAlso Status < 500) Then Throw
+            Catch ex As Exception
+                ex.ThrowIfCanceled()
+                If Attempt = 2 OrElse Not ex.IsBadNetwork() Then Throw
+            Finally
+                '不记录请求正文、令牌或服务返回的原始错误信息。
+                McLaunchLog($"微软登录请求 {New Uri(Url).AbsolutePath}：{Outcome}，第 {Attempt} 次，{Timer.ElapsedMilliseconds} ms")
+            End Try
+            Thread.Sleep(300)
+        Next
+        Throw New InvalidOperationException("微软登录请求未返回结果")
+    End Function
+
     '微软登录步骤 1，原始登录：获取 DeviceCode 并开启登录网页
     Private Function MsLoginStep1New(Data As LoaderTask(Of McLoginMs, McLoginResult)) As (OAuthAccessToken As String, OAuthRefreshToken As String)
         '参考：https://learn.microsoft.com/zh-cn/entra/identity-platform/v2-oauth2-device-code
@@ -876,15 +913,24 @@ LoginFinish:
         '初始请求
 Retry:
         McLaunchLog("开始微软登录步骤 1/6（原始登录）")
-        Dim PrepareJson As JObject = NetRequestByClientRetry("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode", HttpMethod.Post,
-            Content:=$"client_id={OAuthClientId}&tenant=/consumers&scope=XboxLive.signin%20offline_access",
-            ContentType:="application/x-www-form-urlencoded", RequireJson:=True).DeserializeJson()
+        Dim PrepareJson As JObject = MsLoginRequest("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode", HttpMethod.Post,
+            Content:=$"client_id={OAuthClientId}&scope=XboxLive.signin%20offline_access",
+            ContentType:="application/x-www-form-urlencoded").DeserializeJson()
         McLaunchLog("网页登录地址：" & PrepareJson("verification_uri").ToString)
 
         '弹窗
         Dim Converter As New MyMsgBoxConverter With {.Content = PrepareJson, .ForceWait = True, .Type = MyMsgBoxType.Login}
         WaitingMyMsgBox.Enqueue(Converter)
+        RequestMainTick()
         While Converter.Result Is Nothing
+            If Data.IsCanceled Then
+                SyncLock Converter
+                    If Not Converter.IsExited Then
+                        Converter.Result = New OperationCanceledException()
+                        Converter.IsExited = True
+                    End If
+                End SyncLock
+            End If
             Thread.Sleep(100)
         End While
         If TypeOf Converter.Result Is RestartException Then
@@ -907,15 +953,14 @@ Retry:
 
         Dim Result As String
         Try
-            Result = NetRequestByClientMultiple("https://login.live.com/oauth20_token.srf", HttpMethod.Post,
+            Result = MsLoginRequest("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", HttpMethod.Post,
                 Content:=$"client_id={OAuthClientId}&refresh_token={StringUtils.FormUrlEscape(Code)}&grant_type=refresh_token&scope=XboxLive.signin%20offline_access",
                 ContentType:="application/x-www-form-urlencoded",
-                Headers:={{"Accept-Language", "en-US,en;q=0.5"}, {"X-Requested-With", "XMLHttpRequest"}},
-                ThreadCount:=2)
+                Headers:={{"Accept-Language", "en-US,en;q=0.5"}, {"X-Requested-With", "XMLHttpRequest"}})
         Catch ex As HttpRequestCodeException
             '修改错误列表时，同时检查 MyMsgLogin.xaml.vb 中的对应代码
             Dim Response = ex.Response
-            If Response.ContainsIgnoreCase("must sign in again") OrElse Response.ContainsIgnoreCase("password expired") OrElse
+            If Response.Contains("invalid_grant") OrElse Response.Contains("interaction_required") OrElse Response.ContainsIgnoreCase("must sign in again") OrElse Response.ContainsIgnoreCase("password expired") OrElse
                (Response.Contains("refresh_token") AndAlso Response.ContainsIgnoreCase("is not valid")) OrElse '#269
                Response.ContainsIgnoreCase("expired") Then '#8611
                 Return ("Relogin", "")
@@ -931,9 +976,8 @@ Retry:
         End Try
 
         Dim ResultJson As JObject = Result.DeserializeJson()
-        Dim AccessToken As String = ResultJson("access_token").ToString
-        Dim RefreshToken As String = ResultJson("refresh_token").ToString
-        Return (AccessToken, RefreshToken)
+        Dim Tokens = MicrosoftDeviceLogin.ReadTokens(ResultJson, Code)
+        Return (Tokens(0), Tokens(1))
     End Function
     '微软登录步骤 2：从 OAuth AccessToken 获取 XBLToken
     Private Function MsLoginStep2(AccessToken As String) As String
@@ -985,11 +1029,11 @@ Retry:
                             "该账号目前填写的年龄是否在 13 岁以上？", "登录提示", "13 岁以上", "12 岁以下", "我不知道") = 1 Then
                     OpenWebsite("https://account.live.com/editprof.aspx")
                     MyMsgBox("请在打开的网页中修改账号的出生日期（至少改为 18 岁以上）。" & vbCrLf &
-                             "在修改成功后等待一分钟，然后再回到 PCL，就可以正常登录了！", "登录提示")
+                             "在修改成功后等待一分钟，然后再回到 BRCL，就可以正常登录了！", "登录提示")
                 Else
                     OpenWebsite("https://support.microsoft.com/zh-cn/account-billing/如何更改-microsoft-帐户上的出生日期-837badbc-999e-54d2-2617-d19206b9540a")
                     MyMsgBox("请根据打开的网页的说明，修改账号的出生日期（至少改为 18 岁以上）。" & vbCrLf &
-                             "在修改成功后等待一分钟，然后再回到 PCL，就可以正常登录了！", "登录提示")
+                             "在修改成功后等待一分钟，然后再回到 BRCL，就可以正常登录了！", "登录提示")
                 End If
                 Throw New OperationCanceledException
             Else
@@ -1010,8 +1054,8 @@ Retry:
         Dim Request As String = New JObject(New JProperty("identityToken", $"XBL3.0 x={Tokens.UHS};{Tokens.XSTSToken}")).ToString(0)
         Dim Result As String
         Try
-            Result = NetRequestByClientRetry("https://api.minecraftservices.com/authentication/login_with_xbox", HttpMethod.Post,
-                Content:=Request, ContentType:="application/json", RequireJson:=True)
+            Result = MsLoginRequest("https://api.minecraftservices.com/authentication/login_with_xbox", HttpMethod.Post,
+                Content:=Request, ContentType:="application/json")
         Catch ex As HttpRequestCodeException
             If ex.StatusCode = 429 Then
                 Logger.Warn(ex, "微软登录第 4 步汇报 429")
@@ -1021,7 +1065,7 @@ Retry:
                 Throw New Exception("$当前 IP 的登录尝试异常。" & vbCrLf & "如果你使用了 VPN 或加速器，请把它们关掉或更换节点后再试！")
             ElseIf ex.StatusCode = HttpStatusCode.ServiceUnavailable Then
                 Logger.Warn(ex, "微软登录第 4 步汇报 503")
-                Throw New Exception("$Mojang 服务器出现问题，请稍后再试。" & vbCrLf & "你的网络是正常的，PCL 也是正常的，是 Mojang 出问题了……")
+                Throw New Exception("$Mojang 服务器出现问题，请稍后再试。" & vbCrLf & "你的网络是正常的，BRCL 也是正常的，是 Mojang 出问题了……")
             ElseIf ex.Response?.Contains("ACCOUNT_SUSPENDED") Then '#8655
                 MyMsgBox("该账号似乎已被微软封禁，无法登录。", "登录失败", "我知道了", IsWarn:=True)
                 Throw New OperationCanceledException
@@ -1035,12 +1079,28 @@ Retry:
             ResultJson("access_token").ToString,
             ResultJson("expires_in").ToObject(Of Integer) + GetUnixTimestampUtc() - 1200) '提前 20 分钟视作过期
     End Function
+    '持有权与档案请求只依赖 AccessToken，可同时发出；仍先验证持有权，再处理档案结果。
+    Private Function MsLoginStep5And6(AccessToken As String, Data As LoaderTask(Of McLoginMs, McLoginResult)) As (UUID As String, UserName As String, ProfileJson As String)
+        Dim ProfileRequest = Tasks.Task.Run(Function() MsLoginProfileRequest(AccessToken))
+        '取消或持有权检查失败时，后台请求只收尾，不显示错误或保存登录结果。
+        ProfileRequest.ContinueWith(
+            Sub(Failed)
+                Dim Observed = Failed.Exception
+            End Sub, Tasks.TaskContinuationOptions.OnlyOnFaulted)
+        MsLoginStep5(AccessToken)
+        Data.Progress = 0.85
+        If Data.IsCanceled Then Throw New OperationCanceledException
+        Dim Result = MsLoginStep6(AccessToken, ProfileRequest)
+        If Data.IsCanceled Then Throw New OperationCanceledException
+        Return Result
+    End Function
+
     '微软登录步骤 5：验证微软账号是否持有 MC，这也会刷新 XGP
     Private Sub MsLoginStep5(AccessToken As String)
         McLaunchLog("开始微软登录步骤 5/6")
 
-        Dim Result As String = NetRequestByClientMultiple("https://api.minecraftservices.com/entitlements/mcstore",
-            ContentType:="application/json", ThreadCount:=2, Headers:={{"Authorization", "Bearer " & AccessToken}}, RequireJson:=True)
+        Dim Result As String = MsLoginRequest("https://api.minecraftservices.com/entitlements/mcstore",
+            ContentType:="application/json", Headers:={{"Authorization", "Bearer " & AccessToken}})
         Try
             Dim ResultJson As JObject = Result.DeserializeJson()
             If Not (ResultJson.ContainsKey("items") AndAlso ResultJson("items").Any) Then
@@ -1056,13 +1116,27 @@ Retry:
         End Try
     End Sub
     '微软登录步骤 6：从 Minecraft AccessToken 获取 {UUID, UserName, ProfileJson}
-    Private Function MsLoginStep6(AccessToken As String) As (UUID As String, UserName As String, ProfileJson As String)
+    Private Function MsLoginProfileRequest(AccessToken As String) As String
+        Dim Timer = Stopwatch.StartNew()
+        Try
+            Return MsLoginRequest("https://api.minecraftservices.com/minecraft/profile",
+                ContentType:="application/json", Headers:={{"Authorization", "Bearer " & AccessToken}})
+        Finally
+            McLaunchLog($"微软玩家档案请求结束，用时 {Timer.ElapsedMilliseconds} ms")
+        End Try
+    End Function
+
+    Private Function MsLoginStep6(AccessToken As String, Optional ProfileRequest As Tasks.Task(Of String) = Nothing) As (UUID As String, UserName As String, ProfileJson As String)
         McLaunchLog("开始微软登录步骤 6/6")
 
         Dim Result As String
         Try
-            Result = NetRequestByClientMultiple("https://api.minecraftservices.com/minecraft/profile",
-                ContentType:="application/json", ThreadCount:=2, Headers:={{"Authorization", "Bearer " & AccessToken}}, RequireJson:=True)
+            Try
+                Result = If(ProfileRequest Is Nothing, MsLoginProfileRequest(AccessToken), ProfileRequest.GetAwaiter().GetResult())
+            Catch ex As HttpRequestCodeException When ProfileRequest IsNot Nothing AndAlso ex.StatusCode = HttpStatusCode.NotFound
+                '持有权查询也会刷新 XGP。提前查询的 404 需在刷新完成后复查一次，避免误报没有档案。
+                Result = MsLoginProfileRequest(AccessToken)
+            End Try
         Catch ex As HttpRequestCodeException
             Select Case ex.StatusCode
                 Case 429
@@ -1504,7 +1578,7 @@ NextInstance:
         Yield ("${natives_directory}", GetNativesFolder().TrimEnd("\"c))
         Yield ("${library_directory}", PathUtils.ToShortPath(McFolderSelected & "libraries"))
         Yield ("${libraries_directory}", PathUtils.ToShortPath(McFolderSelected & "libraries"))
-        Yield ("${pure_directory}", PathPure.Value.TrimEnd("\"c)) '由 PCL 添加，这会允许在分割参数并去重后再替换路径，防止路径中的特殊字符影响参数分割和去重
+        Yield ("${pure_directory}", PathPure.Value.TrimEnd("\"c)) '由 BRCL 添加，这会允许在分割参数并去重后再替换路径，防止路径中的特殊字符影响参数分割和去重
         Yield ("${launcher_name}", "BRCL")
         Yield ("${launcher_version}", VersionCode)
         Yield ("${version_name}", McInstanceSelected.Name)
@@ -1665,19 +1739,48 @@ NextInstance:
         Dim ExistFiles As New List(Of String)
         For Each Native As McLibEntry In McLibListGet(McInstanceSelected, True)
             If Not Native.IsNatives Then Continue For
-            Dim Zip As ZipArchive
             Try
-                Zip = FileUtils.OpenZip(Native.LocalPath)
+                ExtractNativesArchive(Native.LocalPath, Target, ExistFiles)
             Catch ex As InvalidDataException
                 Logger.Warn(ex, $"打开 Natives 文件失败（{Native.LocalPath}）")
                 FileUtils.Delete(Native.LocalPath)
                 Throw New Exception("无法打开 Natives 文件（" & Native.LocalPath & "），该文件可能已损坏，请重新尝试启动游戏")
             End Try
+        Next
+
+        '删除多余文件
+        For Each FileName As String In DirectoryUtils.EnumerateFiles(Target)
+            If ExistFiles.Contains(FileName) Then Continue For
+            Try
+                McLaunchLog("删除：" & FileName)
+                FileUtils.Delete(FileName)
+            Catch ex As UnauthorizedAccessException
+                McLaunchLog("删除多余文件访问被拒绝，跳过删除步骤")
+                McLaunchLog("实际的错误信息：" & ex.GetDisplay(True))
+                Return
+            End Try
+        Next
+
+    End Sub
+
+    Private Sub ExtractNativesArchive(ArchivePath As String, Target As String, ExistFiles As List(Of String))
+        Dim TargetRoot = Path.GetFullPath(Target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+        Using Zip = FileUtils.OpenZip(ArchivePath)
             For Each Entry In Zip.Entries
                 Dim FileName As String = Entry.FullName
                 If FileName.EndsWithF(".dll", True) Then
+                    'Natives 也来自第三方整合包，不能信任 JAR 中记录的路径。
+                    If Path.IsPathRooted(FileName) OrElse FileName.Contains(":"c) Then Throw New IOException("Natives 文件包含不安全的路径：" & FileName)
+                    Dim FilePath = Path.GetFullPath(Path.Combine(TargetRoot, FileName))
+                    If Not FilePath.StartsWith(TargetRoot, StringComparison.OrdinalIgnoreCase) Then Throw New IOException("Natives 文件包含不安全的路径：" & FileName)
+                    '已有链接文件或父目录会使词法上的路径检查失效。
+                    Dim Current = FilePath
+                    Do While Current.Length >= TargetRoot.TrimEnd(Path.DirectorySeparatorChar).Length
+                        If (File.Exists(Current) OrElse Directory.Exists(Current)) AndAlso (File.GetAttributes(Current) And FileAttributes.ReparsePoint) <> 0 Then Throw New IOException("Natives 文件路径包含链接：" & FileName)
+                        Current = Path.GetDirectoryName(Current)
+                        If Current Is Nothing Then Exit Do
+                    Loop
                     '实际解压文件的步骤
-                    Dim FilePath As String = Target & FileName
                     ExistFiles.Add(FilePath)
                     Dim OriginalFile = FileUtils.GetInfo(FilePath)
                     If OriginalFile.Exists Then
@@ -1695,26 +1798,13 @@ NextInstance:
                         End Try
                     End If
                     '解压新文件
-                    FileUtils.Write(FilePath, Entry.Open)
+                    Using EntryStream = Entry.Open()
+                        FileUtils.Write(FilePath, EntryStream)
+                    End Using
                     McLaunchLog("已解压：" & FilePath)
                 End If
             Next
-            If Zip IsNot Nothing Then Zip.Dispose()
-        Next
-
-        '删除多余文件
-        For Each FileName As String In DirectoryUtils.EnumerateFiles(Target)
-            If ExistFiles.Contains(FileName) Then Continue For
-            Try
-                McLaunchLog("删除：" & FileName)
-                FileUtils.Delete(FileName)
-            Catch ex As UnauthorizedAccessException
-                McLaunchLog("删除多余文件访问被拒绝，跳过删除步骤")
-                McLaunchLog("实际的错误信息：" & ex.GetDisplay(True))
-                Return
-            End Try
-        Next
-
+        End Using
     End Sub
     ''' <summary>
     ''' 获取 Natives 文件夹路径，以 \ 结尾。
@@ -1746,10 +1836,10 @@ NextInstance:
                 If WindowsUtils.HasAdminRole() Then
                     Logger.Warn(ex, "直接调整显卡设置失败")
                 Else
-                    Logger.Warn(ex, "直接调整显卡设置失败，将以管理员权限重启 PCL 再次尝试")
+                    Logger.Warn(ex, "直接调整显卡设置失败，将以管理员权限重启 BRCL 再次尝试")
                     Try
                         If RunAsAdmin($"--gpu ""{McLaunchJavaSelected.JavaExePath}""") = ProcessReturnValues.TaskDone Then
-                            McLaunchLog("以管理员权限重启 PCL 并调整显卡设置成功")
+                            McLaunchLog("以管理员权限重启 BRCL 并调整显卡设置成功")
                         Else
                             Throw New Exception("调整过程中出现异常")
                         End If
@@ -1935,7 +2025,7 @@ NextInstance:
                 '准备文件
                 Dim Bit As New MyBitmap(PathImage & "Heads/Logo.png")
                 Bit.Save(PackPicAddress)
-                FileUtils.Write(MetaFileAddress, "{""pack"":{""pack_format"":" & PackFormat & ",""description"":""PCL 自定义离线皮肤资源包""}}")
+                FileUtils.Write(MetaFileAddress, "{""pack"":{""pack_format"":" & PackFormat & ",""description"":""BRCL 自定义离线皮肤资源包""}}")
                 Dim Skin As New MyBitmap(Paths.AppDataThenName & "CustomSkin.png")
                 If (McInstanceSelected.Version.Vanilla.Major = 6 OrElse McInstanceSelected.Version.Vanilla.Major = 7) AndAlso Skin.Pic.Height = 64 Then
                     McLaunchLog("该 Minecraft 版本不支持双层皮肤，已进行裁剪")
@@ -2152,7 +2242,7 @@ IgnoreCustomSkin:
         '输出信息
         McLaunchLog("")
         McLaunchLog("~ 基础参数 ~")
-        McLaunchLog("PCL 版本：" & VersionDisplay & " (" & VersionCode & ")")
+        McLaunchLog("BRCL 版本：" & VersionDisplay & " (" & VersionCode & ")")
         McLaunchLog($"游戏版本：{McInstanceSelected.VersionDisplayName}（{McInstanceSelected.Version.Vanilla}，Drop {McInstanceSelected.Version.Drop}{If(McInstanceSelected.Version.Reliable, "", "，无法完全确定")}）")
         McLaunchLog("资源版本：" & McAssetsGetIndexName(McInstanceSelected))
         McLaunchLog("版本继承：" & If(McInstanceSelected.InheritName = "", "无", McInstanceSelected.InheritName))

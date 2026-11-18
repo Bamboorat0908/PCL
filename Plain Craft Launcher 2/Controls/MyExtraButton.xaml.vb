@@ -55,6 +55,7 @@ Public Class MyExtraButton
             _Show = value
             RunInUi(
             Sub()
+                If Not value Then CancelPress()
                 If value Then
                     '有了
                     Visibility = Visibility.Visible
@@ -83,15 +84,16 @@ Public Class MyExtraButton
 
     '触发点击事件
     Private Sub Button_LeftMouseUp(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonUp
-        If IsLeftMouseHeld Then
+        If IsEnabled AndAlso IsLeftMouseHeld Then
             Logger.Info($"按下附加按钮{If(ToolTip = "", "", "：" & ToolTip)}")
+            PlayUiSound()
             RaiseEvent Click(sender, e)
             e.Handled = True
             Button_LeftMouseUp()
         End If
     End Sub
     Private Sub Button_RightMouseUp(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseRightButtonUp
-        If IsRightMouseHeld Then
+        If IsEnabled AndAlso CanRightClick AndAlso IsRightMouseHeld Then
             Logger.Info($"右键按下附加按钮{If(ToolTip = "", "", "：" & ToolTip)}")
             RaiseEvent RightClick(sender, e)
             e.Handled = True
@@ -105,6 +107,16 @@ Public Class MyExtraButton
         End Get
         Set(value As Boolean)
             _CanRightClick = value
+            If Not value AndAlso IsRightMouseHeld Then
+                IsRightMouseHeld = False
+                If Not IsLeftMouseHeld Then
+                    AniStop("MyExtraButton Scale " & Uuid)
+                    If PanScale IsNot Nothing Then
+                        CType(PanScale.RenderTransform, ScaleTransform).ScaleX = 1
+                        CType(PanScale.RenderTransform, ScaleTransform).ScaleY = 1
+                    End If
+                End If
+            End If
         End Set
     End Property
 
@@ -112,6 +124,7 @@ Public Class MyExtraButton
     Private IsLeftMouseHeld As Boolean = False
     Private IsRightMouseHeld As Boolean = False
     Private Sub Button_LeftMouseDown(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonDown
+        If Not IsEnabled Then Return
         If Not IsLeftMouseHeld AndAlso Not IsRightMouseHeld Then
             AniStart({
                 AaScaleTransform(PanScale, 0.85 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 800,, New AniEaseOutFluent(AniEasePower.Strong)),
@@ -122,7 +135,7 @@ Public Class MyExtraButton
         Focus()
     End Sub
     Private Sub Button_RightMouseDown(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseRightButtonDown
-        If Not CanRightClick Then Return
+        If Not IsEnabled OrElse Not CanRightClick Then Return
         If Not IsLeftMouseHeld AndAlso Not IsRightMouseHeld Then
             AniStart({
                 AaScaleTransform(PanScale, 0.85 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 800,, New AniEaseOutFluent(AniEasePower.Strong)),
@@ -159,6 +172,15 @@ Public Class MyExtraButton
             AaScaleTransform(PanScale, 1 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 500,, New AniEaseOutFluent)
         }, "MyExtraButton Scale " & Uuid)
         RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+    End Sub
+    Private Sub CancelPress() Handles Me.IsEnabledChanged, Me.Unloaded
+        IsLeftMouseHeld = False
+        IsRightMouseHeld = False
+        AniStop("MyExtraButton Scale " & Uuid)
+        If PanScale IsNot Nothing Then
+            CType(PanScale.RenderTransform, ScaleTransform).ScaleX = 1
+            CType(PanScale.RenderTransform, ScaleTransform).ScaleY = 1
+        End If
     End Sub
 
     '自定义事件

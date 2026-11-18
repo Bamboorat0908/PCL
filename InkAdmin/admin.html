@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>崩溃日志收集中心 · BRCL</title>
+  <link rel="stylesheet" href="/BRCL/InkAdmin/app.css">
+  <script defer src="/BRCL/InkAdmin/app.js"></script>
+</head>
+<body>
+  <header class="mast"><div class="bar"><strong>BRCL</strong><span>管理后台</span><button id="logout" type="button">退出登录</button></div></header>
+  <main id="dashboard">
+    <div class="heading"><h1>崩溃日志收集中心</h1><button id="refresh" type="button">刷新数据</button></div>
+    <div class="scope">
+      <label>统计周期 <select id="days"><option value="1">今天</option><option value="7" selected>近 7 天</option><option value="30">近 30 天</option><option value="90">近 90 天</option></select></label>
+      <label>启动器版本 <select id="version"><option value="">全部版本</option></select></label>
+      <span id="period" class="muted"></span>
+    </div>
+    <div class="metrics" aria-label="关键指标">
+      <section class="metric"><h2>BRCL 累计使用安装量</h2><strong id="installs">—</strong><p>全部版本 · 按参与统计的安装去重</p></section>
+      <section class="metric risk"><h2>本期游戏崩溃率</h2><strong id="rate">—</strong><p id="sample">正在读取可统计的游戏会话…</p><details class="help"><summary>统计口径</summary><p>按所选周期和版本统计，同时开启使用统计与自动诊断的游戏会话中，发生 Minecraft 或 JVM 崩溃的会话占比。每次会话最多计一次。</p></details></section>
+    </div>
+    <p id="message" role="status" class="notice"></p>
+    <section class="workspace" aria-label="崩溃查询">
+      <div class="view-picker" role="group" aria-label="查询视图">
+        <button id="report-list" type="button" aria-pressed="true">日志查询</button>
+        <button id="issue-summary" type="button" aria-pressed="false">按问题汇总</button>
+      </div>
+      <form id="search" class="search">
+        <label id="keyword-label">搜索日志<input type="search" id="q" maxlength="128" placeholder="报告编号、异常名称或日志正文" autocomplete="off"></label>
+        <label>报告类型<select id="kind"><option value="">全部类型</option><option value="minecraft">Minecraft</option><option value="jvm">JVM</option><option value="launcher">启动器</option><option value="unexpected">待确认退出</option></select></label>
+        <button class="primary" id="submit-search" type="submit">查询</button><button id="clear" type="button">重置筛选</button>
+      </form>
+      <div id="issue-filter" class="chip" hidden><span id="issue-filter-text"></span><button id="clear-issue" type="button">移除</button></div>
+      <p id="list-status" class="list-status" role="status"></p>
+      <div id="reports"></div>
+      <div id="pager" class="pager" hidden><button type="button" id="prev">上一页</button><span id="page-label"></span><button type="button" id="next">下一页</button></div>
+    </section>
+  </main>
+  <dialog id="report-dialog" aria-labelledby="detail-title">
+    <div class="dialog-heading"><div><p class="subhead">报告详情</p><h2 id="detail-title"></h2></div><button id="close-detail" type="button" autofocus>关闭</button></div>
+    <div class="dialog-inner">
+      <div class="identity"><code id="report-id"></code><button id="copy-id" type="button">复制报告编号</button></div>
+      <p id="details-status" class="notice" role="status"></p>
+      <dl id="facts"></dl>
+      <div id="viewer" hidden>
+        <details id="stack-box"><summary>关键异常与堆栈</summary><pre id="stack"></pre></details>
+        <div class="file-tools"><label>日志附件<select id="file"></select></label><label>筛选附件中的行<input id="line-query" type="search" placeholder="输入关键字" autocomplete="off"></label><button type="button" id="copy-log">复制附件全文</button></div>
+        <p id="line-count" class="muted" role="status"></p><pre tabindex="0" id="log-content" aria-label="脱敏日志正文"></pre>
+      </div>
+      <details id="issue-controls" hidden><summary>跟进同类问题</summary><p id="issue-info"></p>
+        <form id="triage" class="file-tools">
+          <label>处理状态<select id="status"><option value="open">待处理</option><option value="working">处理中</option><option value="fixed">已修复</option><option value="reopened" hidden>修复后复发</option></select></label>
+          <label>负责人<input id="owner" maxlength="60" autocomplete="off"></label>
+          <label>修复版本<input id="fixed" maxlength="24" inputmode="decimal" pattern="[0-9]{1,4}([.][0-9]{1,4}){1,4}" placeholder="如 1.0.2.9"></label>
+          <button id="save" type="submit">保存记录</button>
+        </form>
+      </details>
+    </div>
+  </dialog>
+</body>
+</html>

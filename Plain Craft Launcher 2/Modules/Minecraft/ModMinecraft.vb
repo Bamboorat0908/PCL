@@ -71,7 +71,7 @@
                     End If
                 Next
             Catch ex As Exception
-                Logger.Warn(ex, "扫描 PCL 所在文件夹中是否有 MC 文件夹失败")
+                Logger.Warn(ex, "扫描 BRCL 所在文件夹中是否有 MC 文件夹失败")
             End Try
 
             '扫描官启文件夹
@@ -335,7 +335,7 @@
                         _Version.VanillaName = "pending"
                         GoTo VersionSearchFinish
                     End If
-                    '从 PCL 下载的版本信息中获取版本号
+                    '从 BRCL 下载的版本信息中获取版本号
                     If JsonObject("clientVersion") IsNot Nothing Then
                         _Version.VanillaName = JsonObject("clientVersion")
                         GoTo VersionSearchFinish
@@ -432,7 +432,7 @@
                     End If
                     '无法获取
                     _Version.VanillaName = "Unknown"
-                    Info = "PCL 无法识别该版本的 MC 版本号"
+                    Info = "BRCL 无法识别该版本的 MC 版本号"
                 Catch ex As Exception
                     Logger.Warn(ex, "识别 Minecraft 版本时出错")
                     _Version.VanillaName = "Unknown"
@@ -1254,7 +1254,7 @@ ExitDataLoad:
     ''' </summary>
     Public McInstanceListForceRefresh As Boolean = False
     ''' <summary>
-    ''' 是否为本次打开 PCL 后第一次加载版本列表。
+    ''' 是否为本次打开 BRCL 后第一次加载版本列表。
     ''' 这会清理所有 .pclignore 文件，而非跳过这些对应版本。
     ''' </summary>
     Private IsFirstMcInstanceListLoad As Boolean = True
@@ -2025,6 +2025,16 @@ OnLoaded:
 
         Next
 
+        '版本 JSON 与整合包提供的库路径不能写出 libraries 目录。
+        '在所有分支（包括 Maven 坐标生成路径）完成后统一校验，避免回退分支绕过检查。
+        Dim LibraryRoot = Path.GetFullPath(Path.Combine(CustomMcFolder, "libraries")).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) & Path.DirectorySeparatorChar
+        For Each Library In BasicArray
+            Dim LibraryPath = Path.GetFullPath(Library.LocalPath)
+            If Not LibraryPath.StartsWith(LibraryRoot, StringComparison.OrdinalIgnoreCase) OrElse LibraryPath.Substring(LibraryRoot.Length).Contains(":"c) Then
+                Throw New IOException("支持库路径超出了 libraries 目录或包含不安全的路径：" & Library.LocalPath)
+            End If
+        Next
+
         '去重
         Dim ResultArray As New Dictionary(Of String, McLibEntry)
         Dim GetVersion =
@@ -2502,9 +2512,10 @@ NextEntry:
             Next
         End If
         '打码当前登录的结果
-        Dim AccessToken As String = McLoginLoader.Output.AccessToken
+        Dim login = McLoginLoader?.Output
+        Dim AccessToken As String = login?.AccessToken
         If AccessToken IsNot Nothing AndAlso AccessToken.Length >= 10 AndAlso Raw.ContainsIgnoreCase(AccessToken) AndAlso
-            McLoginLoader.Output.Uuid <> McLoginLoader.Output.AccessToken Then 'UUID 和 AccessToken 一样则不打码
+            login.Value.Uuid <> AccessToken Then 'UUID 和 AccessToken 一样则不打码
             Raw = Raw.Replace(AccessToken, Left(AccessToken, 5) & New String(FilterChar, AccessToken.Length - 10) & Right(AccessToken, 5))
         End If
         Return Raw

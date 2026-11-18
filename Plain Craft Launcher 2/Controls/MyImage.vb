@@ -85,7 +85,17 @@ Public Class MyImage
             If _ActualSource = value Then Return
             _ActualSource = value
             Try
-                Dim Bitmap As ImageSource = If(value Is Nothing, Nothing, New MyBitmap(value)) '在这里先触发可能的文件读取，尽量避免在 UI 线程中读取文件
+                Dim Bitmap As ImageSource = Nothing
+                If value IsNot Nothing Then
+                    Dim resourcePath = value.Replace("pack://application:,,,/images/", PathImage)
+                    If resourcePath.StartsWith(PathImage, StringComparison.OrdinalIgnoreCase) Then
+                        Dim embedded As New BitmapImage(New Uri(resourcePath, UriKind.Absolute))
+                        embedded.Freeze()
+                        Bitmap = embedded
+                    Else
+                        Bitmap = New MyBitmap(value)
+                    End If
+                End If
                 RunInUi(Sub() MyBase.Source = Bitmap)
             Catch ex As Exception
                 Logger.Warn(ex, $"加载图片失败（{value}）")
