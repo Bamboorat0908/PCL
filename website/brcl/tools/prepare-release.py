@@ -1,4 +1,5 @@
 """Bind the static download information to the exact EXE shipped in dist/."""
+import argparse
 import hashlib
 import html
 import json
@@ -6,10 +7,22 @@ import pathlib
 import re
 
 dist = pathlib.Path(__file__).resolve().parents[1] / 'dist'
+parser = argparse.ArgumentParser()
+parser.add_argument('--release-record', type=pathlib.Path)
+args = parser.parse_args()
 metadata = json.loads((dist / 'release.json').read_text(encoding='utf-8-sig'))
 executable = dist / 'download' / 'BRCL.exe'
+changelog = dist.parents[2] / 'Plain Craft Launcher 2/Pages/PageSetup/Changelog.json'
+entry = json.loads(changelog.read_text(encoding='utf-8-sig'))[0]
 metadata['size'] = executable.stat().st_size
 metadata['sha256'] = hashlib.sha256(executable.read_bytes()).hexdigest()
+if args.release_record:
+    record = json.loads(args.release_record.read_text(encoding='utf-8-sig'))
+    if record['exe_sha256'] != metadata['sha256'] or record['exe_bytes'] != metadata['size']:
+        raise ValueError('Website EXE differs from the test and build record')
+    metadata.update(display_version=record['display_version'], version=record['revision'],
+                    published_at=entry['date'], site_release=entry['date'], build_date=entry['date'],
+                    git_commit=record['git_commit'], test_report_sha256=record['test_report_sha256'])
 metadata['download_url'] = '/BRCL/download/BRCL.exe'
 label = metadata['display_version'] + ' · 官网构建 ' + metadata['site_release'].replace('-', '.')
 values = {
@@ -25,8 +38,6 @@ for identifier, value in values.items():
     if count != 1:
         raise ValueError('Expected one download field: ' + identifier)
 
-changelog = dist.parents[2] / 'Plain Craft Launcher 2/Pages/PageSetup/Changelog.json'
-entry = json.loads(changelog.read_text(encoding='utf-8-sig'))[0]
 if entry['title'] != 'BRCL ' + metadata['display_version'] or entry['date'] != metadata['published_at']:
     raise ValueError('Launcher changelog and website version/date differ')
 notes = entry['items']

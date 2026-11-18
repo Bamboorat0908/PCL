@@ -3,9 +3,10 @@ Imports System.Security.Cryptography
 Imports System.Text
 
 Friend Module ModBrclUpdate
-    Public Const BrclReleaseVersion As String = "1.0.2.10"
-    Public Const BrclUpdateRevision As String = "2026.11.19.1"
-    Private Const UpdateBase As String = "http://t42.sjcmc.cn:25261/"
+    Public Const BrclReleaseVersion As String = "1.0.2.11"
+    Public Const BrclUpdateRevision As String = "2026.11.19.2"
+    Friend Const PrimaryDownloadBase As String = "https://zhushu.homes/BRCL/transfer/"
+    Friend Const BackupDownloadBase As String = "https://zhushu.homes/BRCL/transfer-mirror/"
     Private Const PublicKey As String = "<RSAKeyValue><Modulus>6nS0PTj2VkIKGLjI9wbulA94ZVggaX0294sTyPmjOiaiFo5gSS03/P73ChiJNeZFwYSRYYWQNpNEXPVQvrcjZqJbQd/KFfJ8Atnyo/YRyIzsB9fNg6HBXlCG44ePm298uoLTbeVQun5MwrX7Sl+6w3u1PkkdguzgXdrOdrjrO/YcABguF4J+oEeiRDEuqjhf9VwZBbYnUAgXkDI5GBKoZp0+hG5EItkoeblOKZaeH1gI4pC4fPYgsTglMgunFn3UfaI9jBpERxVpWjWOA70ATA9BDculrT0KKGUKPlBCWGVapalUH45+AsB+LRD6n0n/3ZzXpfhuZHS0kNYM87QYQaj52dV50uUldwXLekYA9wyL0MACCtr5TTadxgcGiOqJMaozLEQeVqKFErRBWP4pVltE7bSmVYNxeQE4YecWFVOQe3Zs6YON3DL6I6YX1Q4rTPvZXta1dfMd8cTCa61bw2ZnRM1Pj79/qZYtK5OBIRTTVVnJJ0S9AAQZRUBscUo9</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
     Private Checking As Integer
     Private StartupCheckScheduled As Integer
@@ -49,17 +50,8 @@ Friend Module ModBrclUpdate
         Dim Stage As String = Nothing
         Dim InstallerStarted As Boolean = False
         Try
-            Dim ManifestBytes As Byte()
-            Dim Signature As Byte()
-            Using Client As New UpdateClient
-                Using Input = Client.OpenRead(UpdateBase & "latest.json")
-                    ManifestBytes = ReadBoundedData(Input, 65536)
-                End Using
-                Using Input = Client.OpenRead(UpdateBase & "latest.sig")
-                    Signature = Convert.FromBase64String(Encoding.UTF8.GetString(ReadBoundedData(Input, 4096)).Trim())
-                End Using
-            End Using
-            Dim Manifest = ReadVerifiedManifest(ManifestBytes, Signature)
+            Dim Sources = {PrimaryDownloadBase, BackupDownloadBase}
+            Dim Manifest = ReadUpdateManifest(Sources)
             Dim Latest = Version.Parse(CStr(Manifest("version")))
             Dim DisplayVersion = If(CStr(Manifest("display_version")), Latest.ToString())
             If Latest <= Version.Parse(BrclUpdateRevision) Then
@@ -80,16 +72,7 @@ Friend Module ModBrclUpdate
             Stage = IO.Path.Combine(IO.Path.GetTempPath(), "BRCL-Update-" & Guid.NewGuid().ToString("N"))
             IO.Directory.CreateDirectory(Stage)
             Dim Archive = IO.Path.Combine(Stage, "release.zip")
-            Using Client As New UpdateClient(120000)
-                Using Input = Client.OpenRead(UpdateBase & Package), Output = IO.File.Create(Archive)
-                    CopyBoundedPackage(Input, Output, ExpectedSize)
-                End Using
-            End Using
-            If New IO.FileInfo(Archive).Length <> ExpectedSize Then Throw New Exception("更新包大小校验失败。")
-            Using Sha = SHA256.Create(), Stream = IO.File.OpenRead(Archive)
-                Dim Hash = BitConverter.ToString(Sha.ComputeHash(Stream)).Replace("-", "").ToLowerInvariant()
-                If Hash <> CStr(Manifest("sha256")).ToLowerInvariant() Then Throw New Exception("更新包 SHA-256 校验失败。")
-            End Using
+            DownloadUpdatePackage(Sources, Package, Archive, ExpectedSize, CStr(Manifest("sha256")))
             Dim Install = RunInUiWait(Function() MyMsgBox("BRCL " & DisplayVersion & " 已下载并通过校验。安装后将重启启动器，原程序会自动备份。", "BRCL 更新", "安装并重启", "稍后"))
             If Install <> 1 Then Return
             If RunInUiWait(Function() HasDownloadingTask()) Then Throw New Exception("请等待下载任务结束后再安装更新。")
@@ -112,7 +95,7 @@ Friend Module ModBrclUpdate
             RunInUi(Sub() FrmMain.EndProgram(False))
         Catch Ex As Exception
             Logger.Warn(Ex, "BRCL 更新检查失败")
-            If Manual Then RunInUi(Sub() ShowBrclError("BRCL 更新检查失败", Ex, "更新地址：" & UpdateBase & vbCrLf & Ex.GetDisplay(True)))
+            If Manual Then RunInUi(Sub() ShowBrclError("BRCL 更新检查失败", Ex, "更新地址：" & PrimaryDownloadBase & vbCrLf & Ex.GetDisplay(True)))
         Finally
             'Only the detached installer needs to retain its staging files.
             'Canceling a prompt or rejecting a broken response must not leak a full ZIP.
@@ -125,6 +108,79 @@ Friend Module ModBrclUpdate
             End If
             Threading.Interlocked.Exchange(Checking, 0)
         End Try
+    End Sub
+
+    Private Function ReadUpdateManifest(Sources As IEnumerable(Of String)) As JObject
+        Dim LastError As Exception = Nothing
+        For Each Source In Sources
+            Try
+                Using Client As New UpdateClient
+                    Dim ManifestBytes As Byte()
+                    Using Input = Client.OpenRead(Source & "latest.json")
+                        ManifestBytes = ReadBoundedData(Input, 65536)
+                    End Using
+                    Using Input = Client.OpenRead(Source & "latest.sig")
+                        Dim Signature = Convert.FromBase64String(Encoding.UTF8.GetString(ReadBoundedData(Input, 4096)).Trim())
+                        Return ReadVerifiedManifest(ManifestBytes, Signature)
+                    End Using
+                End Using
+            Catch ex As Exception
+                LastError = ex
+                Logger.Warn(ex, $"更新清单来源不可用（{Source}）")
+            End Try
+        Next
+        Throw New IO.IOException("无法获取有效的签名更新清单。", LastError)
+    End Function
+
+    Private Sub DownloadUpdatePackage(Sources As IEnumerable(Of String), Package As String, Archive As String, Size As Long, Hash As String)
+        Dim LastError As Exception = Nothing
+        For Each Source In Sources
+            Dim Offset = If(IO.File.Exists(Archive), New IO.FileInfo(Archive).Length, 0L)
+            Try
+                Try
+                    TransferUpdatePackage(Source & Package, Archive, Size, Offset)
+                    VerifyPackageHash(Archive, Hash)
+                Catch ex As IO.InvalidDataException When Offset > 0
+                    '已有分片可能来自损坏的主源；在同一镜像重新下载一次。
+                    TransferUpdatePackage(Source & Package, Archive, Size, 0)
+                    VerifyPackageHash(Archive, Hash)
+                End Try
+                Return
+            Catch ex As Exception
+                LastError = ex
+                If IO.File.Exists(Archive) AndAlso New IO.FileInfo(Archive).Length >= Size Then IO.File.Delete(Archive)
+                Logger.Warn(ex, $"更新包来源不可用（{Source}）")
+            End Try
+        Next
+        Throw New IO.IOException("无法下载通过校验的更新包。", LastError)
+    End Sub
+
+    Private Sub TransferUpdatePackage(Url As String, Archive As String, Size As Long, Offset As Long)
+        Dim Request = DirectCast(WebRequest.Create(Url), HttpWebRequest)
+        Request.AllowAutoRedirect = False
+        Request.UserAgent = "BRCL/" & BrclReleaseVersion
+        Request.Timeout = 30000
+        Request.ReadWriteTimeout = 120000
+        If Offset > 0 Then Request.AddRange(Offset)
+        Using Response = DirectCast(Request.GetResponse(), HttpWebResponse)
+            If Response.StatusCode = HttpStatusCode.OK Then
+                Offset = 0
+            ElseIf Offset <= 0 OrElse Response.StatusCode <> HttpStatusCode.PartialContent OrElse
+                Response.Headers(HttpResponseHeader.ContentRange) <> FormattableString.Invariant($"bytes {Offset}-{Size - 1}/{Size}") Then
+                Throw New IO.InvalidDataException("更新镜像返回了无效的续传区间。")
+            End If
+            If Response.ContentLength >= 0 AndAlso Response.ContentLength <> Size - Offset Then Throw New IO.InvalidDataException("更新包响应大小不符合签名清单。")
+            Using Input = Response.GetResponseStream(), Output = IO.File.Open(Archive, If(Offset = 0, IO.FileMode.Create, IO.FileMode.Append), IO.FileAccess.Write)
+                CopyBoundedPackage(Input, Output, Size - Offset)
+            End Using
+        End Using
+    End Sub
+
+    Private Sub VerifyPackageHash(Archive As String, ExpectedHash As String)
+        Using Sha = SHA256.Create(), Stream = IO.File.OpenRead(Archive)
+            Dim Hash = BitConverter.ToString(Sha.ComputeHash(Stream)).Replace("-", "")
+            If Not String.Equals(Hash, ExpectedHash, StringComparison.OrdinalIgnoreCase) Then Throw New IO.InvalidDataException("更新包 SHA-256 校验失败。")
+        End Using
     End Sub
 
     Private Sub CopyBoundedPackage(Input As IO.Stream, Output As IO.Stream, ExpectedSize As Long)
@@ -192,6 +248,7 @@ Friend Module ModBrclUpdate
             If Http IsNot Nothing Then
                 Http.AllowAutoRedirect = False
                 Http.ReadWriteTimeout = RequestTimeout
+                Http.UserAgent = "BRCL/" & BrclReleaseVersion
             End If
             Return Request
         End Function

@@ -19,6 +19,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Windows.Threading;
@@ -31,6 +33,7 @@ public sealed class RecoveryServer : IDisposable {
     public int BackupRequests;
     public int RateLimitedRequests;
     public int RateBackupRequests;
+    public long UpdateResumeOffset;
     public long BulkBytes;
     public int Port {get;private set;}
     public RecoveryServer() {
@@ -52,7 +55,8 @@ public sealed class RecoveryServer : IDisposable {
                 }
                 bool bulk=path.Contains("bmclapi-bulk");
                 bool broken=path.Contains("broken");
-                if(broken) Interlocked.Increment(ref BrokenRequests);
+                if(path.Contains("update-backup")) Interlocked.Exchange(ref UpdateResumeOffset,start);
+                else if(broken) Interlocked.Increment(ref BrokenRequests);
                 else if(path.Contains("rate-backup")) Interlocked.Increment(ref RateBackupRequests);
                 else if(!bulk) Interlocked.Increment(ref BackupRequests);
                 long total=bulk ? 64*1024*1024 : 2*1024*1024;
@@ -81,12 +85,14 @@ public static class DownloadRecoveryChecks {
     private static void Require(bool value,string message) {if(!value) throw new Exception(message);}
     public static string[] Run(string stage) {
         var passed=new List<string>();
+        AppDomain.CurrentDomain.SetData("APP_CONTEXT_BASE_DIRECTORY",stage+"\\");
         string cache=Path.Combine(stage,"cache")+"\\";
         Directory.CreateDirectory(cache);
         Settings.Entries["SystemSystemCache"].Set(cache,null);
         Settings.Entries["ToolDownloadThread"].Set(3,null);
         Settings.Entries["ToolDownloadSpeed"].Set(42,null);
         Settings.Entries["SystemDebugDelay"].Set(false,null);
+        Settings.Entries["SystemBrclCrashUpload"].Source=Settings.Sources.Normal;
         Settings.Entries["SystemBrclCrashUpload"].Set(false,null);
         ModBase.PathTemp=cache; // Never let a fixture clear a running launcher's shared cache.
         ModNet.NetTaskSpeedLimitLow=256*1024;
@@ -130,6 +136,17 @@ public static class DownloadRecoveryChecks {
                     Require(new FileInfo(limitedFile.LocalPath).Length==2*1024*1024,"Rate-limit fallback produced an incomplete file");
                     passed.Add("PASS a mirror returning HTTP 429 switches to its backup without repeated rate-limited requests");
                 } finally {limitedTask.Cancel();}
+                byte[] expected=new byte[2*1024*1024];
+                for(int i=0;i<expected.Length;i++) expected[i]=0x5a;
+                string digest;
+                using(var sha=SHA256.Create()) digest=BitConverter.ToString(sha.ComputeHash(expected)).Replace("-","");
+                var updater=typeof(ModNet).Assembly.GetType("PCL.ModBrclUpdate",true);
+                var download=updater.GetMethod("DownloadUpdatePackage",BindingFlags.Static|BindingFlags.NonPublic);
+                string updateFile=Path.Combine(stage,"update.zip");
+                download.Invoke(null,new object[]{new[]{root+"/update-broken/",root+"/update-backup/"},"release.zip",updateFile,(long)expected.Length,digest});
+                Require(Interlocked.Read(ref server.UpdateResumeOffset)==65536,"Updater did not resume at the exact failed-source offset");
+                Require(new FileInfo(updateFile).Length==expected.Length,"Updater produced an incomplete file");
+                passed.Add("PASS updater resumes from its backup at the exact Range offset and verifies the assembled SHA-256");
             } finally {
                 if(critical!=null) critical.Cancel(); if(bulk!=null) bulk.Cancel();
                 var waiting=Stopwatch.StartNew(); while(ModNet.NetTaskThreadCount>0 && waiting.ElapsedMilliseconds<3000) Pump(10);

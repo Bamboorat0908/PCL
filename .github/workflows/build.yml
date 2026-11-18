@@ -1,69 +1,33 @@
-name: Build
+name: BRCL release verification
 on:
   push:
-    paths:
-      - 'Plain Craft Launcher 2/**'
-      - '.github/workflows/**'
+    branches: ['brcl/**']
+    tags: ['brcl-v*']
   pull_request:
-    paths:
-      - 'Plain Craft Launcher 2/**'
-      - '.github/workflows/**'
+    branches: ['brcl/**']
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build
+  verify:
     runs-on: windows-latest
-    strategy:  
-       matrix:  
-         configuration: [Debug, Release]
-
+    timeout-minutes: 30
     steps:
-
-    - name: Checkout
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 1
-        submodules: true
-
-    - name: Set Describe
-      shell: bash
-      run: |
-          describe=`git describe --tags --always`
-          echo "describe=$describe" >> $GITHUB_ENV
-
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v3
-      with:
-        msbuild-architecture: x64
-    
-    - name: Update Help
-      run:  |
-        Set-Location ..
-        git clone https://github.com/LTCatt/PCL2Help.git -b master --single-branch --depth 1
-        Set-Location PCL2Help
-        Remove-Item -Path *.* -Recurse -Force
-        Compress-Archive -Path .\* -DestinationPath .\Help.zip
-        Copy-Item -Path .\Help.zip -Destination "${{ GITHUB.WORKSPACE }}\Plain Craft Launcher 2\Resources\Help.zip" -Force
-        Set-Location ..
-        Remove-Item PCL2Help -Recurse -Force
-        Set-Location ${{ GITHUB.WORKSPACE }}
-
-
-    - name: Replace
-      run: |
-        (gc "Plain Craft Launcher 2\Modules\ModSecret.vb") -replace 'Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "")', 'Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "${{ secrets.CLIENT_ID }}")' | Out-File "Plain Craft Launcher 2\Modules\ModSecret.vb"
-        (gc "Plain Craft Launcher 2\Modules\ModSecret.vb") -replace 'Public CurseForgeAPIKey As String = If(Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY"), "")', 'Public CurseForgeAPIKey As String = If(Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY"), "${{ secrets.CURSEFORGE_API_KEY }}")' | Out-File "Plain Craft Launcher 2\Modules\ModSecret.vb"
-        (gc "Plain Craft Launcher 2\Modules\Base\ModBase.vb") -replace 'Public Const CommitHash As String = ""', 'Public Const CommitHash As String = "${{ github.sha }}"' | Out-File "Plain Craft Launcher 2\Modules\Base\ModBase.vb"
-        
-    - name: Restore NuGet Packages
-      run: dotnet restore PCLCS\PCLCS.csproj
-
-    - name: Build
-      run: msbuild "Plain Craft Launcher 2\Plain Craft Launcher 2.vbproj" -p:Configuration=${{ matrix.configuration }}
-
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v7
-      with:
-        name: ${{ matrix.configuration }} ${{ env.describe }}
-        path: Plain Craft Launcher 2\obj\${{ matrix.configuration }}\Plain Craft Launcher 2.exe
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.404'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build, test and package
+        shell: pwsh
+        run: ./scripts/verify-release.ps1 -OutputDirectory artifacts/verified-release
+      - name: Upload validated EXE, ZIP and reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: BRCL-verified-release
+          path: artifacts/verified-release/

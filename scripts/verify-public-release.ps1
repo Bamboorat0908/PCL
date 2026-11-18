@@ -1,16 +1,19 @@
 param(
     [ValidatePattern('^\d+\.\d+\.\d+\.\d+$')][string]$Version = '2026.11.13.12',
-    [string]$OutputDirectory
+    [string]$OutputDirectory,
+    [string]$BaseUrl = 'https://zhushu.homes/BRCL/transfer/',
+    [string]$ReleaseDirectory
 )
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repo ('artifacts\verifications\' + $Version) }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-$base = 'http://t42.sjcmc.cn:25261/'
-$localRelease = Join-Path $repo ('artifacts\updates\' + $Version)
+$base = $BaseUrl.TrimEnd('/') + '/'
+$localRelease = if ($ReleaseDirectory) { $ReleaseDirectory } else { Join-Path $repo ('artifacts\updates\' + $Version) }
+$curlArgs = @('--fail','--silent','--show-error','--user-agent','BRCL/1.0.2.11','--connect-timeout','10')
 foreach ($name in @('latest.json','latest.sig')) {
     $maximum = if ($name -eq 'latest.json') { 65536 } else { 4096 }
-    & curl.exe --fail --silent --show-error --connect-timeout 10 --max-time 45 --max-filesize $maximum --output (Join-Path $OutputDirectory $name) ($base + $name)
+    & curl.exe @curlArgs --max-time 45 --max-filesize $maximum --output (Join-Path $OutputDirectory $name) ($base + $name)
     if ($LASTEXITCODE -ne 0) { throw "Public download failed: $name" }
 }
 $manifestPath = Join-Path $OutputDirectory 'latest.json'
@@ -28,7 +31,7 @@ if ($manifest.version -ne $Version -or $manifest.package -cne "releases/BRCL-$Ve
 Write-Output 'PASS public release version and trusted manifest signature'
 $filename = "BRCL-$Version.zip"
 $package = Join-Path $OutputDirectory $filename
-& curl.exe --fail --silent --show-error --connect-timeout 10 --max-time 120 --max-filesize 268435456 --dump-header (Join-Path $OutputDirectory 'headers.txt') --output $package ($base + $manifest.package)
+& curl.exe @curlArgs --max-time 120 --max-filesize 268435456 --dump-header (Join-Path $OutputDirectory 'headers.txt') --output $package ($base + $manifest.package)
 if ($LASTEXITCODE -ne 0) { throw 'Public package download failed.' }
 $hash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
 if ((Get-Item -LiteralPath $package).Length -ne $manifest.size -or $hash -ne $manifest.sha256) { throw 'Public package does not match its signed size/hash.' }
@@ -40,7 +43,7 @@ if ($manifest.direct_exe) {
     $directName = "BRCL-$Version.exe"
     $directFile = Join-Path $OutputDirectory $directName
     $directUrl = $base + $manifest.direct_exe
-    & curl.exe --fail --silent --show-error --connect-timeout 10 --max-time 120 --max-filesize 268435456 --dump-header (Join-Path $OutputDirectory 'direct-exe-headers.txt') --output $directFile $directUrl
+    & curl.exe @curlArgs --max-time 120 --max-filesize 268435456 --dump-header (Join-Path $OutputDirectory 'direct-exe-headers.txt') --output $directFile $directUrl
     if ($LASTEXITCODE -ne 0) { throw 'Public direct executable download failed.' }
     if ((Get-Item -LiteralPath $directFile).Length -ne $manifest.direct_exe_size -or (Get-FileHash -LiteralPath $directFile -Algorithm SHA256).Hash.ToLowerInvariant() -ne $manifest.direct_exe_sha256) { throw 'Public direct executable does not match its signed size/hash.' }
     $downloaded += $directName

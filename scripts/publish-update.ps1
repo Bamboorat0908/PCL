@@ -3,6 +3,7 @@
     [string]$DisplayVersion = '1.0.2.2',
     [string]$Notes = '启用 BRCL 联网更新。',
     [string]$SourceExe,
+    [string]$VerifiedReleaseDirectory,
     [switch]$Critical,
     [string]$SigningKey = (Join-Path $env:USERPROFILE '.codex\secrets\brcl-update-signing.xml'),
     [string]$Server = 'root@t42.sjcmc.cn',
@@ -30,15 +31,42 @@ $signaturePath = Join-Path $out 'latest.sig'
 if (-not $PublishPrepared) {
     if (Test-Path -LiteralPath $out) { throw "Release already exists: $out" }
     $releaseExe = Join-Path $bin 'BRCL.exe'
-    if ($SourceExe) {
+    $record = $null
+    if ($VerifiedReleaseDirectory) {
+        if ($SourceExe) { throw 'Pass the verified release directory or a source EXE, not both.' }
+        $record = Get-Content -LiteralPath (Join-Path $VerifiedReleaseDirectory 'release-record.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $commit = (git -C $repo rev-parse HEAD).Trim()
+        if ($LASTEXITCODE -ne 0 -or $record.git_commit -ne $commit -or $record.display_version -ne $DisplayVersion -or $record.revision -ne $Version) {
+            throw 'Release record does not match the source checkout or release version.'
+        }
+        $releaseExe = Join-Path $VerifiedReleaseDirectory 'payload\BRCL.exe'
+        $verifiedZip = Join-Path $VerifiedReleaseDirectory "BRCL-$Version.zip"
+        $testReport = Join-Path $VerifiedReleaseDirectory 'tests\results.json'
+        $coreReport = Join-Path $VerifiedReleaseDirectory 'meloongcore-tests.txt'
+        foreach ($file in @(@($releaseExe,$record.exe_sha256), @($verifiedZip,$record.update_zip_sha256), @($testReport,$record.test_report_sha256), @($coreReport,$record.core_test_report_sha256))) {
+            if ((Get-FileHash -LiteralPath $file[0]).Hash -ine $file[1]) { throw "Verified release file changed: $($file[0])" }
+        }
+    } elseif ($SourceExe) {
         $releaseExe = [IO.Path]::GetFullPath($SourceExe)
         if (-not (Test-Path -LiteralPath $releaseExe -PathType Leaf)) { throw 'Source EXE does not exist.' }
     } else {
         & (Join-Path $PSScriptRoot 'build-release.ps1')
     }
     & (Join-Path $PSScriptRoot 'export-single-exe.ps1') -Exe $releaseExe -OutputDirectory (Join-Path $out 'payload')
-    [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $out 'payload'), $archive)
+    if ($record) {
+        Copy-Item -LiteralPath $verifiedZip -Destination $archive
+        Copy-Item -LiteralPath (Join-Path $VerifiedReleaseDirectory 'release-record.json') -Destination $out
+        New-Item -ItemType Directory -Path (Join-Path $out 'tests') | Out-Null
+        Copy-Item -LiteralPath $testReport -Destination (Join-Path $out 'tests')
+        Copy-Item -LiteralPath $coreReport -Destination $out
+    } else {
+        [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $out 'payload'), $archive)
+    }
     $manifest = [ordered]@{version=$Version; display_version=$DisplayVersion; package="releases/BRCL-$Version.zip"; size=(Get-Item -LiteralPath $archive).Length; sha256=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant(); package_format='single-exe'; notes=$Notes; critical=[bool]$Critical}
+    if ($record) {
+        $manifest['git_commit'] = $record.git_commit
+        $manifest['test_report_sha256'] = $record.test_report_sha256
+    }
     if ($DirectExe) {
         Copy-Item -LiteralPath (Join-Path $out 'payload\BRCL.exe') -Destination $directFile
         $manifest['direct_exe'] = "releases/BRCL-$Version.exe"

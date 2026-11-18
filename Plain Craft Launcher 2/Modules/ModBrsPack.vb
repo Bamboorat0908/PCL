@@ -46,7 +46,12 @@ Friend Module ModBrsPack
         End Sub
         Public ReadOnly Property Url As String
             Get
-                Return "http://t42.sjcmc.cn:25261/modpacks/" & FileName
+                Return PrimaryDownloadBase & "modpacks/" & FileName
+            End Get
+        End Property
+        Public ReadOnly Property BackupUrl As String
+            Get
+                Return BackupDownloadBase & "modpacks/" & FileName
             End Get
         End Property
     End Class
@@ -191,7 +196,7 @@ Friend Module ModBrsPack
         Dim ArchivePath = Path.Combine(Paths.Base, "BRCL", "Downloads", Preset.FileName)
         Directory.CreateDirectory(Path.GetDirectoryName(ArchivePath))
         Dim Download As New LoaderDownload("下载服务器整合包", New List(Of NetFile) From {
-            New NetFile({Preset.Url}, ArchivePath, New FileChecker With {.Hash = Preset.Hash, .ActualSize = Preset.Size})}) With {.ProgressWeight = 20}
+            New NetFile({Preset.Url, Preset.BackupUrl}, ArchivePath, New FileChecker With {.Hash = Preset.Hash, .ActualSize = Preset.Size})}) With {.ProgressWeight = 20}
         Dim Install As New LoaderTask(Of String, String)("安装 TRM 整合包",
             Sub(Task As LoaderTask(Of String, String))
                 Dim Token = Task.CreateCancellationToken()

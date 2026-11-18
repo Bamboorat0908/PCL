@@ -1,7 +1,7 @@
 ﻿param([string]$Archive = 'C:\Users\BRPC\Downloads\TRM 1.11 高预设.zip', [switch]$LowPreset)
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-[Reflection.Assembly]::LoadFrom((Join-Path $env:USERPROFILE '.nuget\packages\newtonsoft.json\13.0.3\lib\net45\Newtonsoft.Json.dll')) | Out-Null
+[Reflection.Assembly]::LoadFrom((Join-Path $repo 'Plain Craft Launcher 2\Resources\Newtonsoft.Json.dll')) | Out-Null
 [Reflection.Assembly]::LoadFrom((Join-Path $repo 'Plain Craft Launcher 2\Resources\ThrottleDebounce.dll')) | Out-Null
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $repo 'Plain Craft Launcher 2\bin\BRCL.exe'))
 $module = $assembly.GetType('PCL.ModBrsPack', $true)

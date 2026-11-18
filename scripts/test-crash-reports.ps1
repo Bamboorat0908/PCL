@@ -11,6 +11,11 @@ $settings = $a.GetType('PCL.Settings').GetField('Entries').GetValue($null)
 $flags = [Reflection.BindingFlags]'Public,NonPublic,Static'
 $out = Join-Path $env:TEMP ('BRCL-InkTest-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $out | Out-Null
+[AppDomain]::CurrentDomain.SetData('APP_CONTEXT_BASE_DIRECTORY', $out + '\')
+foreach ($key in 'BrclCrashMode','SystemBrclCrashUpload') {
+    # These are Registry-backed in the client. Keep fixture writes in the test profile.
+    $settings[$key].Source = [Enum]::Parse($settings[$key].Source.GetType(), 'Normal')
+}
 foreach ($name in 'DraftFolder','Pending','LinkedPending','Sessions','SessionFile','Base') {
     $diag.GetField($name,$flags).SetValue($null,(Join-Path $out $name))
 }

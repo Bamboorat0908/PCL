@@ -1,0 +1,17 @@
+[Unit]
+Description=BRCL update mirror SSH tunnel
+After=network-online.target brcl-updates.service
+Wants=network-online.target brcl-updates.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -NT -p 64886 -i /etc/brcl-transfer/id_ed25519 -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/brcl-transfer/known_hosts -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -R 127.0.0.1:25161:127.0.0.1:25261 brcl-transfer@45.207.197.246
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -28,11 +28,12 @@ $cases = @(
     @{Name='bank-page'; File='test-bank-page.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'bank'))},
     @{Name='sponsor-dialog'; File='test-sponsor-dialog.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'sponsor-dialog'))},
     @{Name='pack-layout'; File='test-brs-pack-layout.ps1'; Args=@('-OutputDirectory',(Join-Path $OutputDirectory 'pack-previews'))},
+    @{Name='brs-launch-selection'; File='test-brs-launch-selection.ps1'; Args=@()},
     @{Name='brs'; File='test-brs-data.ps1'; Args=@()},
     @{Name='brs-dashboard'; File='test-brs-dashboard.ps1'; Args=@()},
     @{Name='brs-page'; File='test-brs-page.ps1'; Args=@()},
-    @{Name='news-page'; File='test-news-page.ps1'; Args=@()},
-    @{Name='global-backdrops'; File='test-global-backdrops.ps1'; Args=@()},
+    @{Name='news-page'; File='test-news-page.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'news-previews'))},
+    @{Name='global-backdrops'; File='test-global-backdrops.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'backdrops'))},
     @{Name='sponsors'; File='test-sponsors.ps1'; Args=@()},
     @{Name='errors'; File='test-brcl-errors.ps1'; Args=@('-OutputDirectory','bin')},
     @{Name='credential-redaction'; File='test-credential-redaction.ps1'; Args=@()},
@@ -53,7 +54,7 @@ $cases = @(
     @{Name='control-cancelled-input'; File='test-control-cancelled-input.ps1'; Args=@()},
     @{Name='control-accessibility'; File='test-control-accessibility.ps1'; Args=@()},
     @{Name='setting-toggles'; File='test-setting-toggles.ps1'; Args=@()},
-    @{Name='ui-polish'; File='test-ui-polish.ps1'; Args=@()},
+    @{Name='ui-polish'; File='test-ui-polish.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'ui-polish'))},
     @{Name='dialog-layout'; File='test-dialog-layout.ps1'; Args=@()},
     @{Name='update-rollback'; File='test-update.ps1'; Args=@()},
     @{Name='icon-theme'; File='test-icon-theme.ps1'; Args=@()},
@@ -93,10 +94,11 @@ $runtimeCases = @(
     @{Name='news-api'; Runtime='python'; File='news-server\test_server.py'; Args=@('-v')},
     @{Name='update-http'; Runtime='python'; File='update-server\test_ranges.py'; Args=@('-v')}
     @{Name='bank-service'; Runtime='python'; File='..\services\bank\test_bank_service.py'; Args=@('-v')}
+    @{Name='ink-admin'; Runtime='python'; File=''; Args=@('-B','-m','unittest','discover','-s',(Join-Path $repo 'InkAdmin'),'-v')}
 )
 foreach ($case in $runtimeCases) {
     $runtime = if ($case.Runtime -eq 'node') { $NodePath } else { $PythonPath }
-    $arguments = @((Join-Path $PSScriptRoot $case.File)) + $case.Args
+    $arguments = if ($case.File) { @((Join-Path $PSScriptRoot $case.File)) + $case.Args } else { $case.Args }
     $previousPreference = $ErrorActionPreference
     try {
         if (-not $runtime -or -not (Test-Path -LiteralPath $runtime -PathType Leaf)) {

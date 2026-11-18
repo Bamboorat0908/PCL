@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Net.Http
-$root = 'C:\works\BRCL\PCL-2.13.1.1\Plain Craft Launcher 2'
+$root = Join-Path (Split-Path $PSScriptRoot) 'Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $root 'Resources\Newtonsoft.Json.dll'))
 if (-not $AssemblyPath) { $AssemblyPath = Join-Path $root 'bin\BRCL.exe' }
 $assembly = [Reflection.Assembly]::LoadFrom($AssemblyPath)
