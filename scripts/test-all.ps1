@@ -98,7 +98,7 @@ $runtimeCases = @(
 )
 foreach ($case in $runtimeCases) {
     $runtime = if ($case.Runtime -eq 'node') { $NodePath } else { $PythonPath }
-    $arguments = if ($case.File) { @((Join-Path $PSScriptRoot $case.File)) + $case.Args } else { $case.Args }
+    [string[]]$arguments = @(if ($case.File) { Join-Path $PSScriptRoot $case.File }; $case.Args)
     $previousPreference = $ErrorActionPreference
     try {
         if (-not $runtime -or -not (Test-Path -LiteralPath $runtime -PathType Leaf)) {

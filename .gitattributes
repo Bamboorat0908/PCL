@@ -61,3 +61,5 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+/scripts/fixtures/signed-update/latest.json binary
+/scripts/fixtures/signed-update/latest.sig binary

@@ -1,0 +1,13 @@
+{
+    "version":  "2026.11.19.1",
+    "display_version":  "1.0.2.10",
+    "package":  "releases/BRCL-2026.11.19.1.zip",
+    "size":  6073613,
+    "sha256":  "784793e26c6414ce97598474f9d1fb2e9fbed021b23674c6e34b57e21afc13ff",
+    "package_format":  "single-exe",
+    "notes":  "推出用户体验改善计划。使用统计在主动同意后开启，记录随机安装标识、版本、使用时间和游戏会话信息。",
+    "critical":  false,
+    "direct_exe":  "releases/BRCL-2026.11.19.1.exe",
+    "direct_exe_size":  7546368,
+    "direct_exe_sha256":  "2609d7a01ac8735a1181ed2dce6832c4cb665efb607c14c755d1b57689ee387b"
+}

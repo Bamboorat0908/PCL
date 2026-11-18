@@ -48,11 +48,11 @@ try {
 Write-Output 'PASS UI preview avoids real update traffic and preserves the startup reservation'
 
 $verify = $module.GetMethod('ReadVerifiedManifest',$flags)
-$fixture = Join-Path $repo 'artifacts\updates\2026.11.13.9'
+$fixture = Join-Path $PSScriptRoot 'fixtures\signed-update'
 $bytes = [IO.File]::ReadAllBytes((Join-Path $fixture 'latest.json'))
 $signature = [Convert]::FromBase64String([IO.File]::ReadAllText((Join-Path $fixture 'latest.sig')).Trim())
 $manifest = $verify.Invoke($null,[object[]]@($bytes,$signature))
-if ([string]$manifest['version'] -ne '2026.11.13.9') { throw 'A valid signed release manifest was rejected or changed' }
+if ([string]$manifest['version'] -ne '2026.11.19.1') { throw 'A valid signed release manifest was rejected or changed' }
 Write-Output 'PASS real previously published manifest verifies with the embedded public key'
 foreach ($case in @('tampered-manifest','tampered-signature','empty','oversized')) {
     [byte[]]$testBytes = $bytes.Clone()

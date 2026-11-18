@@ -68,9 +68,10 @@ Write-Output 'PASS optional icons preserve plain-button width, selected feedback
 $newPage={param($name) [Activator]::CreateInstance($assembly.GetType('PCL.'+$name,$true))}
 $news=& $newPage 'PageNews'
 $settings=& $newPage 'PageSetupLaunch'
+$privacy=& $newPage 'PageSetupPrivacy'
 $map=& $newPage 'PageMap'
 $about=& $newPage 'PageOtherAbout'
-$sections=@('SectionAppearance','SectionAdvanced','CardSkin','SectionDiagnostics')
+$sections=@('SectionAppearance','SectionAdvanced','CardSkin')
 foreach($name in $sections){
     $section=$settings.FindName($name)
     if($section -isnot [Windows.Controls.Expander] -or $section.IsExpanded){throw "Settings progressive disclosure missing: $name"}
@@ -82,7 +83,8 @@ foreach($name in $sections){
     if($section.IsExpanded){throw "Cannot collapse setting section: $name"}
 }
 if($settings.FindName('BtnAdvanceJavaSearch').Logo -ne $app.Resources['BrclIconRefresh']){throw 'Build does not contain the final Java refresh icon'}
-Write-Output 'PASS common settings remain visible and four advanced sections expose ExpandCollapse'
+if (-not $privacy.FindName('CheckUsageStatistics') -or -not $privacy.FindName('BtnReviewReports')) { throw 'Independent privacy and diagnostic controls are missing' }
+Write-Output 'PASS launch settings expose ExpandCollapse and privacy has independent consent and diagnostic controls'
 
 $flags=[Reflection.BindingFlags]'Instance,NonPublic'
 $assembly.GetType('PCL.PageMap').GetMethod('ShowUnavailable',$flags).Invoke($map,@('Isolated offline layout sample','Map unavailable')) | Out-Null
@@ -129,7 +131,7 @@ foreach($theme in @('dark','light')){
         Render-Page $news 380 1 $dpi "news-$theme-$dpi"
         Render-Page $settings 430 1 $dpi "settings-$theme-$dpi"
     }
-    foreach($sample in @(@($news,380,'news'),@($settings,430,'settings'),@($map,380,'map-offline'),@($about,430,'about'))){
+    foreach($sample in @(@($news,380,'news'),@($settings,430,'settings'),@($privacy,430,'privacy'),@($map,380,'map-offline'),@($about,430,'about'))){
         Render-Page $sample[0] $sample[1] 1.25 96 ($sample[2]+'-'+$theme+'-zoom125')
     }
     foreach($name in $sections){$settings.FindName($name).IsExpanded=$true}
