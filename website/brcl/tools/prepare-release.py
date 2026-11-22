@@ -17,15 +17,17 @@ changelog = dist.parents[2] / 'Plain Craft Launcher 2/Pages/PageSetup/Changelog.
 entries = json.loads(changelog.read_text(encoding='utf-8-sig'))
 if not isinstance(entries, list) or not entries:
     raise ValueError('Changelog needs at least one release')
-previous_version = None
+previous_number = None
 for entry in entries:
     version = entry['title']
-    if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){2}', version):
-        raise ValueError('Changelog headings must use three-part version numbers')
-    numeric_version = tuple(map(int, version.split('.')))
-    if previous_version is not None and numeric_version >= previous_version:
-        raise ValueError('Changelog versions must be unique and ordered newest first')
-    previous_version = numeric_version
+    if not re.fullmatch(r'[1-9][0-9]*\.[0-9]\.[0-9]', version):
+        raise ValueError(f'Expected a three-part release with single-digit middle and final parts: {version}')
+    major, minor, patch = map(int, version.split('.'))
+    number = major * 100 + minor * 10 + patch
+    if previous_number is not None and number != previous_number - 1:
+        expected = f'{(previous_number - 1) // 100}.{(previous_number - 1) // 10 % 10}.{(previous_number - 1) % 10}'
+        raise ValueError(f'Changelog versions must be consecutive: expected {expected}, found {version}')
+    previous_number = number
     if date.fromisoformat(entry['date']).isoformat() != entry['date']:
         raise ValueError(f'Invalid release date for {version}')
     if not entry['sections']:
@@ -37,6 +39,8 @@ for entry in entries:
             if any(not isinstance(item[field], str) or not item[field].strip()
                    for field in ('summary', 'detail')):
                 raise ValueError(f'Empty changelog item for {version}')
+if previous_number != 100:
+    raise ValueError('The first public release must be 1.0.0')
 entry = entries[0]
 metadata['size'] = executable.stat().st_size
 metadata['sha256'] = hashlib.sha256(executable.read_bytes()).hexdigest()
