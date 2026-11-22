@@ -123,7 +123,7 @@
           <a class="button button-dark download-file" href="/BRCL/download/BRCL.exe" data-download download="BRCL.exe"><span>下载 BRCL.exe</span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></a>
           <dl class="release-meta"><div><dt>版本</dt><dd id="release-version">1.3.0</dd></div><div><dt>文件大小</dt><dd id="release-size">7.24 MiB</dd></div><div><dt>系统</dt><dd>Windows 10 / 11</dd></div><div><dt>基础环境</dt><dd>.NET Framework 4.8</dd></div></dl>
           <p class="download-status" id="release-status" role="status">下载后直接运行，无需配套 DLL 或配置文件。</p>
-          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">95D61CB734EB2B1E1740F5A3A980B0E2C76B612100803D193ED70E12F2C897F2</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
+          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">908C404EC27E3F7FA72888CFD676312C0AF787E7F924E4F447EAA45B978E5F57</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
           <details class="release-notes" open>
             <summary>本次更新<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
             <!-- release-current:start -->
@@ -144,7 +144,7 @@
 <li><strong>修复游戏退出后仍显示运行中</strong>。退出时及时结束运行状态，同时尽量收齐标准输出和错误日志末尾。正常退出会清理监控状态，异常退出仍会进入崩溃诊断。</li>
 </ul></div>
 <div class="release-note-group"><h5>版本号与更新日志</h5><ul>
-<li><strong>统一为三段式版本号</strong>。启动器与官网使用新的三段式版本号。往期日志也按发布顺序统一编号，便于对照各版改动。</li>
+<li><strong>统一为三段式版本号</strong>。启动器与官网统一使用三段式版本号。往期日志按功能阶段和发布时间归档，便于对照各版改动。</li>
 </ul></div>
 </section>
 <!-- release-current:end -->
@@ -152,8 +152,8 @@
           <details class="release-notes" id="changelog">
             <summary>往期更新日志<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
             <!-- release-history:start -->
-<details class="release-history-version" id="version-1.0.13">
-<summary><span>1.0.13</span><time datetime="2026-11-19">2026-11-19</time></summary>
+<details class="release-history-version" id="version-1.2.1">
+<summary><span>1.2.1</span><time datetime="2026-11-19">2026-11-19</time></summary>
 <div class="release-note-group"><h5>TRM 实例</h5><ul>
 <li><strong>显示并记住所选实例</strong>。首页显示即将启动的 TRM 版本、预设和实例名，按游戏目录记住玩家手动选择的实例。未手动选择时，默认使用最新的可用 TRM。</li>
 <li><strong>实例失效提示与独立升级</strong>。所选实例失效时提示重新选择。升级时将新整合包装到独立目录，保留原实例和存档。</li>
@@ -163,8 +163,8 @@
 <li><strong>发布记录与官网说明同步</strong>。发布记录关联源码提交、EXE 校验值和回归结果，官网更新日志与启动器内保持一致。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.12">
-<summary><span>1.0.12</span><time datetime="2026-11-19">2026-11-19</time></summary>
+<details class="release-history-version" id="version-1.2.0">
+<summary><span>1.2.0</span><time datetime="2026-11-19">2026-11-19</time></summary>
 <div class="release-note-group"><h5>体验改善计划</h5><ul>
 <li><strong>新增自愿使用统计</strong>。推出用户体验改善计划。使用统计在主动同意后开启，记录随机安装标识、版本、使用时间和游戏会话信息。</li>
 <li><strong>改进授权对话框</strong>。重做使用统计授权弹窗，适配深浅主题和键盘操作。明确同意或拒绝会保存到当前安装，关闭弹窗会在下次启动再询问。</li>
@@ -175,8 +175,8 @@
 <li><strong>关闭统计时清理本机记录</strong>。关闭使用统计会清除本机的统计安装标识和待发送记录。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.11">
-<summary><span>1.0.11</span><time datetime="2026-11-18">2026-11-18</time></summary>
+<details class="release-history-version" id="version-1.1.1">
+<summary><span>1.1.1</span><time datetime="2026-11-18">2026-11-18</time></summary>
 <div class="release-note-group"><h5>单文件发行</h5><ul>
 <li><strong>按需解压内置依赖</strong>。单文件启动器改为按需解压内置依赖，保留全部托管组件、WebP 解码器以及 32／64 位 WebView2 加载器，无需额外安装启动器 DLL。</li>
 <li><strong>无损压缩资源和复用背景</strong>。对内置图片进行无损优化，保留原分辨率、透明度和画面细节；主题渐变复用背景绘图，无需逐帧重建相同几何。</li>
@@ -186,8 +186,8 @@
 <li><strong>减少空闲轮询</strong>。降低首页空闲轮询频率；拖动、下载、消息及动态主题按需唤醒，保留交互反馈与原有动效。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.10">
-<summary><span>1.0.10</span><time datetime="2026-11-18">2026-11-18</time></summary>
+<details class="release-history-version" id="version-1.1.0">
+<summary><span>1.1.0</span><time datetime="2026-11-18">2026-11-18</time></summary>
 <div class="release-note-group"><h5>TRM 整合包</h5><ul>
 <li><strong>升级 TRM 1.11</strong>。服务器整合包升级至 TRM 1.11，提供高、低两种预设；卡片面板展示画面差异和包体大小，新实例独立安装，保留已有版本与存档。</li>
 </ul></div>

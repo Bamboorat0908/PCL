@@ -1,0 +1,77 @@
+{
+  "website": {
+    "url": "https://zhushu.homes/BRCL/",
+    "changelog_items_verified": 9,
+    "previous_versions_verified": 14,
+    "public_checks": [
+      "canonical 308 preserves query",
+      "HTML and referenced local assets load over verified TLS",
+      "public release metadata matches verified file",
+      "full HTTPS executable matches exact size and SHA-256",
+      "download supports exact byte ranges and rejects invalid ranges",
+      "missing paths and download directory do not expose a listing",
+      "blog, BRS, stock and news baseline routes remain 200"
+    ],
+    "public_check_route": "Public DNS and TLS from the website host; visible logs independently verified from Windows",
+    "origin_checks": 7
+  },
+  "primary_https_update": {
+    "Version": "1.3.0",
+    "Revision": "2026.11.23.4",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.4.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.4.zip",
+    "UpdatePackageBytes": 6105162,
+    "UpdatePackageSHA256": "0ae316fdccf36b87ee98d4ba49e7a0fe112859a06fa09f5359660afec1a9bb3c",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.4.exe",
+    "DirectExeBytes": 7588352,
+    "DirectExeSHA256": "908c404ec27e3f7fa72888cfd676312c0af787e7f924e4f447eaa45b978e5f57",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-23T01:10:00.615711+08:00",
+    "verification": "Public DNS; signed manifest and signature match the locally verified bytes."
+  },
+  "secondary_https_update": {
+    "Version": "1.3.0",
+    "Revision": "2026.11.23.4",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.4.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.4.zip",
+    "UpdatePackageBytes": 6105162,
+    "UpdatePackageSHA256": "0ae316fdccf36b87ee98d4ba49e7a0fe112859a06fa09f5359660afec1a9bb3c",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.4.exe",
+    "DirectExeBytes": 7588352,
+    "DirectExeSHA256": "908c404ec27e3f7fa72888cfd676312c0af787e7f924e4f447eaa45b978e5f57",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-23T01:10:16.834775+08:00",
+    "verification": "Public DNS; signed manifest and signature match the locally verified bytes."
+  },
+  "legacy_update_bridge": {
+    "Version": "1.3.0",
+    "Revision": "2026.11.23.4",
+    "DownloadUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.4.exe",
+    "UpdatePackageUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.4.zip",
+    "UpdatePackageBytes": 6105162,
+    "UpdatePackageSHA256": "0ae316fdccf36b87ee98d4ba49e7a0fe112859a06fa09f5359660afec1a9bb3c",
+    "DirectExeUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.4.exe",
+    "DirectExeBytes": 7588352,
+    "DirectExeSHA256": "908c404ec27e3f7fa72888cfd676312c0af787e7f924e4f447eaa45b978e5f57",
+    "Bytes": 7588352,
+    "SHA256": "908c404ec27e3f7fa72888cfd676312c0af787e7f924e4f447eaa45b978e5f57",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-22T17:10:51.4119412Z"
+  },
+  "saved_installation_upgrade": {
+    "old_version": "1.3.0.0",
+    "new_version": "1.3.0",
+    "revision": "2026.11.23.4",
+    "legacy_endpoint": "http://t42.sjcmc.cn:25261/",
+    "legacy_signature_verified": true,
+    "legacy_bounded_download_verified": true,
+    "embedded_installer_verified": true,
+    "new_exe_sha256": "908c404ec27e3f7fa72888cfd676312c0af787e7f924e4f447eaa45b978e5f57",
+    "restarted": true,
+    "original_exe_backed_up": true,
+    "old_instance_save_verified": true
+  }
+}
