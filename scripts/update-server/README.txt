@@ -27,7 +27,7 @@ SSH: ssh -p 25210 root@t42.sjcmc.cn
   安装失败时恢复替换过的文件；临时目录 error.txt 保留错误。
 
 后续发布（在源码仓库 PowerShell 中执行）:
-  1. 同步修改 ModBrclUpdate.vb 的展示版本 BrclReleaseVersion、四段内部编号 BrclUpdateRevision，以及 AssemblyFileVersion 和 Changelog.json。
+  1. 按 website/brcl/deploy/RELEASE.md 的「确定版本号」选定三段式展示版本，然后同步修改 BrclReleaseVersion、BrclUpdateRevision、AssemblyFileVersion 和 Changelog.json。
   2. .\scripts\test-all.ps1
   3. .\scripts\publish-update.ps1 -Version '2026.11.13.13' -DisplayVersion '1.0.3' -Notes '更新说明' -PrepareOnly
   4. .\scripts\test-release-package.ps1 -ReleaseDirectory artifacts\updates\2026.11.13.13 -Version '2026.11.13.13' -DisplayVersion '1.0.3'

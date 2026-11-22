@@ -1,6 +1,20 @@
 # BRCL 客户端发布
 
-源码版本由 `ModBrclUpdate.vb`、`AssemblyInfo.vb` 和 `Changelog.json` 共同定义。展示版本使用三段式。新增功能升中间一位，小修复升末位，重大改版或破坏性兼容变更升首位。自动更新按独立的四段修订号递增。首次发布使用 `brcl-v<展示版本>` 标签。同一展示版重建时，使用 `brcl-v<展示版本>-build-<修订号>` 标签记录对应构建。
+## 确定版本号
+
+以当前正式版为基准，对外统一使用三段式 `主版本.次版本.修订版本`。同一次发布包含不同类型的改动时，按影响最大的一类升版。
+
+| 发布内容 | 升版规则 | 示例 |
+| --- | --- | --- |
+| 小修复或小幅优化 | 末位加 1 | `1.3.0` → `1.3.1` |
+| 玩家能明显感知的新功能 | 中间一位加 1，末位归零 | `1.3.1` → `1.4.0` |
+| 重大改版或破坏性兼容变更 | 首位加 1，后两位归零 | `1.4.0` → `2.0.0` |
+
+确定后同步修改 `ModBrclUpdate.vb` 中的 `BrclReleaseVersion`、`AssemblyInfo.vb` 中的 `AssemblyFileVersion` 和 `Changelog.json` 的最新条目。Windows 文件版本使用 `主版本.次版本.修订版本.0`。自动更新使用 `BrclUpdateRevision` 独立维护四段内部构建号，每次发布递增。
+
+首次发布使用 `brcl-v<展示版本>` 标签。同一展示版重建时，使用 `brcl-v<展示版本>-build-<修订号>` 标签记录对应构建。
+
+## 构建、签名与上线
 
 1. 在干净检出上执行 `scripts/verify-release.ps1`，保存产物和回归报告。正式发布可加 `-PackArchive` 校验本次服务器整合包。
 2. 执行 `scripts/publish-update.ps1 -PrepareOnly -Version <修订> -DisplayVersion <版本> -VerifiedReleaseDirectory <验证目录>`。准备环节使用外部私钥，校验并签名验证目录里的 ZIP 与 EXE。运行 `scripts/test-release-package.ps1` 校验包和签名。

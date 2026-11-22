@@ -5,7 +5,7 @@
 - BRCL 的源码和版本标签维护在本仓库的 `brcl/develop` 分支。Windows 构建需要 PowerShell 7、Visual Studio 2022 Build Tools 的 .NET 桌面构建组件、.NET Framework 4.8 目标包、.NET SDK 8.0.404、Python 与 Node.js。
 - 干净检出后执行 `./scripts/verify-release.ps1 -OutputDirectory artifacts/verified-release`。脚本还原 NuGet 依赖、构建 .NET Framework 版本、运行核心库与启动器回归，并打包单文件 EXE 和更新 ZIP。已有工具链也可通过 `-ToolsRoot` 指定。CI 运行同一入口。
 - `release-record.json` 关联 Git 提交、展示版本、更新修订、EXE 与 ZIP 的 SHA-256、回归报告及其 SHA-256。发布流程使用该目录中的已验证文件。
-- [签名发布、HTTPS 双源和官网部署](website/brcl/deploy/RELEASE.md)
+- [版本编号、签名发布与官网部署](website/brcl/deploy/RELEASE.md)
 
 [![Stars](https://img.shields.io/github/stars/Meloong-Git/PCL?style=flat&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEiIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTggLjI1YS43NS43NSAwIDAgMSAuNjczLjQxOGwxLjg4MiAzLjgxNSA0LjIxLjYxMmEuNzUuNzUgMCAwIDEgLjQxNiAxLjI3OWwtMy4wNDYgMi45Ny43MTkgNC4xOTJhLjc1MS43NTEgMCAwIDEtMS4wODguNzkxTDggMTIuMzQ3bC0zLjc2NiAxLjk4YS43NS43NSAwIDAgMS0xLjA4OC0uNzlsLjcyLTQuMTk0TC44MTggNi4zNzRhLjc1Ljc1IDAgMCAxIC40MTYtMS4yOGw0LjIxLS42MTFMNy4zMjcuNjY4QS43NS43NSAwIDAgMSA4IC4yNVoiIGZpbGw9IiNlYWM1NGYiLz48L3N2Zz4=&logoSize=auto&label=Stars&labelColor=444444&color=eac54f)](https://github.com/Meloong-Git/PCL/)
 [![Issues](https://img.shields.io/github/issues/Meloong-Git/PCL?style=flat&label=Issues&labelColor=444444&color=1F883D)](https://github.com/Meloong-Git/PCL/issues)
