@@ -2,6 +2,7 @@ Imports System.IO
 Imports System.Net.Http
 Imports System.Threading
 Imports System.Windows.Media.Animation
+Imports System.Windows.Media.Imaging
 Imports System.Windows.Threading
 Imports Newtonsoft.Json.Linq
 
@@ -26,9 +27,37 @@ Public Class PageLaunchRight
     Private CurrentFortune As BrclFortuneResult
     Private FortuneBusy As Boolean
     Private FortuneVersion As Integer
+    Private Const HeroImageWidth As Integer = 1672
+    Private Const HeroImageHeight As Integer = 941
+    Private Shared ReadOnly HeroImageUri As New Uri("pack://application:,,,/BRCL;component/Images/BrsMachinist.jpg")
+
+    Private Sub UpdateHeroImage(sender As Object, e As SizeChangedEventArgs) Handles Hero.SizeChanged
+        UpdateHeroImage(VisualTreeHelper.GetDpi(Hero))
+    End Sub
+
+    Protected Overrides Sub OnDpiChanged(OldDpi As DpiScale, NewDpi As DpiScale)
+        MyBase.OnDpiChanged(OldDpi, NewDpi)
+        If Hero IsNot Nothing Then UpdateHeroImage(NewDpi)
+    End Sub
+
+    Private Sub UpdateHeroImage(Dpi As DpiScale)
+        If Hero.ActualWidth <= 0 OrElse Hero.ActualHeight <= 0 Then Return
+        'UniformToFill 可能按高度放大后裁边。按实际物理像素选择解码尺寸，并合并相近的窗口尺寸。
+        Dim Required = Math.Max(Hero.ActualWidth * Dpi.DpiScaleX,
+                                Hero.ActualHeight * Dpi.DpiScaleY * HeroImageWidth / HeroImageHeight)
+        Dim DecodeWidth = CInt(Math.Min(HeroImageWidth, Math.Ceiling(Required / 256) * 256))
+        If TryCast(HeroImage.Source, BitmapImage)?.DecodePixelWidth = DecodeWidth Then Return
+        Dim Bitmap As New BitmapImage()
+        Bitmap.BeginInit()
+        Bitmap.UriSource = HeroImageUri
+        Bitmap.DecodePixelWidth = DecodeWidth
+        Bitmap.EndInit()
+        Bitmap.Freeze()
+        HeroImage.Source = Bitmap
+    End Sub
 
     Private Shared Function CreateClient() As HttpClient
-        Dim Client As New HttpClient With {.Timeout = TimeSpan.FromSeconds(12)}
+        Dim Client As New HttpClient With {.Timeout = TimeSpan.FromSeconds(12), .MaxResponseContentBufferSize = 4 * 1024 * 1024}
         Client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 BRCL")
         Return Client
     End Function

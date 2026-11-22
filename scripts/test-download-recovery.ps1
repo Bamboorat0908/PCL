@@ -35,6 +35,8 @@ public sealed class RecoveryServer : IDisposable {
     public int RateBackupRequests;
     public long UpdateResumeOffset;
     public long BulkBytes;
+    public long UnknownBytes;
+    public readonly ManualResetEventSlim AllowUnknownFinish = new ManualResetEventSlim();
     public int Port {get;private set;}
     public RecoveryServer() {
         listener.Start(); Port=((IPEndPoint)listener.LocalEndpoint).Port;
@@ -54,13 +56,15 @@ public sealed class RecoveryServer : IDisposable {
                     stream.Write(limited,0,limited.Length); return;
                 }
                 bool bulk=path.Contains("bmclapi-bulk");
+                bool unknown=path.Contains("unknown-length");
                 bool broken=path.Contains("broken");
                 if(path.Contains("update-backup")) Interlocked.Exchange(ref UpdateResumeOffset,start);
                 else if(broken) Interlocked.Increment(ref BrokenRequests);
                 else if(path.Contains("rate-backup")) Interlocked.Increment(ref RateBackupRequests);
-                else if(!bulk) Interlocked.Increment(ref BackupRequests);
-                long total=bulk ? 64*1024*1024 : 2*1024*1024;
-                string headers="HTTP/1.1 "+(start>0?"206 Partial Content":"200 OK")+"\r\nConnection: close\r\nContent-Type: application/octet-stream\r\nContent-Length: "+(total-start)+"\r\n";
+                else if(!bulk && !unknown) Interlocked.Increment(ref BackupRequests);
+                long total=bulk ? 64*1024*1024 : unknown ? 24*1024*1024 : 2*1024*1024;
+                string headers="HTTP/1.1 "+(start>0?"206 Partial Content":"200 OK")+"\r\nConnection: close\r\nContent-Type: application/octet-stream\r\n";
+                if(!unknown) headers+="Content-Length: "+(total-start)+"\r\n";
                 if(start>0) headers+="Content-Range: bytes "+start+"-"+(total-1)+"/"+total+"\r\n";
                 byte[] head=Encoding.ASCII.GetBytes(headers+"\r\n"); stream.Write(head,0,head.Length);
                 byte[] block=new byte[32768]; for(int i=0;i<block.Length;i++) block[i]=0x5a;
@@ -68,6 +72,7 @@ public sealed class RecoveryServer : IDisposable {
                 while(remaining>0 && !stopped) {
                     int count=(int)Math.Min(block.Length,remaining); stream.Write(block,0,count); remaining-=count;
                     if(bulk) {Interlocked.Add(ref BulkBytes,count); Thread.Sleep(10);}
+                    if(unknown && Interlocked.Add(ref UnknownBytes,count)==4*1024*1024) AllowUnknownFinish.Wait(6000);
                 }
                 // The primary deliberately closes after a partial body.
             }
@@ -147,6 +152,36 @@ public static class DownloadRecoveryChecks {
                 Require(Interlocked.Read(ref server.UpdateResumeOffset)==65536,"Updater did not resume at the exact failed-source offset");
                 Require(new FileInfo(updateFile).Length==expected.Length,"Updater produced an incomplete file");
                 passed.Add("PASS updater resumes from its backup at the exact Range offset and verifies the assembled SHA-256");
+
+                bulk.Cancel();
+                waiting.Restart();
+                while(ModNet.NetTaskThreadCount>0 && waiting.ElapsedMilliseconds<3000) Pump(10);
+                Require(ModNet.NetTaskThreadCount==0,"Bulk transfer did not stop before the unknown-length check");
+                var unknownFile=new ModNet.NetFile(new[]{root+"/unknown-length"},Path.Combine(stage,"unknown.bin"),null,false);
+                var unknownTask=new ModNet.LoaderDownload("Loopback unknown-length download",new[]{unknownFile});
+                try {
+                    unknownTask.Start(null,false); waiting.Restart();
+                    while(Interlocked.Read(ref server.UnknownBytes)<4*1024*1024 && waiting.ElapsedMilliseconds<6000) Pump(10);
+                    string temp=unknownFile.Threads==null ? null : unknownFile.Threads.Temp;
+                    Require(unknownFile.IsUnknownSize && temp!=null && File.Exists(temp),"Unknown-length response did not stream into a temporary file");
+                    server.AllowUnknownFinish.Set();
+                    while(unknownTask.State==ModBase.LoadState.Loading && waiting.ElapsedMilliseconds<10000) Pump(10);
+                    Require(unknownTask.State==ModBase.LoadState.Finished,"Unknown-length download did not finish at EOF: "+unknownTask.State+", bytes "+unknownFile.DownloadDone);
+                    using(var result=File.OpenRead(unknownFile.LocalPath)) {
+                        Require(result.Length==24L*1024*1024,"Unknown-length download produced the wrong file length");
+                        using(var hash=SHA256.Create()) {
+                            byte[] block=new byte[32768]; for(int i=0;i<block.Length;i++) block[i]=0x5a;
+                            using(var expectedFile=new CryptoStream(Stream.Null,hash,CryptoStreamMode.Write)) {
+                                for(long i=0;i<result.Length;i+=block.Length) expectedFile.Write(block,0,block.Length);
+                                expectedFile.FlushFinalBlock();
+                                string expectedHash=BitConverter.ToString(hash.Hash);
+                                using(var actualHash=SHA256.Create()) Require(expectedHash==BitConverter.ToString(actualHash.ComputeHash(result)),"Unknown-length download changed the response body");
+                            }
+                        }
+                    }
+                    Require(!File.Exists(temp),"Unknown-length download left temporary data after completion");
+                    passed.Add("PASS 24 MiB unknown-length download streams to disk, preserves SHA-256 and removes its temporary file");
+                } finally { server.AllowUnknownFinish.Set(); unknownTask.Cancel(); }
             } finally {
                 if(critical!=null) critical.Cancel(); if(bulk!=null) bulk.Cancel();
                 var waiting=Stopwatch.StartNew(); while(ModNet.NetTaskThreadCount>0 && waiting.ElapsedMilliseconds<3000) Pump(10);

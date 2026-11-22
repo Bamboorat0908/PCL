@@ -282,9 +282,17 @@
                 Preferred = 8
             End If
         End If
-        Return Enumerable.Range(5, 95).
-            Where(Function(Major) Not Range.Intersect(ValueRange(Of Version).ClosedOpen(New Version(Major, 0), New Version(Major + 1, 0))).IsEmpty).
-            OrderBy(Function(Major) Math.Abs(Major - Preferred)).ThenBy(Function(Major) Major).FirstOrDefault()
+        If RangeAllowsJavaMajor(Range, Preferred) Then Return Preferred
+        For Distance = 1 To Math.Max(Preferred - 5, 99 - Preferred)
+            Dim Lower = Preferred - Distance, Upper = Preferred + Distance
+            If Lower >= 5 AndAlso RangeAllowsJavaMajor(Range, Lower) Then Return Lower
+            If Upper <= 99 AndAlso RangeAllowsJavaMajor(Range, Upper) Then Return Upper
+        Next
+        Return 0
+    End Function
+
+    Private Function RangeAllowsJavaMajor(Range As ValueRange(Of Version), Major As Integer) As Boolean
+        Return Not Range.Intersect(ValueRange(Of Version).ClosedOpen(New Version(Major, 0), New Version(Major + 1, 0))).IsEmpty
     End Function
 
     Private Function SelectAutomaticJava(Instance As McInstance, Range As ValueRange(Of Version), RecommendedComponent As String,
@@ -539,7 +547,7 @@ NoForcedJava:
                     New FileChecker With {.Hash = FileHash, .ActualSize = CLng(Info("size"))}))
             Next
             RunJavaFileDownload(Downloads, c, p)
-            Return PublishJavaRuntime(Stage, Stage, Range, Preferred, c)
+            Return PublishJavaRuntime(Stage, Range, Preferred, c)
         Finally
             CleanupJavaStage(Stage)
         End Try
@@ -588,7 +596,7 @@ NoForcedJava:
                 Where(Function(File) IO.Path.GetFileName(IO.Path.GetDirectoryName(File)).Equals("bin", StringComparison.OrdinalIgnoreCase)).ToArray()
             If JavaFiles.Length <> 1 Then Throw New InvalidDataException("Java 安装包中没有唯一的 bin/java.exe。")
             Dim RuntimeRoot = IO.Directory.GetParent(IO.Path.GetDirectoryName(JavaFiles(0))).FullName
-            Return PublishJavaRuntime(Stage, RuntimeRoot, Range, Archive.JavaVersion.Major, c)
+            Return PublishJavaRuntime(RuntimeRoot, Range, Archive.JavaVersion.Major, c)
         Finally
             CleanupJavaStage(Stage)
         End Try
@@ -612,7 +620,10 @@ NoForcedJava:
     End Function
 
     Public Sub ExtractJavaRuntimeArchive(ZipPath As String, Destination As String, Optional c As CancellationToken = Nothing)
+        Const MaxExpandedSize As Long = 2L * 1024 * 1024 * 1024
         Dim TotalSize As Long = 0
+        Dim Root = New DirectoryInfo(Destination).FullName.TrimEnd(IO.Path.DirectorySeparatorChar)
+        Dim Buffer(65535) As Byte
         Using Archive = ZipFile.OpenRead(ZipPath)
             If Archive.Entries.Count > 20000 Then Throw New InvalidDataException("Java 安装包文件过多。")
             For Each Entry In Archive.Entries
@@ -620,21 +631,33 @@ NoForcedJava:
                 Dim Relative = Entry.FullName.TrimEnd("/"c, "\"c)
                 Dim Target = GetJavaRuntimeFilePath(Destination, Relative)
                 If ((Entry.ExternalAttributes >> 16) And &HF000) = &HA000 Then Throw New InvalidDataException("Java 安装包不能包含符号链接。")
-                TotalSize += Entry.Length
-                If TotalSize > 2L * 1024 * 1024 * 1024 Then Throw New InvalidDataException("Java 安装包展开后超过大小限制。")
+                Dim Current = Target
+                Do
+                    If (IO.Directory.Exists(Current) OrElse IO.File.Exists(Current)) AndAlso (IO.File.GetAttributes(Current) And FileAttributes.ReparsePoint) <> 0 Then
+                        Throw New InvalidDataException("Java 安装目标包含链接。")
+                    End If
+                    If Current.TrimEnd(IO.Path.DirectorySeparatorChar).Equals(Root, StringComparison.OrdinalIgnoreCase) Then Exit Do
+                    Current = IO.Path.GetDirectoryName(Current)
+                Loop
+                Dim Remaining = Entry.Length
+                If Remaining < 0 OrElse Remaining > MaxExpandedSize - TotalSize Then Throw New InvalidDataException("Java 安装包展开后超过大小限制。")
                 If Entry.FullName.EndsWith("/") OrElse Entry.FullName.EndsWith("\") Then
+                    If Remaining <> 0 Then Throw New InvalidDataException("Java 安装包的目录条目包含文件数据。")
                     IO.Directory.CreateDirectory(Target)
                     Continue For
                 End If
+                TotalSize += Remaining
                 IO.Directory.CreateDirectory(IO.Path.GetDirectoryName(Target))
                 Using Input = Entry.Open(), Output = New FileStream(Target, FileMode.CreateNew, FileAccess.Write)
-                    Dim Buffer(65535) As Byte
                     While True
                         c.ThrowIfCancellationRequested()
                         Dim Count = Input.Read(Buffer, 0, Buffer.Length)
                         If Count = 0 Then Exit While
+                        If Count > Remaining Then Throw New InvalidDataException("Java 安装包的实际解压大小超出声明大小。")
                         Output.Write(Buffer, 0, Count)
+                        Remaining -= Count
                     End While
+                    If Remaining <> 0 Then Throw New InvalidDataException("Java 安装包的实际解压大小不足。")
                 End Using
             Next
         End Using
@@ -654,7 +677,7 @@ NoForcedJava:
         End Try
     End Sub
 
-    Private Function PublishJavaRuntime(Stage As String, RuntimeRoot As String, Range As ValueRange(Of Version), Preferred As Integer, c As CancellationToken) As Java
+    Private Function PublishJavaRuntime(RuntimeRoot As String, Range As ValueRange(Of Version), Preferred As Integer, c As CancellationToken) As Java
         c.ThrowIfCancellationRequested()
         Dim Candidate As New Java(IO.Path.Combine(RuntimeRoot, "bin"))
         If Not Candidate.CheckAsync(c).Run() OrElse Candidate.Version.Major <> Preferred OrElse Not Range.Contains(Candidate.Version) Then Throw New InvalidDataException("下载的 Java 未通过运行或版本兼容性检查。")
@@ -664,7 +687,15 @@ NoForcedJava:
         '只发布已验证的全新目录，不覆盖、清理其他 Java 或已在运行的游戏文件。
         IO.Directory.Move(RuntimeRoot, FinalRoot)
         Dim Installed As New Java(IO.Path.Combine(FinalRoot, "bin"))
-        If Not Installed.CheckAsync(c).Run() Then Throw New InvalidDataException("Java 安装后验证失败。")
+        Try
+            If Not Installed.CheckAsync(c).Run() OrElse Installed.Version.Major <> Preferred OrElse Not Range.Contains(Installed.Version) Then
+                Throw New InvalidDataException("Java 安装后验证失败。")
+            End If
+            c.ThrowIfCancellationRequested()
+        Catch
+            CleanupJavaStage(FinalRoot)
+            Throw
+        End Try
         Configs.JavaList.Edit(Sub(ByRef List) List.Add(Installed))
         UpdateJavaLists()
         Logger.Info($"已安装并自动选择 Java：{Installed}")

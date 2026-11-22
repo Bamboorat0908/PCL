@@ -54,6 +54,8 @@ Public Class PageMap
                 AddHandler ViewMap.CoreWebView2.ProcessFailed, AddressOf ProcessFailed
                 ViewMap.CoreWebView2.Settings.IsStatusBarEnabled = False
                 ViewMap.CoreWebView2.Settings.AreDevToolsEnabled = False
+                ViewMap.CoreWebView2.Settings.AreHostObjectsAllowed = False
+                ViewMap.CoreWebView2.Settings.IsWebMessageEnabled = False
             End If
             If Version <> ConnectionVersion Then Return '初始化超时后不得再覆盖失败提示。
             ApplyWebTheme()

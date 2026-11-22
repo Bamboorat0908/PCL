@@ -211,6 +211,8 @@ Public Class CustomEvent
                                 }
                                 StartProcess(Info)
                             End If
+                        Catch ex As OperationCanceledException
+                            '用户取消了打开联网帮助。
                         Catch ex As Exception
                             Logger.Error(ex, "执行打开类自定义事件失败", LogBehavior.Alert)
                         End Try
@@ -349,31 +351,28 @@ Public Class CustomEvent
             If RunInUi() Then
                 Throw New Exception("能打开联网帮助页面的 MyListItem 必须手动设置 Title、Info 属性！")
             End If
-            '获取文件名
-            Dim RawFileName As String
+            Dim Address As Uri = Nothing
+            If Not Uri.TryCreate(RelativeUrl, UriKind.Absolute, Address) OrElse Address.Scheme <> Uri.UriSchemeHttps OrElse
+               Address.UserInfo.Length <> 0 OrElse Not Address.AbsolutePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase) Then
+                Throw New ArgumentException("联网帮助须指向 HTTPS 的 .json 文件，并在同路径下提供对应的 .xaml 文件。")
+            End If
+            If MyMsgBox("联网帮助会在启动器中加载外部 XAML。仅在你信任此来源时继续。" & vbCrLf & Address.GetLeftPart(UriPartial.Path),
+                        "打开联网帮助", "打开", "取消", IsWarn:=True, ForceWait:=True) <> 1 Then
+                Throw New OperationCanceledException()
+            End If
+            Dim XamlAddress As New UriBuilder(Address) With {.Path = Address.AbsolutePath.Substring(0, Address.AbsolutePath.Length - 5) & ".xaml"}
+            Dim Folder = RequestTaskTempFolder()
+            Dim LocalTemp = IO.Path.Combine(Folder, "help.json")
             Try
-                RawFileName = PathUtils.GetLastPart(RelativeUrl)
-                If Not RawFileName.EndsWithF(".json", True) Then Throw New Exception("未指向 .json 后缀的文件")
+                Using Handler As New Net.Http.HttpClientHandler With {.AllowAutoRedirect = False, .UseCookies = False},
+                      Client As New Net.Http.HttpClient(Handler) With {.Timeout = TimeSpan.FromSeconds(15), .MaxResponseContentBufferSize = 2 * 1024 * 1024}
+                    DownloadRemoteHelpFile(Client, Address, LocalTemp)
+                    DownloadRemoteHelpFile(Client, XamlAddress.Uri, IO.Path.Combine(Folder, "help.xaml"))
+                End Using
             Catch ex As Exception
-                Throw New Exception("联网帮助页面须指向一个帮助 JSON 文件，并在同路径下包含相应 XAML 文件！" & vbCrLf &
-                                    "例如：" & vbCrLf &
-                                    " - https://www.baidu.com/test.json（填写这个路径）" & vbCrLf &
-                                    " - https://www.baidu.com/test.xaml（同时也需要包含这个文件）", ex)
+                Throw New IO.IOException("无法取得联网帮助的 JSON 和 XAML 文件。", ex)
             End Try
-            '下载文件
-            Dim LocalTemp As String = RequestTaskTempFolder() & RawFileName
-            Logger.Info($"转换网络资源：{RelativeUrl} -> {LocalTemp}")
-            Try
-                NetDownloadByClient(RelativeUrl, LocalTemp)
-                NetDownloadByClient(RelativeUrl.Replace(".json", ".xaml"), LocalTemp.Replace(".json", ".xaml"))
-            Catch ex As Exception
-                Throw New Exception("下载指定的文件失败！" & vbCrLf &
-                                    "注意，联网帮助页面须指向一个帮助 JSON 文件，并在同路径下包含相应 XAML 文件！" & vbCrLf &
-                                    "例如：" & vbCrLf &
-                                    " - https://www.baidu.com/test.json（填写这个路径）" & vbCrLf &
-                                    " - https://www.baidu.com/test.xaml（同时也需要包含这个文件）", ex)
-            End Try
-            RelativeUrl = LocalTemp
+            Return {LocalTemp, Folder}
         End If
         RelativeUrl = RelativeUrl.Replace("/", "\").Lower.TrimStart("\")
 
@@ -409,6 +408,32 @@ Public Class CustomEvent
 
         Return {Location, WorkingDir}
     End Function
+
+    Private Shared Sub DownloadRemoteHelpFile(Client As Net.Http.HttpClient, Address As Uri, Target As String)
+        Dim Current = Address
+        For Redirects = 0 To 4
+            Using Response = Client.GetAsync(Current).GetAwaiter().GetResult()
+                Select Case CInt(Response.StatusCode)
+                    Case 301, 302, 303, 307, 308
+                        Dim Location = Response.Headers.Location
+                        Dim NextAddress As Uri = Nothing
+                        If Location Is Nothing OrElse Not Uri.TryCreate(Current, Location, NextAddress) OrElse
+                           NextAddress.Scheme <> Uri.UriSchemeHttps OrElse NextAddress.UserInfo.Length <> 0 OrElse
+                           Not NextAddress.Authority.Equals(Address.Authority, StringComparison.OrdinalIgnoreCase) Then
+                            Throw New IO.InvalidDataException("联网帮助跳转到未经确认的来源。")
+                        End If
+                        Current = NextAddress
+                    Case Else
+                        Response.EnsureSuccessStatusCode()
+                        Using Output As New IO.FileStream(Target, IO.FileMode.CreateNew, IO.FileAccess.Write)
+                            Response.Content.CopyToAsync(Output).GetAwaiter().GetResult()
+                        End Using
+                        Return
+                End Select
+            End Using
+        Next
+        Throw New IO.InvalidDataException("联网帮助跳转次数过多。")
+    End Sub
 
     ''' <summary>
     ''' 弹出安全确认弹窗。返回是否继续执行。

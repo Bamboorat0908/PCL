@@ -152,6 +152,23 @@ try {
         "http://127.0.0.1:$($server.Port)/backup", $null, $null, '*/*', $null, $true, $null, $false)
     $result = [BrclResponseServer]::Invoke($retry, $retryArguments)
     Check ($result -eq '{"ok":true}' -and $server.Count('/fail-primary') -eq 1 -and $server.Count('/backup') -eq 1) 'failed primary request switches to its configured backup URL'
+    $download = $assembly.GetType('PCL.ModNet',$true).GetMethod('NetDownloadByClient')
+    $target = [IO.Path]::GetTempFileName()
+    try {
+        [IO.File]::WriteAllText($target, 'previous copy')
+        $failed = $false
+        try { $download.Invoke($null, [object[]]@("http://127.0.0.1:$($server.Port)/fail-download", $target, $false)) }
+        catch { $failed = $true }
+        Check ($failed -and [IO.File]::ReadAllText($target) -eq 'previous copy') 'failed replacement preserves the previous downloaded file'
+        [void]$download.Invoke($null, [object[]]@("http://127.0.0.1:$($server.Port)/replacement", $target, $false))
+        Check ([IO.File]::ReadAllText($target) -eq '{"ok":true}') 'successful replacement publishes the new complete file'
+    } finally { [IO.File]::Delete($target) }
+    $revocation = $assembly.GetType('PCL.ModNet',$true).GetMethod('UpdateCertificateRevocationCheck')
+    foreach ($enabled in @($false, $true)) {
+        [void]$revocation.Invoke($null, [object[]]@($enabled))
+        Check ([Net.ServicePointManager]::CheckCertificateRevocationList -eq $enabled -and
+               $null -eq [Net.ServicePointManager]::ServerCertificateValidationCallback) "revocation preference ($enabled) leaves Windows certificate trust validation in place"
+    }
     Write-Output "Network response: $script:passed checks passed; all requests stayed on loopback."
 } finally {
     $server.Dispose()

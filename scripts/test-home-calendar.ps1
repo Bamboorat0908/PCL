@@ -230,4 +230,14 @@ foreach ($theme in @('dark', 'light')) {
       }
     }
 }
+$hero = $page.FindName('HeroImage')
+$setHeroDpi = $pageType.GetMethod('UpdateHeroImage', $flags, $null, [type[]]@([Windows.DpiScale]), $null)
+[void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(1, 1)))
+$standard = $hero.Source
+if ($null -eq $standard -or $standard.PixelWidth -ge 1672 -or $standard.PixelWidth -lt $hero.ActualWidth) { throw 'Standard-DPI home did not decode to a suitable smaller size.' }
+[void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(1, 1)))
+if (-not [object]::ReferenceEquals($standard, $hero.Source)) { throw 'Unchanged home dimensions decoded the hero again.' }
+[void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(3, 3)))
+if ($hero.Source.PixelWidth -ne 1672 -or $hero.Source.PixelHeight -ne 941) { throw 'High-DPI home did not retain the native artwork dimensions.' }
+Write-Output 'PASS homepage decodes at the displayed DPI, reuses the selected size and retains the full-size artwork'
 $app.Shutdown()

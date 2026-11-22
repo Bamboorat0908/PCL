@@ -206,15 +206,22 @@ Retry:
         Dim RetryCount As Integer = 0
 Retry:
         Try
-            FileUtils.Write(LocalPath, SendRequest(Url, HttpMethod.Get, SimulateBrowserHeaders:=SimulateBrowserHeaders))
+            FileUtils.WriteAtomic(LocalPath, SendRequest(Url, HttpMethod.Get, SimulateBrowserHeaders:=SimulateBrowserHeaders))
         Catch ex As Exception
-            FileUtils.Delete(LocalPath)
             ex.ThrowIfCanceled()
             If RetryCount < 2 Then
                 RetryCount += 1
                 GoTo Retry
             End If
             Throw New HttpRequestException($"通过网络请求直接下载小文件失败（{LocalPath}）", ex)
+        End Try
+    End Sub
+
+    Private Sub DeleteDownloadTemp(TempPath As String)
+        Try
+            FileUtils.Delete(TempPath)
+        Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+            Logger.Warn(ex, "清理下载暂存文件失败")
         End Try
     End Sub
 
@@ -939,6 +946,7 @@ StartThread:
             '部分下载源真的特别慢，并且只需要一个请求，例如 Ping 为 20s，如果增长太慢，就会造成类似 2.5s 5s 7.5s 10s 12.5s... 的极大延迟
             '延迟过长会导致某些特别慢的链接迟迟不被掐死
             Dim Timeout As Integer = Math.Min(Math.Max(ConnectAverage, 15000) * (1 + Th.Source.FailCount), 30000)
+            Dim SpoolUnknownSize As Boolean = False
             Th.State = NetState.Connecting
             Try
                 Dim HttpDataCount As Integer = 0
@@ -1008,9 +1016,10 @@ NotSupportRange:
                     If State < NetState.Reading Then State = NetState.Reading
                 End SyncLock
                 '创建缓存文件
-                If IsNoSplit Then
+                SpoolUnknownSize = IsUnknownSize
+                If IsNoSplit AndAlso Not SpoolUnknownSize Then
                     Th.Temp = Nothing
-                    Cache = New MemoryStream
+                    Cache = New MemoryStream(CInt(FileSize))
                     ResultStream = Cache
                 Else
                     Th.Temp = $"{PathTemp}Download\{Uuid}_{Th.Uuid}_{RandomInteger(0, 999999)}.tmp"
@@ -1066,7 +1075,7 @@ NotSupportRange:
                     HttpDataCount = ResponseStream.ReadAsync(ResponseBytes, 0, 16384, CancelToken.Token).GetResultWithTimeout(CancelToken, Timeout)
                 End While
 SourceBreak:
-                If State = NetState.Canceled OrElse (Th.Source.IsFailed AndAlso Th.Source.SingleThread <> Th) OrElse (Th.DownloadUndone > 0 AndAlso Not IsUnknownSize) Then
+                If State >= NetState.Merging OrElse IsProgramEnding OrElse (Th.Source.IsFailed AndAlso Th.Source.SingleThread <> Th) Then
                     '被外部中断
                     Th.State = NetState.Canceled
                     Logger.Info($"{LocalName}：中断")
@@ -1091,12 +1100,15 @@ SourceBreak:
                 Response?.Dispose()
                 ResponseStream?.Dispose()
                 CancelToken?.Dispose()
-                If Not IsNoSplit Then ResultStream?.Dispose()
+                If Th.Temp IsNot Nothing Then ResultStream?.Dispose()
                 '改变计数
                 Interlocked.Decrement(NetTaskThreadCount)
                 '合并
-                If ((FileSize >= 0 AndAlso DownloadDone >= FileSize) OrElse (FileSize = -1 AndAlso DownloadDone > 0)) AndAlso
-                    State < NetState.Merging AndAlso Th.State <> NetState.Canceled Then Merge(Th)
+                If State < NetState.Merging AndAlso Th.State = NetState.Finished AndAlso
+                    ((FileSize >= 0 AndAlso DownloadDone >= FileSize) OrElse FileSize = -1) Then Merge(Th)
+                If Th.Temp IsNot Nothing AndAlso (State = NetState.Canceled OrElse (SpoolUnknownSize AndAlso Th.State = NetState.Canceled)) Then
+                    DeleteDownloadTemp(Th.Temp)
+                End If
             End Try
         End Sub
         Private Sub SourceFail(Th As NetThread, ex As Exception, IsMergeFailure As Boolean)
@@ -1178,6 +1190,7 @@ SourceBreak:
         End Sub
         Private Sub Reset()
             FileSize = -2
+            IsUnknownSize = False
             Cache?.Dispose() : Cache = Nothing
             SyncLock LockChain
                 Threads = Nothing
@@ -1201,43 +1214,49 @@ SourceBreak:
                     Return
                 End If
             End SyncLock
+            Dim Folder = PathUtils.RemoveLastPart(LocalPath)
+            Dim TempPath = IO.Path.Combine(Folder, $".brcl-download-{Guid.NewGuid():N}.tmp")
+            Dim MergeCache = Cache
             Dim RetryCount As Integer = 0
             Try
 Retry:
                 '创建文件夹
-                DirectoryUtils.Create(PathUtils.RemoveLastPart(LocalPath))
-                FileUtils.Delete(LocalPath)
+                DirectoryUtils.Create(Folder)
                 SyncLock LockChain
                     '合并文件
-                    If IsNoSplit Then
+                    If MergeCache IsNot Nothing Then
                         '仅有一个线程，从内存中输出
                         Logger.Trace(Function() $"{LocalName}：下载结束，从内存输出文件")
-                        FileUtils.Write(LocalPath, Cache)
+                        FileUtils.Write(TempPath, MergeCache)
                     ElseIf Threads.DownloadDone = DownloadDone AndAlso Threads.Temp IsNot Nothing Then
                         '仅有一个文件，直接复制
                         Logger.Trace(Function() $"{LocalName}：下载结束，仅有一个文件，无需合并")
-                        FileUtils.Copy(Threads.Temp, LocalPath)
+                        FileUtils.Copy(Threads.Temp, TempPath)
                     Else
                         '有多个线程，合并
                         Logger.Trace(Function() $"{LocalName}：下载结束，开始合并文件")
-                        Using MergeFile = FileUtils.CreateAsStream(LocalPath)
-                            Using AddWriter As New BinaryWriter(MergeFile)
-                                For Each Thread As NetThread In Threads
-                                    If Thread.DownloadDone = 0 OrElse Thread.Temp Is Nothing Then Continue For
-                                    Using fs = FileUtils.ReadAsStream(Thread.Temp)
-                                        Using TempReader As New BinaryReader(fs)
-                                            AddWriter.Write(TempReader.ReadBytes(Thread.DownloadDone))
-                                        End Using
-                                    End Using
-                                Next
-                            End Using
+                        Dim Buffer(65535) As Byte
+                        Using MergeFile = FileUtils.CreateAsStream(TempPath)
+                            For Each Thread As NetThread In Threads
+                                If Thread.DownloadDone = 0 OrElse Thread.Temp Is Nothing Then Continue For
+                                Using Part = FileUtils.ReadAsStream(Thread.Temp)
+                                    Dim Remaining = Thread.DownloadDone
+                                    While Remaining > 0
+                                        If State = NetState.Canceled Then Throw New OperationCanceledException()
+                                        Dim Count = Part.Read(Buffer, 0, CInt(Math.Min(Remaining, Buffer.Length)))
+                                        If Count = 0 Then Throw New EndOfStreamException("下载分片提前结束。")
+                                        MergeFile.Write(Buffer, 0, Count)
+                                        Remaining -= Count
+                                    End While
+                                End Using
+                            Next
                         End Using
                     End If
                     '检查文件
-                    Dim CheckResult As String = Check?.Check(LocalPath)
+                    Dim CheckResult As String = Check?.Check(TempPath)
                     If CheckResult Is Nothing AndAlso Not IsUnknownSize AndAlso Check IsNot Nothing Then
                         If Check.ActualSize = -1 Then
-                            CheckResult = (New FileChecker With {.ActualSize = FileSize}).Check(LocalPath) '不修改原始的 Checker，以免污染原始实例
+                            CheckResult = (New FileChecker With {.ActualSize = FileSize}).Check(TempPath) '不修改原始的 Checker，以免污染原始实例
                         ElseIf Check.ActualSize <> FileSize Then
                             CheckResult = $"文件大小不一致：任务校验要求为 {Check.ActualSize}，请求结果为 {FileSize}"
                         End If
@@ -1249,12 +1268,18 @@ Retry:
                         Next
                         Throw New Exception(CheckResult)
                     End If
+                    SyncLock LockState
+                        If State = NetState.Canceled Then Throw New OperationCanceledException()
+                        If FileUtils.Exists(LocalPath) Then
+                            IO.File.Replace(PathUtils.ForApi(TempPath), PathUtils.ForApi(LocalPath), Nothing, True)
+                        Else
+                            IO.File.Move(PathUtils.ForApi(TempPath), PathUtils.ForApi(LocalPath))
+                        End If
+                    End SyncLock
                     '后处理
-                    If Not IsNoSplit Then
-                        For Each Thread As NetThread In Threads
-                            If Thread.Temp IsNot Nothing Then FileUtils.Delete(Thread.Temp)
-                        Next
-                    End If
+                    For Each Thread As NetThread In Threads
+                        If Thread.Temp IsNot Nothing Then DeleteDownloadTemp(Thread.Temp)
+                    Next
                     Finish()
                 End SyncLock
             Catch ex As Exception
@@ -1267,14 +1292,11 @@ Retry:
                     GoTo Retry
                 End If
                 '失败，禁用当前下载源并重启下载
-                Try
-                    FileUtils.Delete(LocalPath)
-                Catch exx As Exception
-                    Logger.Warn(ex, $"删除合并失败的文件出错（{LocalPath}）")
-                End Try
                 SourceFail(Th, ex, True)
             Finally
-                Cache?.Dispose()
+                DeleteDownloadTemp(TempPath)
+                If Cache Is MergeCache Then Cache = Nothing
+                MergeCache?.Dispose()
             End Try
         End Sub
         ''' <summary>
@@ -1936,7 +1958,9 @@ FinishExCatch:
     Public Function Ping(Ip As String, Optional Timeout As Integer = 10000, Optional MakeLog As Boolean = True) As Integer
         Dim PingResult As NetworkInformation.PingReply
         Try
-            PingResult = (New NetworkInformation.Ping).Send(Ip)
+            Using Client As New NetworkInformation.Ping()
+                PingResult = Client.Send(Ip, Timeout)
+            End Using
         Catch ex As Exception
             If MakeLog Then Logger.Info($"Ping {Ip} 失败：{ex.Message}")
             Return -1
@@ -1951,23 +1975,10 @@ FinishExCatch:
     End Function
 
     ''' <summary>
-    ''' 设置是否应当在正版登录时校验 SSL 证书。
+    ''' 设置是否额外检查网络证书的吊销状态；始终由系统验证证书链和主机名。
     ''' </summary>
-    Public Sub ShouldValidateSslCertificateOnLogin(Enabled As Boolean)
-        ServicePointManager.ServerCertificateValidationCallback =
-        Function(Sender, Certificate, Chain, Failure)
-            Dim Request As HttpWebRequest = TryCast(Sender, HttpWebRequest)
-            If Failure = Net.Security.SslPolicyErrors.None Then Return True '已通过验证
-            '基于 #3018 和 #5879，只在访问正版登录 API 时跳过证书验证
-            Logger.Warn($"未通过 SSL 证书验证（{Failure}），提供的证书为 {Certificate?.Subject}，URL：{Request?.Address}")
-            If Request Is Nothing Then
-                Return Not Enabled
-            ElseIf Request.Address.Host.Contains("xboxlive") OrElse Request.Address.Host.Contains("minecraftservices") Then
-                Return Not Enabled '根据设置决定是否忽略错误
-            Else
-                Return False
-            End If
-        End Function
+    Public Sub UpdateCertificateRevocationCheck(Enabled As Boolean)
+        ServicePointManager.CheckCertificateRevocationList = Enabled
     End Sub
 
 End Module

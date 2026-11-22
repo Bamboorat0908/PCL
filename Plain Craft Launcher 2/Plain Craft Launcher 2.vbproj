@@ -1,6 +1,6 @@
 ﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <ItemGroup><Resource Include="Images\BrsMachinist.png" /><Resource Include="Images\LauncherLogo.png" /><Resource Include="Images\LauncherSplash.png" /><Resource Include="Images\BrsServerLogo.png" /><Compile Include="Modules\BrclErrorPresentation.vb" /><Compile Include="Controls\MyMsg\BrclErrorWindow.vb" /></ItemGroup>
+  <ItemGroup><Resource Include="Images\BrsMachinist.jpg" /><Resource Include="Images\LauncherLogo.png" /><Resource Include="Images\LauncherSplash.png" /><Resource Include="Images\BrsServerLogo.png" /><Compile Include="Modules\BrclErrorPresentation.vb" /><Compile Include="Controls\MyMsg\BrclErrorWindow.vb" /></ItemGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>

@@ -101,6 +101,7 @@ Public Class PageStock
                 ViewWeb.CoreWebView2.Settings.AreDefaultContextMenusEnabled = False
                 ViewWeb.CoreWebView2.Settings.IsStatusBarEnabled = False
                 ViewWeb.CoreWebView2.Settings.AreDevToolsEnabled = False
+                ViewWeb.CoreWebView2.Settings.AreHostObjectsAllowed = False
                 '布局脚本在文档创建时注册，避免先显示桌面站点再跳变。
                 Dim Script As String = EmbedScript.Replace("__BRCL_ALLOW_TEST__", If(String.IsNullOrEmpty(Environment.GetEnvironmentVariable("BRCL_STOCK_URL")), "false", "true"))
                 Await ViewWeb.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(Script)
@@ -199,7 +200,7 @@ Public Class PageStock
     ''' <summary>跟随主题：只切换 color-scheme，让站点用自己的深色样式，避免强行改色导致半深半浅。</summary>
     Private Sub InjectPageTheme()
         Try
-            If ViewWeb.CoreWebView2 Is Nothing Then Return
+            If ViewWeb.CoreWebView2 Is Nothing OrElse Not IsStockSource(ViewWeb.CoreWebView2.Source) Then Return
             Dim IsLight As Boolean = (Settings.Get(Of Integer)("UiThemeMode") = 1)
             ViewWeb.CoreWebView2.ExecuteScriptAsync("document.documentElement.style.colorScheme='" & If(IsLight, "light", "dark") & "'")
         Catch ex As Exception
@@ -294,8 +295,12 @@ try {
         Try
             If Not IsStockSource(e.Source) Then Return
             Dim Msg As String = e.TryGetWebMessageAsString()
-            If String.IsNullOrEmpty(Msg) OrElse Not Msg.StartsWith("brcl-theme:") Then Return
-            Logger.Info("交易所明暗同步：" & Msg.Substring("brcl-theme:".Length))
+            Select Case Msg
+                Case "brcl-theme:synced"
+                    Logger.Info("交易所明暗同步：synced")
+                Case "brcl-theme:unavailable"
+                    Logger.Info("交易所明暗同步：unavailable")
+            End Select
         Catch ex As Exception
         End Try
     End Sub

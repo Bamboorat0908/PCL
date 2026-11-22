@@ -10,7 +10,7 @@
    <Grid x:Name="Hero" Height="330" ClipToBounds="True" Background="Transparent">
     <Grid IsHitTestVisible="False">
      <Grid.OpacityMask><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#FFFFFFFF" Offset="0.60"/><GradientStop Color="#C0FFFFFF" Offset="0.77"/><GradientStop Color="#00FFFFFF" Offset="1"/></LinearGradientBrush></Grid.OpacityMask>
-    <Image Source="pack://application:,,,/BRCL;component/Images/BrsMachinist.png" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" IsHitTestVisible="False"/>
+    <Image x:Name="HeroImage" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" IsHitTestVisible="False"/>
     <Rectangle IsHitTestVisible="False"><Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#E610191C" Offset="0"/><GradientStop Color="#9910191C" Offset="0.45"/><GradientStop Color="#1010191C" Offset="1"/></LinearGradientBrush></Rectangle.Fill></Rectangle>
     <Rectangle IsHitTestVisible="False"><Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#00101416" Offset="0.4"/><GradientStop Color="#D9101416" Offset="1"/></LinearGradientBrush></Rectangle.Fill></Rectangle>
     </Grid>

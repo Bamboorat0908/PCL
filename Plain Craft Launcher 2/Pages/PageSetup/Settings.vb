@@ -131,7 +131,7 @@ Public Class Settings
         New Setting("ToolDownloadVersion", 1, Source:=Sources.Registry),
         New Setting("ToolDownloadTranslate", 0, Source:=Sources.Registry),
         New Setting("ToolDownloadTranslateV2", 1, Source:=Sources.Registry),
-        New Setting("ToolDownloadCert", False, Source:=Sources.Registry, OnChanged:=AddressOf ModNet.ShouldValidateSslCertificateOnLogin),
+        New Setting("ToolDownloadCertRevocation", True, Source:=Sources.Registry, OnChanged:=AddressOf ModNet.UpdateCertificateRevocationCheck),
         New Setting("ToolDownloadMod", 2, Source:=Sources.Registry),
         New Setting("ToolModLocalNameStyle", 0, Source:=Sources.Registry),
         New Setting("ToolUpdateRelease", False, Source:=Sources.Registry),
