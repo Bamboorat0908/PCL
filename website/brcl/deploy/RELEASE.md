@@ -1,6 +1,6 @@
 # BRCL 客户端发布
 
-源码版本由 `ModBrclUpdate.vb`、`AssemblyInfo.vb` 和 `Changelog.json` 共同定义。展示版本使用三段式。新增功能升中间一位，小修复升末位，重大改版或破坏性兼容变更升首位。自动更新按独立的四段修订号递增。发布提交使用 `brcl-v<展示版本>` 标签。
+源码版本由 `ModBrclUpdate.vb`、`AssemblyInfo.vb` 和 `Changelog.json` 共同定义。展示版本使用三段式。新增功能升中间一位，小修复升末位，重大改版或破坏性兼容变更升首位。自动更新按独立的四段修订号递增。首次发布使用 `brcl-v<展示版本>` 标签。同一展示版重建时，使用 `brcl-v<展示版本>-build-<修订号>` 标签记录对应构建。
 
 1. 在干净检出上执行 `scripts/verify-release.ps1`，保存产物和回归报告。正式发布可加 `-PackArchive` 校验本次服务器整合包。
 2. 执行 `scripts/publish-update.ps1 -PrepareOnly -Version <修订> -DisplayVersion <版本> -VerifiedReleaseDirectory <验证目录>`。准备环节使用外部私钥，校验并签名验证目录里的 ZIP 与 EXE。运行 `scripts/test-release-package.ps1` 校验包和签名。
@@ -14,7 +14,7 @@
 
 官网的本次更新、可展开的往期版本和最新版本文本下载由 prepare-release.py 从内置日志生成。release.json 中的 release_notes 继续提供最新版本的纯文本条目。
 
-1.3.0 对应 2026-11-23 的发布内容。往期条目的原始发行编号可以通过 changelog 中的 original_version 查询。历史编号按发布时间从 1.0.0 排到 1.0.13，标题有变化的条目保留原编号，供查询此前的安装包和发布凭据。
+1.3.0 对应 2026-11-23 的发布内容。往期条目的原始发行编号可以通过 changelog 中的 original_version 查询。历史编号按功能阶段和发布时间排列，包括 1.0.0 至 1.0.9、1.1.0 至 1.1.1，以及 1.2.0 至 1.2.1。标题有变化的条目保留原编号，供查询此前的安装包和发布凭据。
 
 ## HTTPS 地址
 
