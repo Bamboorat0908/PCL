@@ -1,0 +1,174 @@
+{
+  "website": {
+    "url": "https://zhushu.homes/BRCL/",
+    "changelog_items_verified": 7,
+    "previous_versions_verified": 15,
+    "public_checks": [
+      "canonical 308 preserves query",
+      "HTML and referenced local assets load over verified TLS",
+      "public release metadata matches verified file",
+      "full HTTPS executable matches exact size and SHA-256",
+      "download supports exact byte ranges and rejects invalid ranges",
+      "missing paths and download directory do not expose a listing",
+      "blog, BRS, stock and news baseline routes remain 200"
+    ],
+    "public_check_route": "Public DNS and TLS from the website host; visible logs independently verified from Windows",
+    "origin_checks": 7
+  },
+  "primary_https_update": {
+    "Version": "1.3.1",
+    "Revision": "2026.11.23.6",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.6.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.6.zip",
+    "UpdatePackageBytes": 4936816,
+    "UpdatePackageSHA256": "3fe66f947c81c76a2db97b6e4088bd156191036b0983d5f662a8d1f2a9acf2b0",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.6.exe",
+    "DirectExeBytes": 6423552,
+    "DirectExeSHA256": "aab06cb18a632b69ec8f7316dac00eec07edf47a874de156f94c741966557428",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-23T02:39:27.853162+08:00",
+    "verification": "Public DNS; signed manifest and signature match the locally verified bytes."
+  },
+  "secondary_https_update": {
+    "Version": "1.3.1",
+    "Revision": "2026.11.23.6",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.6.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.6.zip",
+    "UpdatePackageBytes": 4936816,
+    "UpdatePackageSHA256": "3fe66f947c81c76a2db97b6e4088bd156191036b0983d5f662a8d1f2a9acf2b0",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.6.exe",
+    "DirectExeBytes": 6423552,
+    "DirectExeSHA256": "aab06cb18a632b69ec8f7316dac00eec07edf47a874de156f94c741966557428",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-23T02:39:33.379501+08:00",
+    "verification": "Public DNS; signed manifest and signature match the locally verified bytes."
+  },
+  "legacy_update_bridge": {
+    "Version": "1.3.1",
+    "Revision": "2026.11.23.6",
+    "DownloadUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.6.exe",
+    "UpdatePackageUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.6.zip",
+    "UpdatePackageBytes": 4936816,
+    "UpdatePackageSHA256": "3fe66f947c81c76a2db97b6e4088bd156191036b0983d5f662a8d1f2a9acf2b0",
+    "DirectExeUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.6.exe",
+    "DirectExeBytes": 6423552,
+    "DirectExeSHA256": "aab06cb18a632b69ec8f7316dac00eec07edf47a874de156f94c741966557428",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-23T02:39:38.764948+08:00",
+    "verification": "Public DNS; signed manifest and signature match the locally verified bytes."
+  },
+  "saved_installation_upgrade": {
+    "old_version": "1.3.1.0",
+    "old_revision": "2026.11.23.5",
+    "new_version": "1.3.1",
+    "revision": "2026.11.23.6",
+    "legacy_endpoint": "http://t42.sjcmc.cn:25261/",
+    "legacy_signature_verified": true,
+    "legacy_bounded_download_verified": true,
+    "embedded_installer_verified": true,
+    "new_exe_sha256": "aab06cb18a632b69ec8f7316dac00eec07edf47a874de156f94c741966557428",
+    "restarted": true,
+    "original_exe_backed_up": true,
+    "old_instance_save_verified": true,
+    "old_pcl_settings_verified": true
+  },
+  "modpack_public_ranges": [
+    {
+      "archive": "TRM-1.11-high.zip",
+      "size": 164408085,
+      "sha256": "408a5201984a03dea09cc9a475186af56a5b350fa6860707774e2e823cf403fe",
+      "ranges": [
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-high.zip",
+          "start": 0,
+          "end": 20551009
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-high.zip",
+          "start": 20551010,
+          "end": 41102020
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-high.zip",
+          "start": 41102021,
+          "end": 61653030
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-high.zip",
+          "start": 61653031,
+          "end": 82204041
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-high.zip",
+          "start": 82204042,
+          "end": 102755052
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-high.zip",
+          "start": 102755053,
+          "end": 123306062
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-high.zip",
+          "start": 123306063,
+          "end": 143857073
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-high.zip",
+          "start": 143857074,
+          "end": 164408084
+        }
+      ]
+    },
+    {
+      "archive": "TRM-1.11-low.zip",
+      "size": 164806392,
+      "sha256": "77ae44973a087a767bf64ce927dcae66595a330d7d8e77e2b48ad3c900d369fd",
+      "ranges": [
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-low.zip",
+          "start": 0,
+          "end": 20600798
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-low.zip",
+          "start": 20600799,
+          "end": 41201597
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-low.zip",
+          "start": 41201598,
+          "end": 61802396
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-low.zip",
+          "start": 61802397,
+          "end": 82403195
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-low.zip",
+          "start": 82403196,
+          "end": 103003994
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-low.zip",
+          "start": 103003995,
+          "end": 123604793
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer/modpacks/TRM-1.11-low.zip",
+          "start": 123604794,
+          "end": 144205592
+        },
+        {
+          "source": "https://zhushu.homes/BRCL/transfer-mirror/modpacks/TRM-1.11-low.zip",
+          "start": 144205593,
+          "end": 164806391
+        }
+      ]
+    }
+  ]
+}

@@ -1,11 +1,11 @@
 {
   "display_version": "1.3.1",
-  "version": "2026.11.23.5",
+  "version": "2026.11.23.6",
   "site_release": "2026-11-23",
   "build_date": "2026-11-23",
   "published_at": "2026-11-23",
-  "size": 6423040,
-  "sha256": "9d9fee7be9081d86e359b2ce80d38c56ada3ac0309e220c2f5a678cbe7afbdcc",
+  "size": 6423552,
+  "sha256": "aab06cb18a632b69ec8f7316dac00eec07edf47a874de156f94c741966557428",
   "download_url": "/BRCL/download/BRCL.exe",
   "platform": "Windows",
   "architecture": "AnyCPU",
@@ -24,6 +24,6 @@
     "完善 Java 安装检查和失败清理。安装时检查解压路径与实际解压大小，复验失败或取消时清理本次新建的运行时目录。推荐 Java 符合兼容范围时直接选用，已有的兼容回退规则继续适用。"
   ],
   "license_url": "/BRCL/license.txt",
-  "git_commit": "201d7a4ffb4f922cfd39feb2360d7c7bf0f38fba",
-  "test_report_sha256": "2102efe2c0f5935dee03a64b579d97c05afad147badab9a79b458a5648b3b6e3"
+  "git_commit": "5709a7c4b1e6245e9e130c4e131f72f9786c8fb9",
+  "test_report_sha256": "291d8fe9f1a33ccbe8f3145bc20dccaa68e5f3b50128480b3fe7a311341776ef"
 }

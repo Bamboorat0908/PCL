@@ -1,6 +1,6 @@
 1.3.1
 发布日期：2026-11-23
-内部版本：2026.11.23.5
+内部版本：2026.11.23.6
 
 体积与响应
 - 启动器单文件缩小约 15%。首页插图使用同分辨率的高质量压缩，保留原有页面与功能。
@@ -17,4 +17,4 @@
 
 官网：https://zhushu.homes/BRCL/
 下载：https://zhushu.homes/BRCL/download/BRCL.exe
-SHA-256：9d9fee7be9081d86e359b2ce80d38c56ada3ac0309e220c2f5a678cbe7afbdcc
+SHA-256：aab06cb18a632b69ec8f7316dac00eec07edf47a874de156f94c741966557428
