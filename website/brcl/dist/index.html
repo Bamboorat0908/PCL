@@ -119,16 +119,16 @@
       <div class="wrap download-layout">
         <div class="download-intro"><div class="eyebrow"><span class="square"></span> 05 / GET BRCL</div><h2 id="download-title">准备好，<br>再次出发。</h2><p>一个文件，<br>你的 BRS 旅程从这里继续。</p><span class="download-outline" aria-hidden="true">BRCL</span></div>
         <div class="download-panel">
-          <div class="download-panel-head"><svg class="icon windows-mark" aria-hidden="true"><use href="#i-windows"/></svg><div><h3>BRCL for Windows</h3><p id="release-label">1.0.2.12 · 官网构建 2026.11.23</p></div><span class="file-label technical">.EXE</span></div>
+          <div class="download-panel-head"><svg class="icon windows-mark" aria-hidden="true"><use href="#i-windows"/></svg><div><h3>BRCL for Windows</h3><p id="release-label">1.3.0 · 官网构建 2026.11.23</p></div><span class="file-label technical">.EXE</span></div>
           <a class="button button-dark download-file" href="/BRCL/download/BRCL.exe" data-download download="BRCL.exe"><span>下载 BRCL.exe</span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></a>
-          <dl class="release-meta"><div><dt>版本</dt><dd id="release-version">1.0.2.12</dd></div><div><dt>文件大小</dt><dd id="release-size">7.24 MiB</dd></div><div><dt>系统</dt><dd>Windows 10 / 11</dd></div><div><dt>基础环境</dt><dd>.NET Framework 4.8</dd></div></dl>
+          <dl class="release-meta"><div><dt>版本</dt><dd id="release-version">1.3.0</dd></div><div><dt>文件大小</dt><dd id="release-size">7.24 MiB</dd></div><div><dt>系统</dt><dd>Windows 10 / 11</dd></div><div><dt>基础环境</dt><dd>.NET Framework 4.8</dd></div></dl>
           <p class="download-status" id="release-status" role="status">下载后直接运行，无需配套 DLL 或配置文件。</p>
-          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">3F3D1665584A8B27D68E4248B6549F0129D0E07B2FE97FB356859D0844A835D0</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
+          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">95D61CB734EB2B1E1740F5A3A980B0E2C76B612100803D193ED70E12F2C897F2</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
           <details class="release-notes" open>
             <summary>本次更新<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
             <!-- release-current:start -->
 <section class="release-note-version" id="release-current">
-<h4 class="release-note-heading"><span>1.0.2.12</span><time datetime="2026-11-23">2026-11-23</time></h4>
+<h4 class="release-note-heading"><span>1.3.0</span><time datetime="2026-11-23">2026-11-23</time></h4>
 <div class="release-note-group"><h5>Java 运行环境</h5><ul>
 <li><strong>启动时自动选择 Java</strong>。启动器会根据 Minecraft 版本、游戏元数据及模组兼容范围，从本机优先选择推荐主版本中最新的兼容补丁。缺少推荐版本时自动下载、安装并切换，完成后继续启动。</li>
 <li><strong>Java 下载源可自动测速或手动指定</strong>。自动模式会对提供同一运行包的可用源测速，失败时尝试其他适用来源。可在「设置 → 启动 → Java 运行环境」选择官方源、BMCLAPI、清华大学 TUNA 或南京大学 NJU。</li>
@@ -143,14 +143,17 @@
 <li><strong>修复 Mod 哈希缓存误命中</strong>。缓存按实际文件路径、长度和完整修改时间区分。替换为大小相同的 Mod 文件后会重新计算哈希，避免 CurseForge 或 Modrinth 识别到旧文件。</li>
 <li><strong>修复游戏退出后仍显示运行中</strong>。退出时及时结束运行状态，同时尽量收齐标准输出和错误日志末尾。正常退出会清理监控状态，异常退出仍会进入崩溃诊断。</li>
 </ul></div>
+<div class="release-note-group"><h5>版本号与更新日志</h5><ul>
+<li><strong>统一为三段式版本号</strong>。启动器与官网使用新的三段式版本号。往期日志也按发布顺序统一编号，便于对照各版改动。</li>
+</ul></div>
 </section>
 <!-- release-current:end -->
           </details>
           <details class="release-notes" id="changelog">
             <summary>往期更新日志<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
             <!-- release-history:start -->
-<details class="release-history-version" id="version-1.0.2.11">
-<summary><span>1.0.2.11</span><time datetime="2026-11-19">2026-11-19</time></summary>
+<details class="release-history-version" id="version-1.0.13">
+<summary><span>1.0.13</span><time datetime="2026-11-19">2026-11-19</time></summary>
 <div class="release-note-group"><h5>TRM 实例</h5><ul>
 <li><strong>显示并记住所选实例</strong>。首页显示即将启动的 TRM 版本、预设和实例名，按游戏目录记住玩家手动选择的实例。未手动选择时，默认使用最新的可用 TRM。</li>
 <li><strong>实例失效提示与独立升级</strong>。所选实例失效时提示重新选择。升级时将新整合包装到独立目录，保留原实例和存档。</li>
@@ -160,8 +163,8 @@
 <li><strong>发布记录与官网说明同步</strong>。发布记录关联源码提交、EXE 校验值和回归结果，官网更新日志与启动器内保持一致。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.10">
-<summary><span>1.0.2.10</span><time datetime="2026-11-19">2026-11-19</time></summary>
+<details class="release-history-version" id="version-1.0.12">
+<summary><span>1.0.12</span><time datetime="2026-11-19">2026-11-19</time></summary>
 <div class="release-note-group"><h5>体验改善计划</h5><ul>
 <li><strong>新增自愿使用统计</strong>。推出用户体验改善计划。使用统计在主动同意后开启，记录随机安装标识、版本、使用时间和游戏会话信息。</li>
 <li><strong>改进授权对话框</strong>。重做使用统计授权弹窗，适配深浅主题和键盘操作。明确同意或拒绝会保存到当前安装，关闭弹窗会在下次启动再询问。</li>
@@ -172,8 +175,8 @@
 <li><strong>关闭统计时清理本机记录</strong>。关闭使用统计会清除本机的统计安装标识和待发送记录。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.8">
-<summary><span>1.0.2.8</span><time datetime="2026-11-18">2026-11-18</time></summary>
+<details class="release-history-version" id="version-1.0.11">
+<summary><span>1.0.11</span><time datetime="2026-11-18">2026-11-18</time></summary>
 <div class="release-note-group"><h5>单文件发行</h5><ul>
 <li><strong>按需解压内置依赖</strong>。单文件启动器改为按需解压内置依赖，保留全部托管组件、WebP 解码器以及 32／64 位 WebView2 加载器，无需额外安装启动器 DLL。</li>
 <li><strong>无损压缩资源和复用背景</strong>。对内置图片进行无损优化，保留原分辨率、透明度和画面细节；主题渐变复用背景绘图，无需逐帧重建相同几何。</li>
@@ -183,8 +186,8 @@
 <li><strong>减少空闲轮询</strong>。降低首页空闲轮询频率；拖动、下载、消息及动态主题按需唤醒，保留交互反馈与原有动效。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.7">
-<summary><span>1.0.2.7</span><time datetime="2026-11-18">2026-11-18</time></summary>
+<details class="release-history-version" id="version-1.0.10">
+<summary><span>1.0.10</span><time datetime="2026-11-18">2026-11-18</time></summary>
 <div class="release-note-group"><h5>TRM 整合包</h5><ul>
 <li><strong>升级 TRM 1.11</strong>。服务器整合包升级至 TRM 1.11，提供高、低两种预设；卡片面板展示画面差异和包体大小，新实例独立安装，保留已有版本与存档。</li>
 </ul></div>
@@ -200,14 +203,14 @@
 <li><strong>更新赞助入口</strong>。更新启动次数感谢与赞助说明，“支持 BRCL”按钮前往 BRS 爱发电主页。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.6">
-<summary><span>1.0.2.6</span><time datetime="2026-11-15">2026-11-15</time></summary>
+<details class="release-history-version" id="version-1.0.9">
+<summary><span>1.0.9</span><time datetime="2026-11-15">2026-11-15</time></summary>
 <div class="release-note-group"><h5>主题修复</h5><ul>
 <li><strong>修复深浅色切换报错</strong>。修复切换深浅色主题时出现“刷新主题颜色失败”的问题，恢复界面颜色的完整切换与渐变。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.5">
-<summary><span>1.0.2.5</span><time datetime="2026-11-15">2026-11-15</time></summary>
+<details class="release-history-version" id="version-1.0.8">
+<summary><span>1.0.8</span><time datetime="2026-11-15">2026-11-15</time></summary>
 <div class="release-note-group"><h5>文件与隐私</h5><ul>
 <li><strong>限制库文件与解压路径</strong>。加强启动原生库、支持库清单和 ZIP/GZip 解压的路径边界，拒绝越界路径、附加数据流及目标中的危险链接。</li>
 <li><strong>修复父目录移动与链接删除</strong>。修复目录移动到父目录时可能丢失源文件的问题；递归删除链接目录时只移除链接，保留链接外的真实文件。</li>
@@ -228,8 +231,8 @@
 <li><strong>清理旧资源并补充回归检查</strong>。清理已迁移的旧资源引用，补充文件边界、网络恢复、启动参数、备份和界面交互回归检查。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.4">
-<summary><span>1.0.2.4</span><time datetime="2026-11-13">2026-11-13</time></summary>
+<details class="release-history-version" id="version-1.0.7">
+<summary><span>1.0.7</span><time datetime="2026-11-13">2026-11-13</time></summary>
 <div class="release-note-group"><h5>窗口拖动</h5><ul>
 <li><strong>最大化后可拖动还原</strong>。修复最大化后顶栏无法拖动的问题，拖离顶栏时恢复为普通窗口并继续跟随鼠标移动。</li>
 <li><strong>减少拖动还原时跳动</strong>。保留鼠标在顶栏中的水平比例与纵向位置，改善拖动还原时的窗口跳动。</li>
@@ -238,8 +241,8 @@
 <li><strong>清理拖动状态并支持取消</strong>。松开鼠标、失去捕获、切换窗口或关闭时及时清理拖动准备状态，支持按 Escape 取消尚未开始的拖动。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.3">
-<summary><span>1.0.2.3</span><time datetime="2026-11-13">2026-11-13</time></summary>
+<details class="release-history-version" id="version-1.0.6">
+<summary><span>1.0.6</span><time datetime="2026-11-13">2026-11-13</time></summary>
 <div class="release-note-group"><h5>全局视觉与主题</h5><ul>
 <li><strong>统一各页面的几何背景</strong>。轨道、网络、地图等高线、校准刻度、波形和档案线按页面切换，配合渐隐边缘和少量强调色，改善卡片与场景衔接。</li>
 <li><strong>分别调整深色和浅色构图</strong>。深色背景增加黄色刻度、节点和短条。浅色背景采用轴测几何、错层面板和稀疏网格，以少量黄色细节呼应深色界面。</li>
@@ -262,8 +265,8 @@
 <li><strong>整理关于页内容</strong>。更新介绍、问题反馈与诊断说明，保留完整历史日志、单 EXE 发行与联网更新。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.2">
-<summary><span>1.0.2.2</span><time datetime="2026-11-13">2026-11-13</time></summary>
+<details class="release-history-version" id="version-1.0.5">
+<summary><span>1.0.5</span><time datetime="2026-11-13">2026-11-13</time></summary>
 <div class="release-note-group"><h5>单文件发行</h5><ul>
 <li><strong>一个 EXE 即可运行</strong>。改为单 EXE 发行，启动器依赖、图片、原生组件与许可内容内嵌，只需下载一个文件。</li>
 <li><strong>提供直接下载和自动更新</strong>。公开下载入口直接提供 EXE，保留原有自动更新能力。</li>
@@ -272,23 +275,23 @@
 <li><strong>保留窗口与性能改进</strong>。保留最大化与还原、启动和切页优化，以及每次启动自动检查更新。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2.1">
-<summary><span>1.0.2.1</span><time datetime="2026-11-13">2026-11-13</time></summary>
+<details class="release-history-version" id="version-1.0.4">
+<summary><span>1.0.4</span><time datetime="2026-11-13">2026-11-13</time></summary>
 <div class="release-note-group"><h5>窗口操作</h5><ul>
 <li><strong>新增最大化与还原按钮</strong>。新增标题栏最大化与还原按钮，支持在普通窗口和最大化之间切换。</li>
 <li><strong>适配显示器工作区</strong>。最大化时适配显示器工作区，保留任务栏，并在还原时恢复原有窗口大小。</li>
 <li><strong>同步图标和无障碍名称</strong>。同步最大化按钮图标、提示与无障碍名称，兼容深浅色主题。</li>
 </ul></div>
 <div class="release-note-group"><h5>发布与性能</h5><ul>
-<li><strong>延续启动性能与后台更新检查</strong>。保留 1.0.2 的首次启动、切页和内存优化，以及每次启动自动后台检查更新。</li>
+<li><strong>延续启动性能与后台更新检查</strong>。延续此前的首次启动、切页和内存优化，以及每次启动自动后台检查更新。</li>
 <li><strong>同步内置日志和下载入口</strong>。更新版本信息、内置日志与下载入口。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.2">
-<summary><span>1.0.2</span><time datetime="2026-11-13">2026-11-13</time></summary>
+<details class="release-history-version" id="version-1.0.3">
+<summary><span>1.0.3</span><time datetime="2026-11-13">2026-11-13</time></summary>
 <div class="release-note-group"><h5>自动更新与版本记录</h5><ul>
 <li><strong>启动后在后台检查更新</strong>。新增每次启动后自动在后台检查更新，校验更新清单签名，保留下载偏好与安装确认。</li>
-<li><strong>从关于页下载当前版本</strong>。新增“关于 → 下载当前版本”，提供 BRCL 1.0.2 安装包下载入口。</li>
+<li><strong>从关于页下载当前版本</strong>。新增“关于 → 下载当前版本”，提供当前版本的安装包下载入口。</li>
 <li><strong>新增离线更新日志</strong>。新增“更新日志”页面，可离线查看更新内容、浏览发布历史并复制日志。</li>
 </ul></div>
 <div class="release-note-group"><h5>启动与性能</h5><ul>
@@ -306,10 +309,10 @@
 <li><strong>整理导航和品牌信息</strong>。优化关于页信息排版、标题栏导航和启动器品牌显示。</li>
 </ul></div>
 </details>
-<details class="release-history-version" id="version-1.0.1.1">
-<summary><span>1.0.1.1</span><time datetime="2026-11-13">2026-11-13</time></summary>
+<details class="release-history-version" id="version-1.0.2">
+<summary><span>1.0.2</span><time datetime="2026-11-13">2026-11-13</time></summary>
 <div class="release-note-group"><h5>版本发布</h5><ul>
-<li><strong>发布 1.0.1.1</strong>。本版发布记录仅提供版本号与发布日期。</li>
+<li><strong>记录本次发布</strong>。本版发布记录仅提供版本号与发布日期。</li>
 </ul></div>
 </details>
 <details class="release-history-version" id="version-1.0.1">

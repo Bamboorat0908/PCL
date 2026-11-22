@@ -1,0 +1,94 @@
+{
+  "website": {
+    "url": "https://zhushu.homes/BRCL/",
+    "changelog_items_verified": 9,
+    "previous_versions_verified": 14,
+    "public_checks": [
+      "canonical 308 preserves query",
+      "HTML and referenced local assets load over verified TLS",
+      "public release metadata matches verified file",
+      "full HTTPS executable matches exact size and SHA-256",
+      "download supports exact byte ranges and rejects invalid ranges",
+      "missing paths and download directory do not expose a listing",
+      "blog, BRS, stock and news baseline routes remain 200"
+    ],
+    "public_check_route": "Public DNS and TLS from the website host; visible logs independently verified from Windows",
+    "origin_checks": 7
+  },
+  "primary_https_update": {
+    "Version": "1.3.0",
+    "Revision": "2026.11.23.3",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.3.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.3.zip",
+    "UpdatePackageBytes": 6105409,
+    "UpdatePackageSHA256": "74b6407882dc874d30ac327718c3ddb2a18a7ca224752094cc56effff36d8fa8",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer/releases/BRCL-2026.11.23.3.exe",
+    "DirectExeBytes": 7588352,
+    "DirectExeSHA256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+    "Bytes": 7588352,
+    "SHA256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-22T16:57:11.3905075Z"
+  },
+  "secondary_https_update": {
+    "Version": "1.3.0",
+    "Revision": "2026.11.23.3",
+    "DownloadUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.3.exe",
+    "UpdatePackageUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.3.zip",
+    "UpdatePackageBytes": 6105409,
+    "UpdatePackageSHA256": "74b6407882dc874d30ac327718c3ddb2a18a7ca224752094cc56effff36d8fa8",
+    "DirectExeUrl": "https://zhushu.homes/BRCL/transfer-mirror/releases/BRCL-2026.11.23.3.exe",
+    "DirectExeBytes": 7588352,
+    "DirectExeSHA256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+    "Bytes": 7588352,
+    "SHA256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-22T16:57:07.5036824Z"
+  },
+  "legacy_update_bridge": {
+    "Version": "1.3.0",
+    "Revision": "2026.11.23.3",
+    "DownloadUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.3.exe",
+    "UpdatePackageUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.3.zip",
+    "UpdatePackageBytes": 6105409,
+    "UpdatePackageSHA256": "74b6407882dc874d30ac327718c3ddb2a18a7ca224752094cc56effff36d8fa8",
+    "DirectExeUrl": "http://t42.sjcmc.cn:25261/releases/BRCL-2026.11.23.3.exe",
+    "DirectExeBytes": 7588352,
+    "DirectExeSHA256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+    "Bytes": 7588352,
+    "SHA256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+    "SignatureVerified": true,
+    "MatchesPreparedRelease": true,
+    "VerifiedUtc": "2026-11-22T16:56:55.786186Z"
+  },
+  "legacy_install_restarts": [
+    {
+      "old_version": "1.0.2.12",
+      "new_version": "1.3.0",
+      "revision": "2026.11.23.3",
+      "legacy_endpoint": "http://t42.sjcmc.cn:25261/",
+      "legacy_signature_verified": true,
+      "legacy_bounded_download_verified": true,
+      "embedded_installer_verified": true,
+      "new_exe_sha256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+      "restarted": true,
+      "original_exe_backed_up": true,
+      "old_instance_save_verified": true
+    },
+    {
+      "old_version": "1.1.0.0",
+      "new_version": "1.3.0",
+      "revision": "2026.11.23.3",
+      "legacy_endpoint": "http://t42.sjcmc.cn:25261/",
+      "legacy_signature_verified": true,
+      "legacy_bounded_download_verified": true,
+      "embedded_installer_verified": true,
+      "new_exe_sha256": "95d61cb734eb2b1e1740f5a3a980b0e2c76b612100803d193ed70e12f2c897f2",
+      "restarted": true,
+      "original_exe_backed_up": true,
+      "old_instance_save_verified": true
+    }
+  ]
+}
