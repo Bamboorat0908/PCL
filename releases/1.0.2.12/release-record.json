@@ -1,0 +1,16 @@
+{
+  "display_version": "1.0.2.12",
+  "revision": "2026.11.23.1",
+  "git_commit": "d008d5981a7b7ef32a47f7183bb2d57c148faa1a",
+  "exe": "payload/BRCL.exe",
+  "exe_sha256": "3f3d1665584a8b27d68e4248b6549f0129d0e07b2fe97fb356859d0844a835d0",
+  "exe_bytes": 7587840,
+  "update_zip": "BRCL-2026.11.23.1.zip",
+  "update_zip_sha256": "5f197f42920173d5d412c33c188b2fa9c14c267078623ddd8882989b994489ad",
+  "test_report": "tests/results.json",
+  "test_report_sha256": "c774dae00541bc5ca43a25b372659722b949240960ee67114907d7cd392f5b73",
+  "test_groups": 57,
+  "reported_checks": 568.0,
+  "core_test_report": "meloongcore-tests.txt",
+  "core_test_report_sha256": "b66fc8877d13f386d033772ef7090561fe136f6c2617be7c39416a06b8fab664"
+}
