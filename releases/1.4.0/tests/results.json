@@ -1,0 +1,302 @@
+[
+  {
+    "Name": "data-migration",
+    "ExitCode": 0,
+    "PassedAssertions": 31
+  },
+  {
+    "Name": "user-agreement",
+    "ExitCode": 0,
+    "PassedAssertions": 3
+  },
+  {
+    "Name": "instance-game",
+    "ExitCode": 0,
+    "PassedAssertions": 26
+  },
+  {
+    "Name": "instance-backup",
+    "ExitCode": 0,
+    "PassedAssertions": 4
+  },
+  {
+    "Name": "directory-safety",
+    "ExitCode": 0,
+    "PassedAssertions": 7
+  },
+  {
+    "Name": "home",
+    "ExitCode": 0,
+    "PassedAssertions": 10
+  },
+  {
+    "Name": "home-calendar",
+    "ExitCode": 0,
+    "PassedAssertions": 60
+  },
+  {
+    "Name": "daily-fortune",
+    "ExitCode": 0,
+    "PassedAssertions": 5
+  },
+  {
+    "Name": "bank-page",
+    "ExitCode": 0,
+    "PassedAssertions": 4
+  },
+  {
+    "Name": "sponsor-dialog",
+    "ExitCode": 0,
+    "PassedAssertions": 3
+  },
+  {
+    "Name": "pack-layout",
+    "ExitCode": 0,
+    "PassedAssertions": 5
+  },
+  {
+    "Name": "brs-launch-selection",
+    "ExitCode": 0,
+    "PassedAssertions": 6
+  },
+  {
+    "Name": "brs",
+    "ExitCode": 0,
+    "PassedAssertions": 36
+  },
+  {
+    "Name": "brs-dashboard",
+    "ExitCode": 0,
+    "PassedAssertions": 7
+  },
+  {
+    "Name": "brs-page",
+    "ExitCode": 0,
+    "PassedAssertions": 6
+  },
+  {
+    "Name": "news-page",
+    "ExitCode": 0,
+    "PassedAssertions": 5
+  },
+  {
+    "Name": "global-backdrops",
+    "ExitCode": 0,
+    "PassedAssertions": 10
+  },
+  {
+    "Name": "sponsors",
+    "ExitCode": 0,
+    "PassedAssertions": 5
+  },
+  {
+    "Name": "errors",
+    "ExitCode": 0,
+    "PassedAssertions": 12
+  },
+  {
+    "Name": "credential-redaction",
+    "ExitCode": 0,
+    "PassedAssertions": 2
+  },
+  {
+    "Name": "privacy-offline",
+    "ExitCode": 0,
+    "PassedAssertions": 1
+  },
+  {
+    "Name": "webview-bundle",
+    "ExitCode": 0,
+    "PassedAssertions": 20
+  },
+  {
+    "Name": "webview-lifecycle",
+    "ExitCode": 0,
+    "PassedAssertions": 6
+  },
+  {
+    "Name": "assets",
+    "ExitCode": 0,
+    "PassedAssertions": 7
+  },
+  {
+    "Name": "oauth-config",
+    "ExitCode": 0,
+    "PassedAssertions": 3
+  },
+  {
+    "Name": "oauth-flow",
+    "ExitCode": 0,
+    "PassedAssertions": 39
+  },
+  {
+    "Name": "oauth-performance",
+    "ExitCode": 0,
+    "PassedAssertions": 11
+  },
+  {
+    "Name": "network-response",
+    "ExitCode": 0,
+    "PassedAssertions": 18
+  },
+  {
+    "Name": "download-recovery",
+    "ExitCode": 0,
+    "PassedAssertions": 8
+  },
+  {
+    "Name": "native-extraction",
+    "ExitCode": 0,
+    "PassedAssertions": 16
+  },
+  {
+    "Name": "library-paths",
+    "ExitCode": 0,
+    "PassedAssertions": 9
+  },
+  {
+    "Name": "loader-input",
+    "ExitCode": 0,
+    "PassedAssertions": 4
+  },
+  {
+    "Name": "launch-patch",
+    "ExitCode": 0,
+    "PassedAssertions": 2
+  },
+  {
+    "Name": "java-management",
+    "ExitCode": 0,
+    "PassedAssertions": 32
+  },
+  {
+    "Name": "button-keyboard",
+    "ExitCode": 0,
+    "PassedAssertions": 6
+  },
+  {
+    "Name": "control-cancelled-input",
+    "ExitCode": 0,
+    "PassedAssertions": 24
+  },
+  {
+    "Name": "control-accessibility",
+    "ExitCode": 0,
+    "PassedAssertions": 11
+  },
+  {
+    "Name": "setting-toggles",
+    "ExitCode": 0,
+    "PassedAssertions": 5
+  },
+  {
+    "Name": "ui-polish",
+    "ExitCode": 0,
+    "PassedAssertions": 6
+  },
+  {
+    "Name": "dialog-layout",
+    "ExitCode": 0,
+    "PassedAssertions": 8
+  },
+  {
+    "Name": "update-rollback",
+    "ExitCode": 0,
+    "PassedAssertions": 8
+  },
+  {
+    "Name": "icon-theme",
+    "ExitCode": 0,
+    "PassedAssertions": 6
+  },
+  {
+    "Name": "exe-icon",
+    "ExitCode": 0,
+    "PassedAssertions": 11
+  },
+  {
+    "Name": "stock-resource",
+    "ExitCode": 0,
+    "PassedAssertions": 1
+  },
+  {
+    "Name": "ui-feedback",
+    "ExitCode": 0,
+    "PassedAssertions": 15
+  },
+  {
+    "Name": "ui-performance",
+    "ExitCode": 0,
+    "PassedAssertions": 5
+  },
+  {
+    "Name": "startup-updates",
+    "ExitCode": 0,
+    "PassedAssertions": 8
+  },
+  {
+    "Name": "startup-navigation",
+    "ExitCode": 0,
+    "PassedAssertions": 4
+  },
+  {
+    "Name": "startup-arguments",
+    "ExitCode": 0,
+    "PassedAssertions": 3
+  },
+  {
+    "Name": "title-navigation",
+    "ExitCode": 0,
+    "PassedAssertions": 2
+  },
+  {
+    "Name": "page-cache-performance",
+    "ExitCode": 0,
+    "PassedAssertions": 4
+  },
+  {
+    "Name": "window-maximize",
+    "ExitCode": 0,
+    "PassedAssertions": 4
+  },
+  {
+    "Name": "single-exe",
+    "ExitCode": 0,
+    "PassedAssertions": 10
+  },
+  {
+    "Name": "source-integrity",
+    "ExitCode": 0,
+    "PassedAssertions": 2
+  },
+  {
+    "Name": "pack",
+    "ExitCode": 0,
+    "PassedAssertions": 3
+  },
+  {
+    "Name": "stock-theme",
+    "ExitCode": 0,
+    "PassedAssertions": 10
+  },
+  {
+    "Name": "news-api",
+    "ExitCode": 0,
+    "PassedAssertions": 7
+  },
+  {
+    "Name": "update-http",
+    "ExitCode": 0,
+    "PassedAssertions": 5
+  },
+  {
+    "Name": "bank-service",
+    "ExitCode": 0,
+    "PassedAssertions": 6
+  },
+  {
+    "Name": "ink-admin",
+    "ExitCode": 0,
+    "PassedAssertions": 17
+  }
+]
