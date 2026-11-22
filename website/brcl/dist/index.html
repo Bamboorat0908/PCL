@@ -119,16 +119,37 @@
       <div class="wrap download-layout">
         <div class="download-intro"><div class="eyebrow"><span class="square"></span> 05 / GET BRCL</div><h2 id="download-title">准备好，<br>再次出发。</h2><p>一个文件，<br>你的 BRS 旅程从这里继续。</p><span class="download-outline" aria-hidden="true">BRCL</span></div>
         <div class="download-panel">
-          <div class="download-panel-head"><svg class="icon windows-mark" aria-hidden="true"><use href="#i-windows"/></svg><div><h3>BRCL for Windows</h3><p id="release-label">1.3.0 · 官网构建 2026.11.23</p></div><span class="file-label technical">.EXE</span></div>
+          <div class="download-panel-head"><svg class="icon windows-mark" aria-hidden="true"><use href="#i-windows"/></svg><div><h3>BRCL for Windows</h3><p id="release-label">1.3.1 · 官网构建 2026.11.23</p></div><span class="file-label technical">.EXE</span></div>
           <a class="button button-dark download-file" href="/BRCL/download/BRCL.exe" data-download download="BRCL.exe"><span>下载 BRCL.exe</span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></a>
-          <dl class="release-meta"><div><dt>版本</dt><dd id="release-version">1.3.0</dd></div><div><dt>文件大小</dt><dd id="release-size">7.24 MiB</dd></div><div><dt>系统</dt><dd>Windows 10 / 11</dd></div><div><dt>基础环境</dt><dd>.NET Framework 4.8</dd></div></dl>
+          <dl class="release-meta"><div><dt>版本</dt><dd id="release-version">1.3.1</dd></div><div><dt>文件大小</dt><dd id="release-size">6.13 MiB</dd></div><div><dt>系统</dt><dd>Windows 10 / 11</dd></div><div><dt>基础环境</dt><dd>.NET Framework 4.8</dd></div></dl>
           <p class="download-status" id="release-status" role="status">下载后直接运行，无需配套 DLL 或配置文件。</p>
-          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">908C404EC27E3F7FA72888CFD676312C0AF787E7F924E4F447EAA45B978E5F57</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
+          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">9D9FEE7BE9081D86E359B2CE80D38C56ADA3AC0309E220C2F5A678CBE7AFBDCC</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
           <details class="release-notes" open>
             <summary>本次更新<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
             <!-- release-current:start -->
 <section class="release-note-version" id="release-current">
-<h4 class="release-note-heading"><span>1.3.0</span><time datetime="2026-11-23">2026-11-23</time></h4>
+<h4 class="release-note-heading"><span>1.3.1</span><time datetime="2026-11-23">2026-11-23</time></h4>
+<div class="release-note-group"><h5>体积与响应</h5><ul>
+<li><strong>启动器单文件缩小约 15%</strong>。首页插图使用同分辨率的高质量压缩，保留原有页面与功能。</li>
+<li><strong>降低首页渲染与下载的内存开销</strong>。首页按窗口大小和屏幕缩放解码插图。未知长度的下载写入暂存文件，分片合并按块读取，避免在内存中保留整份下载或整段分片。</li>
+</ul></div>
+<div class="release-note-group"><h5>安全与联网</h5><ul>
+<li><strong>加强 HTTPS 证书校验</strong>。证书信任链和域名始终由系统验证。「设置 → 系统」中的证书选项用于额外检查吊销状态，默认开启。</li>
+<li><strong>加强联网帮助、地图和交易所的加载保护</strong>。打开联网帮助前确认来源，并通过 HTTPS 获取同源内容。地图关闭未使用的宿主接口，交易所仅在其页面运行主题同步脚本。</li>
+<li><strong>让异常网络请求更容易恢复</strong>。限制首页状态响应的大小，异常响应会提示重试。Ping 探测应用设定的超时。</li>
+</ul></div>
+<div class="release-note-group"><h5>下载与 Java</h5><ul>
+<li><strong>下载校验通过后再替换已有文件</strong>。下载失败或校验失败时保留已有文件，断点续传及备用下载源继续可用。</li>
+<li><strong>完善 Java 安装检查和失败清理</strong>。安装时检查解压路径与实际解压大小，复验失败或取消时清理本次新建的运行时目录。推荐 Java 符合兼容范围时直接选用，已有的兼容回退规则继续适用。</li>
+</ul></div>
+</section>
+<!-- release-current:end -->
+          </details>
+          <details class="release-notes" id="changelog">
+            <summary>往期更新日志<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <!-- release-history:start -->
+<details class="release-history-version" id="version-1.3.0">
+<summary><span>1.3.0</span><time datetime="2026-11-23">2026-11-23</time></summary>
 <div class="release-note-group"><h5>Java 运行环境</h5><ul>
 <li><strong>启动时自动选择 Java</strong>。启动器会根据 Minecraft 版本、游戏元数据及模组兼容范围，从本机优先选择推荐主版本中最新的兼容补丁。缺少推荐版本时自动下载、安装并切换，完成后继续启动。</li>
 <li><strong>Java 下载源可自动测速或手动指定</strong>。自动模式会对提供同一运行包的可用源测速，失败时尝试其他适用来源。可在「设置 → 启动 → Java 运行环境」选择官方源、BMCLAPI、清华大学 TUNA 或南京大学 NJU。</li>
@@ -146,12 +167,7 @@
 <div class="release-note-group"><h5>版本号与更新日志</h5><ul>
 <li><strong>统一为三段式版本号</strong>。启动器与官网统一使用三段式版本号。往期日志按功能阶段和发布时间归档，便于对照各版改动。</li>
 </ul></div>
-</section>
-<!-- release-current:end -->
-          </details>
-          <details class="release-notes" id="changelog">
-            <summary>往期更新日志<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
-            <!-- release-history:start -->
+</details>
 <details class="release-history-version" id="version-1.2.1">
 <summary><span>1.2.1</span><time datetime="2026-11-19">2026-11-19</time></summary>
 <div class="release-note-group"><h5>TRM 实例</h5><ul>
