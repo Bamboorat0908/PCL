@@ -1,4 +1,4 @@
-Public Module ModJava
+﻿Public Module ModJava
 
     ''' <summary>
     ''' 初始化 Java 列表。
@@ -170,18 +170,17 @@ Public Module ModJava
             AddConstraint(ValueRange(Of Version).LessThan(New Version(9, 0)))
         End If
 
-        '原版 26+：获取 Mojang 要求的 Java 版本
+        '版本元数据声明的 Java 最低要求（包含快照和整合包）
         Dim RecommendedComponent As String = Nothing
         Dim RecommendedCode As Integer =
             If(Instance.JsonObject?("javaVersion")?("majorVersion")?.ToObject(Of Integer),
             If(Instance.JsonVersion?("java_version")?.ToObject(Of Integer), 0))
-        If RecommendedCode >= 22 Then
+        RecommendedComponent = If(Instance.JsonObject?("javaVersion")?("component")?.ToString,
+                                  Instance.JsonVersion?("java_component")?.ToString)
+        If RecommendedComponent = "" Then RecommendedComponent = Nothing
+        If RecommendedCode >= 8 AndAlso RecommendedCode < 100 Then
             Logger.Info("Mojang 要求至少使用 Java " & RecommendedCode)
             AddConstraint(ValueRange(Of Version).AtLeast(New Version(RecommendedCode, 0)))
-            RecommendedComponent =
-                If(Instance.JsonObject?("javaVersion")?("component")?.ToString,
-                   Instance.JsonVersion?("java_component")?.ToString)
-            If RecommendedComponent = "" Then RecommendedComponent = Nothing
         End If
 
         'OptiFine 检测
@@ -268,6 +267,82 @@ Public Module ModJava
         Return (JavaRange, RecommendedComponent)
     End Function
 
+    ''' <summary>推荐游戏对应的 Java 主版本，并保持在模组或用户指定的兼容范围内。</summary>
+    Public Function GetRecommendedJavaMajor(Vanilla As Version, ReleaseTime As Date, MetadataMajor As Integer, Range As ValueRange(Of Version)) As Integer
+        If Range Is Nothing OrElse Range.IsEmpty Then Return 0
+        Dim Preferred As Integer = MetadataMajor
+        If Preferred < 5 OrElse Preferred >= 100 Then
+            If (Vanilla IsNot Nothing AndAlso Vanilla >= New Version(20, 0, 5)) OrElse (Vanilla Is Nothing AndAlso ReleaseTime >= New Date(2024, 4, 2)) Then
+                Preferred = 21
+            ElseIf (Vanilla IsNot Nothing AndAlso Vanilla.Major >= 18) OrElse (Vanilla Is Nothing AndAlso ReleaseTime >= New Date(2021, 11, 16)) Then
+                Preferred = 17
+            ElseIf (Vanilla IsNot Nothing AndAlso Vanilla.Major >= 17) OrElse (Vanilla Is Nothing AndAlso ReleaseTime >= New Date(2021, 5, 11)) Then
+                Preferred = 16
+            Else
+                Preferred = 8
+            End If
+        End If
+        Return Enumerable.Range(5, 95).
+            Where(Function(Major) Not Range.Intersect(ValueRange(Of Version).ClosedOpen(New Version(Major, 0), New Version(Major + 1, 0))).IsEmpty).
+            OrderBy(Function(Major) Math.Abs(Major - Preferred)).ThenBy(Function(Major) Major).FirstOrDefault()
+    End Function
+
+    Private Function SelectAutomaticJava(Instance As McInstance, Range As ValueRange(Of Version), RecommendedComponent As String,
+                                         TryFixOrHint As Boolean, c As CancellationToken, p As ProgressProvider) As Java
+        Dim AutoManage = Instance IsNot Nothing AndAlso Settings.Get(Of Boolean)("LaunchJavaAutoSelect")
+        Dim Preferred = If(Instance Is Nothing, GetRecommendedJavaMajor(Nothing, Date.MinValue, 21, Range),
+            GetRecommendedJavaMajor(If(Instance.Version.Vaild, Instance.Version.Vanilla, Nothing), Instance.ReleaseTime,
+                If(Instance.JsonObject?("javaVersion")?("majorVersion")?.ToObject(Of Integer), If(Instance.JsonVersion?("java_version")?.ToObject(Of Integer), 0)), Range))
+        If Range Is Nothing OrElse Range.IsEmpty OrElse Preferred = 0 Then Throw New InvalidOperationException("Java 版本要求存在冲突，请在版本设置中检查 Java 版本范围。")
+        Logger.Info($"Java 兼容范围：{Range}，推荐主版本：{Preferred}，自动管理：{AutoManage}")
+        Dim Checked As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim FindLocal As Func(Of Java) =
+            Function()
+                JavaListRefreshWorker.WaitIfRunning(cancellationToken:=c)
+                Dim Available As New List(Of Java)
+                For Each Candidate In Configs.JavaList.Get()
+                    c.ThrowIfCancellationRequested()
+                    '每次启动重新执行检查，避免已被移除或损坏的 Java 命中旧缓存。
+                    If TryFixOrHint AndAlso Checked.Add(Candidate.Folder) Then Candidate.InvalidateChecked()
+                    If Not Candidate.CheckAsync(c).Run() OrElse Candidate.Version Is Nothing OrElse Not Range.Contains(Candidate.Version) Then Continue For
+                    If Not AutoManage Then Return Candidate
+                    Available.Add(Candidate)
+                Next
+                Return RankJavaCandidates(Available, Preferred).FirstOrDefault()
+            End Function
+        Dim Result = FindLocal()
+        If Result IsNot Nothing AndAlso (Not AutoManage OrElse Result.Version.Major = Preferred OrElse Not TryFixOrHint) Then Return Result
+        SyncLock JavaLock
+            c.ThrowIfCancellationRequested()
+            JavaListRefreshWorker.Start(c, p?.SplitTo(0.2))
+            Result = FindLocal()
+            If Result IsNot Nothing AndAlso (Not AutoManage OrElse Result.Version.Major = Preferred) Then Return Result
+            If Not TryFixOrHint Then Return Result
+            Try
+                Hint($"正在准备适合此版本的 Java {Preferred}，完成后将自动继续启动")
+                Dim Installed = DownloadManagedJava(Range, Preferred, RecommendedComponent, c, p)
+                p?.Finish()
+                Hint($"已自动选择 Java {Installed.Version.Major}", HintType.Green)
+                Return Installed
+            Catch ex As Exception
+                ex.ThrowIfCanceled()
+                If Result IsNot Nothing Then
+                    Logger.Warn(ex, $"推荐 Java 下载失败，改用兼容的 Java {Result.Version}")
+                    Hint($"推荐 Java 下载失败，已使用兼容的 Java {Result.Version.Major}；可在启动设置中更换下载源", HintType.Red)
+                    Return Result
+                End If
+                Throw New InvalidOperationException($"未能准备 Java {Preferred}。请检查网络，或在【设置 → 启动 → Java 运行环境】中更换下载源、导入 Java。", ex)
+            End Try
+        End SyncLock
+    End Function
+
+    ''' <summary>优先推荐主版本，其次兼容主版本；同主版本选择本机较新的补丁。</summary>
+    Public Function RankJavaCandidates(Candidates As IEnumerable(Of Java), Preferred As Integer) As IEnumerable(Of Java)
+        Return Candidates.Where(Function(Candidate) Candidate.Version IsNot Nothing).
+            OrderBy(Function(Candidate) Math.Abs(Candidate.Version.Major - Preferred)).
+            ThenByDescending(Function(Candidate) Candidate.Version)
+    End Function
+
     ''' <summary>
     ''' 根据版本或 Java 范围要求寻找适合的 Java。
     ''' 若指定了 <paramref name="TryFixOrHint"/>，则会在找不到时会尝试下载 Java 或提示用户下载，否则只会静默运行。
@@ -332,137 +407,12 @@ Public Module ModJava
 
                 Case Else '======================== 根据版本范围自动选择 JavaList 中的 Java ========================
 
-                    '获取范围
-                    Dim Range As ValueRange(Of Version) =
-                        If(Target.Is(Of McInstance), GetJavaRequirement(Instance).Range, Target.As(Of ValueRange(Of Version)))
-                    Dim RecommendedComponent As String =
-                        If(Target.Is(Of McInstance), GetJavaRequirement(Instance).RecommendedComponent, Nothing)
-                    Logger.Info($"自动选择以下范围的 Java：{Range} {RecommendedComponent}")
-                    If Range.IsEmpty Then Throw New Exception("Java 版本需求存在冲突，导致没有任何可能适配的 Java，请查看 BRCL 的日志了解详细信息！")
-
-                    '搜索 Java
-                    Dim SelectJavaFromJavaList =
-                    Function() As Java
-                        JavaListRefreshWorker.WaitIfRunning() '等待进行中的搜索结束
-                        For Each ChosenJava In Configs.JavaList.Get()
-                            If Not ChosenJava.CheckAsync(c).Run() Then '检查
-                                Logger.Warn($"Java 检查失败，将尝试列表中的下一个 Java：{ChosenJava}")
-                                Continue For
-                            End If
-                            If ChosenJava.Version Is Nothing OrElse Not Range.Contains(ChosenJava.Version) Then Continue For '版本范围
-                            Logger.Info($"已选定 Java：{ChosenJava}")
-                            Return ChosenJava
-                        Next
-                        Return Nothing
-                    End Function
-                    p?.Set(0.25)
-                    Dim Result = SelectJavaFromJavaList()
-                    If Result IsNot Nothing Then p?.Skip() : Return Result
-
-                    SyncLock JavaLock '#3797
-                        '既有列表中没有合适的 Java，重新触发搜索
-                        Logger.Warn($"既有列表中没有合适的 Java，重新触发搜索")
-                        JavaListRefreshWorker.Start(c, p?.SplitTo(0.3))
-                        Result = SelectJavaFromJavaList()
-                        If Result IsNot Nothing Then p?.Skip() : Return Result
-                        If Not TryFixOrHint Then Return Nothing
-
-                        '电脑中没有合适的 Java，获取 Mojang 提供的 Java 下载列表
-                        Logger.Warn($"电脑中没有合适的 Java，开始获取 Mojang 提供的 Java 下载列表")
-                        Static DownloadListWorker As New RedoableWorker(Of List(Of JavaDownloadInfo))(
-                        Function(cancellationToken)
-                            '下载 Mojang 提供的 Java 列表
-                            Dim IndexFileStr As String = NetRequestByLoader(DlVersionListOrder(
-                                {"https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"},
-                                {"https://bmclapi2.bangbang93.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"}
-                            ), IsJson:=True)
-                            cancellationToken?.ThrowIfCancellationRequested()
-                            '解析 Java 列表
-                            Dim Results = New List(Of JavaDownloadInfo)
-                            For Each Prop As JProperty In IndexFileStr.DeserializeJson(Of JObject)()("windows-x64")
-                                cancellationToken?.ThrowIfCancellationRequested()
-                                If Prop.Name = "minecraft-java-exe" Then Continue For '不是完整 Java
-                                Try
-                                    Dim Entry = Prop.Value.FirstOrDefault
-                                    If Entry Is Nothing Then Continue For
-                                    Dim JavaName = Entry("version")("name").ToString '可能的名称格式："12"、"8u51-cacert462b08"、"17.0.8.1"、"17.0.1.12.1"、"21.0.7"
-                                    If JavaName.Contains(".") Then
-                                        Dim Parts As String() = JavaName.Split(".")
-                                        Results.Add(New JavaDownloadInfo With {.ComponentName = Prop.Name, .Java = Entry, .JavaVersion = New Version(Val(Parts(0)), Val(Parts(1)), If(Parts.Length >= 3, Val(Parts(2)), 0), If(Parts.Length >= 4, Val(Parts(3)), 0))})
-                                    ElseIf JavaName.StartsWithF("8u51-") Then
-                                        Results.Add(New JavaDownloadInfo With {.ComponentName = Prop.Name, .Java = Entry, .JavaVersion = New Version(8, 0, 51, 0)})
-                                    Else
-                                        Results.Add(New JavaDownloadInfo With {.ComponentName = Prop.Name, .Java = Entry, .JavaVersion = New Version(Val(JavaName.BeforeFirstOfAny({"u", "."})), 0, 0, 0)})
-                                    End If
-                                Catch ex As Exception
-                                    Logger.Warn(ex, $"解析 Mojang 提供的 Java 列表项失败，已跳过（{Prop.Name}）")
-                                End Try
-                            Next
-                            Return Results
-                        End Function)
-                        If Not DownloadListWorker.HasSucceeded Then DownloadListWorker.Start(c, p?.SplitTo(0.4))
-                        DownloadListWorker.WaitIfRunning(cancellationToken:=c)
-                        p?.Set(0.4, skiped:=True)
-                        Dim Components = DownloadListWorker.LastResult
-
-                        '确定要下载的目标 Java
-                        Dim JavaToDownload As JavaDownloadInfo = If(
-                        Components.FirstOrDefault(Function(Comp) Comp.Java("version")("name").ToString = RecommendedComponent), '优先选择指定的 Component
-                        Components.FirstOrDefault(Function(Comp) Range.Contains(Comp.JavaVersion)))
-                        If JavaToDownload Is Nothing Then
-                            Logger.Warn($"Mojang 提供的 Java 列表中没有合适的 Java，无法自动下载")
-                            '提示需要手动下载 Java
-                            Dim Description As String
-                            Dim HasPureLower As Boolean = Range.HasLower AndAlso Range.IsLowerInclusive AndAlso
-                            Range.Lower.Minor <= 0 AndAlso Range.Lower.Build <= 0 AndAlso Range.Lower.Revision <= 0
-                            Dim HasPureUpper As Boolean = Range.HasUpper AndAlso Not Range.IsUpperInclusive AndAlso
-                            Range.Upper.Minor <= 0 AndAlso Range.Upper.Build <= 0 AndAlso Range.Upper.Revision <= 0
-                            If Range.HasLower AndAlso Range.HasUpper Then '有上下界
-                                If HasPureLower AndAlso HasPureUpper Then
-                                    If Range.Lower.Major = Range.Upper.Major - 1 Then
-                                        Description = $" Java {Range.Lower.Major}"
-                                    Else
-                                        Description = $" Java {Range.Lower.Major} ~ {Range.Upper.Major - 1}"
-                                    End If
-                                Else
-                                    Description = $" Java {Range}" '摆烂
-                                End If
-                            ElseIf Range.HasLower Then '只有下界
-                                If HasPureLower Then
-                                    Description = $" Java {Range.Lower.Major} 或更高版本的 Java"
-                                ElseIf Range.IsLowerInclusive Then
-                                    Description = $" Java {Range.Lower} 或更高版本的 Java"
-                                Else
-                                    Description = $"版本高于 {Range.Lower} 的 Java"
-                                End If
-                            Else '只有上界
-                                If HasPureUpper Then
-                                    Description = $" Java {Range.Upper.Major - 1} 或更低版本的 Java"
-                                ElseIf Range.IsUpperInclusive Then
-                                    Description = $" Java {Range.Upper} 或更低版本的 Java"
-                                Else
-                                    Description = $"版本低于 {Range.Upper} 的 Java"
-                                End If
-                            End If
-                            MyMsgBox($"BRCL 没能找到合适的 Java。{vbCrLf}请在网上搜索并手动安装{Description}， 然后在【设置 → 启动 → 高级选项 → Java 列表】中导入它。", "需要手动安装 Java")
-                            Return Nothing
-                        End If
-
-                        '自动下载 Java
-                        Dim JavaLoader = CreateJavaDownloadLoader(JavaToDownload)
-                        Try
-                            JavaLoader.WaitForExit(IsForceRestart:=True, c:=c, p:=p?.SplitTo(0.95))
-                        Finally
-                            JavaLoader.Cancel() '确保取消时中止 Java 下载
-                        End Try
-                        Result = SelectJavaFromJavaList()
-                        If Result IsNot Nothing Then p?.Finish() : Return Result
-                        Throw New Exception($"下载 Java {JavaToDownload.ComponentName} 后仍然无法找到合适的 Java")
-                    End SyncLock
+                    Dim Requirement = If(Instance Is Nothing, (Target.As(Of ValueRange(Of Version)), CType(Nothing, String)), GetJavaRequirement(Instance))
+                    Return SelectAutomaticJava(Instance, Requirement.Item1, Requirement.Item2, TryFixOrHint, c, p)
             End Select
         Catch ex As Exception
             ex.ThrowIfCanceled()
-            Logger.Error(ex, "选择 Java 时出现异常")
+            Logger.Error(ex, "选择 Java 时出现异常", If(TryFixOrHint, LogBehavior.Alert, LogBehavior.None))
             p?.Skip() : Return Nothing
         End Try
     End Function
@@ -527,52 +477,198 @@ NoForcedJava:
 
 #End Region
 
-#Region "下载（均为内部工具方法，无外部调用）"
+#Region "受管理 Java 下载"
 
-    Private Class JavaDownloadInfo
-        Public Property ComponentName As String
-        Public Property Java As JObject
-        Public Property JavaVersion As Version
-    End Class
+    Private Const JavaRuntimeIndex As String = "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
 
-    ''' <summary>
-    ''' 构建下载指定 Java 的加载器。
-    ''' </summary>
-    Private Function CreateJavaDownloadLoader(Target As JavaDownloadInfo) As LoaderCombo(Of Integer)
-
-        '分析需要下载的 Java 文件列表
-        Dim Address As String = Target.Java("manifest")("url")
-        Logger.Info($"准备下载 Java {Target.Java("version")("name")}（{Target.ComponentName}）：{Address}")
-        Dim ListFileStr As String = NetRequestByLoader(DlSourceOrder({Address}, {Address.Replace("piston-meta.mojang.com", "bmclapi2.bangbang93.com")}), IsJson:=True)
-        Dim BaseDir As String = $"{Paths.AppData}.minecraft\runtime\{Target.ComponentName}\"
-        Dim FilesToDownload As New List(Of NetFile)
-        For Each File As JProperty In CType(ListFileStr.DeserializeJson(), JObject)("files")
-            If CType(File.Value, JObject)("downloads")?("raw") Is Nothing Then Continue For
-            Dim Info As JObject = CType(File.Value, JObject)("downloads")("raw")
-            Dim Checker As New FileChecker With {.ActualSize = Info("size"), .Hash = Info("sha1")}
-            If Checker.Hash = "12976a6c2b227cbac58969c1455444596c894656" OrElse Checker.Hash = "c80e4bab46e34d02826eab226a4441d0970f2aba" OrElse Checker.Hash = "84d2102ad171863db04e7ee22a259d1f6c5de4a5" Then
-                Continue For '跳过 3 个无意义大量重复文件（#3827）
-            End If
-            Dim Url As String = Info("url")
-            FilesToDownload.Add(New NetFile(
-                DlSourceOrder({Url}, {Url.Replace("piston-data.mojang.com", "bmclapi2.bangbang93.com")}),
-                BaseDir & File.Name, Checker))
+    Private Function DownloadManagedJava(Range As ValueRange(Of Version), Preferred As Integer, Component As String,
+                                         c As CancellationToken, p As ProgressProvider) As Java
+        Dim Source = Settings.Get(Of Integer)("LaunchJavaDownloadSource")
+        Logger.Info($"准备 Java {Preferred}，下载源：{JavaDownloadSourceName(Source)}")
+        'Temurin 的同一份安装包在官方、清华、南京间测速；特殊旧版使用 Mojang 运行环境。
+        If Source <> 2 Then
+            Try
+                Dim Archive = ResolveTemurinJavaArchive(Preferred, Range, Source, c)
+                If Archive IsNot Nothing Then Return InstallJavaArchive(Archive, Range, c, p)
+                If Source = 3 OrElse Source = 4 Then Throw New InvalidOperationException("所选镜像没有满足兼容范围的 Java，请切换为自动测速或导入 Java。")
+            Catch ex As Exception
+                ex.ThrowIfCanceled()
+                If Source = 3 OrElse Source = 4 Then Throw
+                Logger.Warn(ex, "Temurin Java 获取失败，尝试同一下载策略下的 Mojang 运行环境")
+            End Try
+        End If
+        Dim IndexUrls = OrderJavaDownloadUrls(GetMojangJavaDownloadUrls(JavaRuntimeIndex, Source), c)
+        Dim Index = JObject.Parse(ReadJavaMetadata(IndexUrls, Nothing, c))
+        Dim Platform = TryCast(Index("windows-x64"), JObject)
+        If Platform Is Nothing Then Throw New InvalidDataException("Java 下载列表中没有 Windows x64 运行环境。")
+        Dim Candidates As New List(Of (Component As String, Entry As JObject, Version As Version))
+        For Each Item In Platform.Properties()
+            If Item.Name = "minecraft-java-exe" Then Continue For
+            For Each Entry As JObject In Item.Value
+                Dim Name = Entry("version")?("name")?.ToString()
+                Dim Match = System.Text.RegularExpressions.Regex.Match(If(Name, ""), "^(?<major>\d+)(?:u(?<update>\d+)|(?:\.(?<minor>\d+))(?:\.(?<patch>\d+))?(?:\.(?<build>\d+))?)?")
+                If Not Match.Success Then Continue For
+                Dim Version As New Version(CInt(Val(Match.Groups("major").Value)), CInt(Val(Match.Groups("minor").Value)),
+                    CInt(Val(If(Match.Groups("update").Success, Match.Groups("update").Value, Match.Groups("patch").Value))), CInt(Val(Match.Groups("build").Value)))
+                If Version.Major = Preferred AndAlso Range.Contains(Version) Then Candidates.Add((Item.Name, Entry, Version))
+            Next
         Next
-        Logger.Info($"该 Java 需要下载 {FilesToDownload.Count} 个文件，目标文件夹：{BaseDir}")
+        If Candidates.Count = 0 Then Throw New InvalidOperationException($"下载源没有符合范围 {Range} 的 Java {Preferred}。请在启动设置中更换下载源或导入 Java。")
+        Dim Target = Candidates.OrderByDescending(Function(Item) Item.Component = Component).ThenByDescending(Function(Item) Item.Version).First()
+        Dim Manifest = Target.Entry("manifest")
+        Dim Checker As New FileChecker With {.Hash = Manifest("sha1")?.ToString(), .IsJson = True}
+        If Manifest("size") IsNot Nothing Then Checker.ActualSize = CLng(Manifest("size"))
+        If Checker.Hash Is Nothing OrElse Not System.Text.RegularExpressions.Regex.IsMatch(Checker.Hash, "\A[0-9a-fA-F]{40}\z") Then Throw New InvalidDataException("Java 清单缺少有效校验值。")
+        Dim Files = JObject.Parse(ReadJavaMetadata(GetMojangJavaDownloadUrls(Manifest("url").ToString(), Source), Checker, c))("files")
+        Dim Stage = CreateJavaStageDirectory()
+        Try
+            Dim RawFiles = CType(Files, JObject).Properties().Where(Function(Item) Item.Value("downloads")?("raw") IsNot Nothing).ToList()
+            If RawFiles.Count = 0 Then Throw New InvalidDataException("Java 清单中没有可下载文件。")
+            '仅选一个代表性大文件测速，其他运行时文件复用源排序。
+            Dim Sample = RawFiles.OrderByDescending(Function(Item) CLng(Item.Value("downloads")("raw")("size"))).First().Value("downloads")("raw")("url").ToString()
+            Dim SourceOrder = OrderJavaDownloadUrls(GetMojangJavaDownloadUrls(Sample, Source), c).
+                Select(Function(Url) If(New Uri(Url).Host = "bmclapi2.bangbang93.com", 2, 1)).ToArray()
+            Dim Downloads As New List(Of NetFile)
+            For Each Item In RawFiles
+                c.ThrowIfCancellationRequested()
+                Dim Info = Item.Value("downloads")("raw")
+                Dim FileHash = Info("sha1")?.ToString()
+                If Not System.Text.RegularExpressions.Regex.IsMatch(If(FileHash, ""), "\A[0-9a-fA-F]{40}\z") Then Throw New InvalidDataException("Java 文件缺少有效校验值。")
+                Dim Destination = GetJavaRuntimeFilePath(Stage, Item.Name)
+                Downloads.Add(New NetFile(SourceOrder.Select(Function(Id) MapMojangJavaUrl(Info("url").ToString(), Id)), Destination,
+                    New FileChecker With {.Hash = FileHash, .ActualSize = CLng(Info("size"))}))
+            Next
+            RunJavaFileDownload(Downloads, c, p)
+            Return PublishJavaRuntime(Stage, Stage, Range, Preferred, c)
+        Finally
+            CleanupJavaStage(Stage)
+        End Try
+    End Function
 
-        '构建加载器
-        Dim Loader = New LoaderCombo(Of Integer)("下载 Java", {
-            New LoaderDownload("下载 Java 文件", FilesToDownload) With {.ProgressWeight = 10},
-            New LoaderWorker("刷新 Java 列表", JavaListRefreshWorker)
-        }) With {.OnStateChanged =
-        Sub(RawLoader As LoaderCombo(Of Integer))
-            If RawLoader.State = LoadState.Failed OrElse RawLoader.State = LoadState.Canceled Then
-                Logger.Warn($"由于 Java 下载未完成，清理未下载完成的 Java 文件夹：{BaseDir}")
-                DirectoryUtils.Delete(BaseDir)
+    Private Function ReadJavaMetadata(Urls As IEnumerable(Of String), Checker As FileChecker, c As CancellationToken) As String
+        Dim Stage = CreateJavaStageDirectory()
+        Dim Target = IO.Path.Combine(Stage, "metadata.json")
+        Try
+            Using Deadline As New CancellationTokenSource(30000), Linked = CancellationTokenSource.CreateLinkedTokenSource(c, Deadline.Token)
+                Try
+                    RunJavaFileDownload(New List(Of NetFile) From {New NetFile(Urls, Target, If(Checker, New FileChecker With {.IsJson = True}))}, Linked.Token, Nothing)
+                Catch ex As Exception
+                    c.ThrowIfCancellationRequested()
+                    If Deadline.IsCancellationRequested Then Throw New TimeoutException("获取 Java 元数据超时，请更换下载源。", ex)
+                    Throw
+                End Try
+            End Using
+            Return IO.File.ReadAllText(Target)
+        Finally
+            CleanupJavaStage(Stage)
+        End Try
+    End Function
+
+    Private Sub RunJavaFileDownload(Files As List(Of NetFile), c As CancellationToken, p As ProgressProvider)
+        Dim Loader As New LoaderDownload("下载 Java 运行环境", Files)
+        Try
+            Loader.WaitForExit(c:=c, p:=p?.SplitTo(0.85))
+        Finally
+            Loader.Cancel()
+        End Try
+    End Sub
+
+    Private Function InstallJavaArchive(Archive As JavaArchiveDownloadInfo, Range As ValueRange(Of Version), c As CancellationToken, p As ProgressProvider) As Java
+        Dim Stage = CreateJavaStageDirectory()
+        Try
+            Dim ZipPath = IO.Path.Combine(Stage, "runtime.zip")
+            Dim ExtractPath = IO.Path.Combine(Stage, "runtime")
+            Dim Checker As New FileChecker With {.Hash = Archive.Sha256, .ActualSize = Archive.Size}
+            RunJavaFileDownload(New List(Of NetFile) From {New NetFile(Archive.Urls, ZipPath, Checker)}, c, p)
+            c.ThrowIfCancellationRequested()
+            Dim CheckError = Checker.Check(ZipPath)
+            If CheckError IsNot Nothing Then Throw New InvalidDataException("Java 安装包校验失败：" & CheckError)
+            ExtractJavaRuntimeArchive(ZipPath, ExtractPath, c)
+            Dim JavaFiles = IO.Directory.GetFiles(ExtractPath, "java.exe", SearchOption.AllDirectories).
+                Where(Function(File) IO.Path.GetFileName(IO.Path.GetDirectoryName(File)).Equals("bin", StringComparison.OrdinalIgnoreCase)).ToArray()
+            If JavaFiles.Length <> 1 Then Throw New InvalidDataException("Java 安装包中没有唯一的 bin/java.exe。")
+            Dim RuntimeRoot = IO.Directory.GetParent(IO.Path.GetDirectoryName(JavaFiles(0))).FullName
+            Return PublishJavaRuntime(Stage, RuntimeRoot, Range, Archive.JavaVersion.Major, c)
+        Finally
+            CleanupJavaStage(Stage)
+        End Try
+    End Function
+
+    ''' <summary>拒绝压缩包或清单中的绝对路径、设备名、ADS 与目录穿越。</summary>
+    Public Function GetJavaRuntimeFilePath(BaseDir As String, RelativePath As String) As String
+        If String.IsNullOrWhiteSpace(RelativePath) OrElse IO.Path.IsPathRooted(RelativePath) OrElse RelativePath.Contains(":") Then Throw New InvalidDataException("Java 文件路径无效。")
+        Dim Parts = RelativePath.Replace("/", "\").Split("\"c)
+        For Each Part In Parts
+            If Part = "" OrElse Part = "." OrElse Part = ".." OrElse Part.EndsWith(".") OrElse Part.EndsWith(" ") OrElse
+                Part.IndexOfAny(IO.Path.GetInvalidFileNameChars()) >= 0 OrElse
+                System.Text.RegularExpressions.Regex.IsMatch(Part, "\A(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|\z)", System.Text.RegularExpressions.RegexOptions.IgnoreCase) Then
+                Throw New InvalidDataException("Java 文件路径包含不安全的目录名。")
             End If
-        End Sub}
-        Return Loader
+        Next
+        Dim Root = IO.Path.GetFullPath(BaseDir).TrimEnd(IO.Path.DirectorySeparatorChar) & IO.Path.DirectorySeparatorChar
+        Dim Result = IO.Path.GetFullPath(IO.Path.Combine(Root, String.Join("\", Parts)))
+        If Not Result.StartsWith(Root, StringComparison.OrdinalIgnoreCase) Then Throw New InvalidDataException("Java 文件路径超出安装目录。")
+        Return Result
+    End Function
 
+    Public Sub ExtractJavaRuntimeArchive(ZipPath As String, Destination As String, Optional c As CancellationToken = Nothing)
+        Dim TotalSize As Long = 0
+        Using Archive = ZipFile.OpenRead(ZipPath)
+            If Archive.Entries.Count > 20000 Then Throw New InvalidDataException("Java 安装包文件过多。")
+            For Each Entry In Archive.Entries
+                c.ThrowIfCancellationRequested()
+                Dim Relative = Entry.FullName.TrimEnd("/"c, "\"c)
+                Dim Target = GetJavaRuntimeFilePath(Destination, Relative)
+                If ((Entry.ExternalAttributes >> 16) And &HF000) = &HA000 Then Throw New InvalidDataException("Java 安装包不能包含符号链接。")
+                TotalSize += Entry.Length
+                If TotalSize > 2L * 1024 * 1024 * 1024 Then Throw New InvalidDataException("Java 安装包展开后超过大小限制。")
+                If Entry.FullName.EndsWith("/") OrElse Entry.FullName.EndsWith("\") Then
+                    IO.Directory.CreateDirectory(Target)
+                    Continue For
+                End If
+                IO.Directory.CreateDirectory(IO.Path.GetDirectoryName(Target))
+                Using Input = Entry.Open(), Output = New FileStream(Target, FileMode.CreateNew, FileAccess.Write)
+                    Dim Buffer(65535) As Byte
+                    While True
+                        c.ThrowIfCancellationRequested()
+                        Dim Count = Input.Read(Buffer, 0, Buffer.Length)
+                        If Count = 0 Then Exit While
+                        Output.Write(Buffer, 0, Count)
+                    End While
+                End Using
+            Next
+        End Using
+    End Sub
+
+    Private Function CreateJavaStageDirectory() As String
+        Dim Stage = IO.Path.Combine(Paths.AppData, ".minecraft", "brcl-java-staging", Guid.NewGuid().ToString("N"))
+        IO.Directory.CreateDirectory(Stage)
+        Return Stage
+    End Function
+
+    Private Sub CleanupJavaStage(Stage As String)
+        Try
+            If IO.Directory.Exists(Stage) Then IO.Directory.Delete(Stage, True)
+        Catch ex As Exception
+            Logger.Warn(ex, "清理 Java 下载临时目录失败，将保留临时文件")
+        End Try
+    End Sub
+
+    Private Function PublishJavaRuntime(Stage As String, RuntimeRoot As String, Range As ValueRange(Of Version), Preferred As Integer, c As CancellationToken) As Java
+        c.ThrowIfCancellationRequested()
+        Dim Candidate As New Java(IO.Path.Combine(RuntimeRoot, "bin"))
+        If Not Candidate.CheckAsync(c).Run() OrElse Candidate.Version.Major <> Preferred OrElse Not Range.Contains(Candidate.Version) Then Throw New InvalidDataException("下载的 Java 未通过运行或版本兼容性检查。")
+        Dim FinalRoot = IO.Path.Combine(Paths.AppData, ".minecraft", "runtime", $"brcl-java-{Preferred}-{Guid.NewGuid():N}")
+        IO.Directory.CreateDirectory(IO.Path.GetDirectoryName(FinalRoot))
+        c.ThrowIfCancellationRequested()
+        '只发布已验证的全新目录，不覆盖、清理其他 Java 或已在运行的游戏文件。
+        IO.Directory.Move(RuntimeRoot, FinalRoot)
+        Dim Installed As New Java(IO.Path.Combine(FinalRoot, "bin"))
+        If Not Installed.CheckAsync(c).Run() Then Throw New InvalidDataException("Java 安装后验证失败。")
+        Configs.JavaList.Edit(Sub(ByRef List) List.Add(Installed))
+        UpdateJavaLists()
+        Logger.Info($"已安装并自动选择 Java：{Installed}")
+        Return Installed
     End Function
 
 #End Region

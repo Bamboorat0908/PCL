@@ -25,6 +25,7 @@ Friend Module ModExperience
 
     Public Sub SaveUsageChoice(Enabled As Boolean)
         Settings.Set(UsageSetting, Enabled)
+        Settings.Set("BrclCrashMode", If(Enabled, 2, 0))
         'The first explicit refusal must be saved even though False is the default.
         If Not Enabled AndAlso Not Settings.HasSaved(UsageSetting) Then Settings.Entries(UsageSetting).Save()
         If Application.Current IsNot Nothing Then RunInUi(Sub() FrmSetupPrivacy?.RefreshUsagePreference())
@@ -50,6 +51,9 @@ Friend Module ModExperience
 
     Public Sub UsageChanged()
         Try
+            'Cancel uploads even if an old queue file cannot be removed.
+            Settings.Set("BrclCrashMode", If(UsageEnabled(), 2, 0))
+            If Not UsageEnabled() Then CrashUploadSettingChanged()
             SyncLock UsageGate
                 UsageCancel.Cancel()
                 UsageCancel = New Threading.CancellationTokenSource
@@ -110,10 +114,18 @@ Friend Module ModExperience
                 End Try
             End SyncLock
             FlushUsage()
-        Catch
-            'Optional diagnostics must not interfere with launching the game.
+        Catch ex As Exception
+            Logger.Warn(ex, "保存体验改善计划统计失败")
         End Try
     End Sub
+
+    Public Function CreateInkClient(TimeoutSeconds As Integer) As HttpClient
+        Dim Client As New HttpClient(New HttpClientHandler With {.AllowAutoRedirect = False}) With {
+            .Timeout = TimeSpan.FromSeconds(TimeoutSeconds), .MaxResponseContentBufferSize = 16384}
+        'The HTTPS proxy rejects requests without a User-Agent.
+        Client.DefaultRequestHeaders.UserAgent.ParseAdd("BRCL/" & BrclReleaseVersion)
+        Return Client
+    End Function
 
     Public Sub FlushUsage()
         If Not UsageEnabled() OrElse Threading.Interlocked.Exchange(Sending, 1) <> 0 Then Return
@@ -124,7 +136,7 @@ Friend Module ModExperience
                     Token = UsageCancel.Token
                 End SyncLock
                 If Not Directory.Exists(ActivityQueue) Then Return
-                Using Handler As New HttpClientHandler With {.AllowAutoRedirect = False}, Client As New HttpClient(Handler) With {.Timeout = TimeSpan.FromSeconds(12)}
+                Using Client = CreateInkClient(12)
                     For Each Info In New DirectoryInfo(ActivityQueue).GetFiles("*.json").OrderBy(Function(F) F.LastWriteTimeUtc).Take(24)
                         If Token.IsCancellationRequested OrElse Not UsageEnabled() Then Return
                         If Info.LastWriteTimeUtc < DateTime.UtcNow.AddDays(-14) Then
@@ -144,8 +156,10 @@ Friend Module ModExperience
                         End Using
                     Next
                 End Using
-            Catch
-                'Retry on the next timer tick or startup.
+            Catch ex As OperationCanceledException When Not UsageEnabled()
+                'Opting out cancels the in-flight request.
+            Catch ex As Exception
+                Logger.Warn(ex, "体验改善计划统计上传失败，已保留并将在后台重试")
             Finally
                 Threading.Interlocked.Exchange(Sending, 0)
             End Try
@@ -153,6 +167,10 @@ Friend Module ModExperience
     End Sub
 
     Public Sub OfferPendingReports(Optional Explicit As Boolean = False)
+        If Not Explicit Then
+            FlushCrashReports()
+            Return
+        End If
         If Threading.Interlocked.Exchange(ReviewOpen, 1) <> 0 Then Return
         Try
             If CrashMode() = 0 Then Return

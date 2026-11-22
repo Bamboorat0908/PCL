@@ -30,17 +30,18 @@ Friend Module ModCrashReports
     End Function
 
     Public Function CrashMode() As Integer
+        If Not UsageEnabled() Then Return 0
         Dim Mode = Settings.Get(Of Integer)("BrclCrashMode")
-        If Mode = 3 Then Return If(Settings.Get(Of Boolean)("SystemBrclCrashUpload"), 1, 0)
-        Return If(Mode >= 0 AndAlso Mode <= 2, Mode, 0)
+        If Mode = 3 Then Return If(Settings.Get(Of Boolean)("SystemBrclCrashUpload"), 2, 0)
+        Return If(Mode = 1 OrElse Mode = 2, 2, 0)
     End Function
 
     Public Sub InitializeCrashReports()
         Try
             AddHandler AppDomain.CurrentDomain.UnhandledException,
                 Sub(Sender, Args) QueueLauncherCrash(TryCast(Args.ExceptionObject, Exception)?.ToString(), "unhandled_exception")
-            If Settings.Get(Of Integer)("BrclCrashMode") = 3 Then
-                Settings.Set("BrclCrashMode", If(Settings.Get(Of Boolean)("SystemBrclCrashUpload"), 1, 0))
+            If Settings.Get(Of Integer)("BrclCrashMode") <> CrashMode() Then
+                Settings.Set("BrclCrashMode", CrashMode())
             End If
             DeleteQueueFiles(Path.Combine(Base, "Pending"))
             If CrashUploadsEnabled() Then
@@ -95,6 +96,8 @@ Friend Module ModCrashReports
             SyncLock Gate
                 UploadCancel.Cancel()
                 UploadCancel = New Threading.CancellationTokenSource
+                NextAttempt = DateTime.MinValue
+                FailureCount = 0
                 If CrashUploadsEnabled() Then
                     WriteSession()
                 Else
@@ -232,13 +235,7 @@ Friend Module ModCrashReports
                 Report("install") = InstallId()
                 If Session IsNot Nothing Then Report("session") = Session
             End If
-            If CrashMode() = 2 Then
-                Persist(If(Report("install") Is Nothing, Pending, LinkedPending), CStr(Report("id")), ".json", Encoding.UTF8.GetBytes(SealCrashReport(Report)))
-            Else
-                Dim Encoded = ProtectedData.Protect(Encoding.UTF8.GetBytes(Report.ToString()), Nothing, DataProtectionScope.CurrentUser)
-                Persist(DraftFolder, CStr(Report("id")), ".draft", Encoded)
-                Return
-            End If
+            Persist(If(Report("install") Is Nothing, Pending, LinkedPending), CStr(Report("id")), ".json", Encoding.UTF8.GetBytes(SealCrashReport(Report)))
         End SyncLock
         FlushCrashReports()
     End Sub
@@ -283,6 +280,17 @@ Friend Module ModCrashReports
             File.Delete(Filename)
         End SyncLock
         FlushCrashReports()
+    End Sub
+
+    Private Sub QueueAutomaticDrafts(Token As Threading.CancellationToken)
+        For Each Draft In ReviewReports()
+            If Token.IsCancellationRequested OrElse CrashMode() <> 2 Then Return
+            Try
+                ApproveDraft(Draft, ReadDraft(Draft))
+            Catch ex As Exception
+                Logger.Warn(ex, "转换旧版诊断报告失败，已保留报告")
+            End Try
+        Next
     End Sub
 
     Public Sub RevokeUsageLinkage()
@@ -386,13 +394,17 @@ Friend Module ModCrashReports
                     SyncLock Gate
                         Token = UploadCancel.Token
                     End SyncLock
-                    Using Handler As New HttpClientHandler With {.AllowAutoRedirect = False}, Client As New HttpClient(Handler) With {.Timeout = TimeSpan.FromSeconds(15), .MaxResponseContentBufferSize = 16384}
+                    QueueAutomaticDrafts(Token)
+                    Using Client = CreateInkClient(15)
                         SendQueuedReports(Client, Token)
                     End Using
                     FailureCount = 0
-                Catch
+                Catch ex As OperationCanceledException When Not CrashUploadsEnabled()
+                    'Opting out cancels uploads and erases pending reports.
+                Catch ex As Exception
                     FailureCount = Math.Min(8, FailureCount + 1)
                     NextAttempt = DateTime.UtcNow.AddSeconds(15 * Math.Pow(2, FailureCount))
+                    Logger.Warn(ex, "诊断日志上传失败，已保留并将在后台重试")
                     'Leave encrypted reports queued; a later timer/startup retries.
                 Finally
                     Threading.Interlocked.Exchange(Uploading, 0)

@@ -50,6 +50,7 @@ $cases = @(
     @{Name='library-paths'; File='test-library-paths.ps1'; Args=@()},
     @{Name='loader-input'; File='test-loader-input.ps1'; Args=@()},
     @{Name='launch-patch'; File='test-launch-patch.ps1'; Args=@()},
+    @{Name='java-management'; File='test-java-management.ps1'; Args=@()},
     @{Name='button-keyboard'; File='test-button-keyboard.ps1'; Args=@()},
     @{Name='control-cancelled-input'; File='test-control-cancelled-input.ps1'; Args=@()},
     @{Name='control-accessibility'; File='test-control-accessibility.ps1'; Args=@()},

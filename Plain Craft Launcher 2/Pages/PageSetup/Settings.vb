@@ -100,6 +100,8 @@ Public Class Settings
         New Setting("LaunchArgumentInfo", "BRCL"),
         New Setting("LaunchArgumentJavaSelect", "", Source:=Sources.Registry),
         New Setting("LaunchArgumentJavaAll", "[]", Source:=Sources.Registry),
+        New Setting("LaunchJavaAutoSelect", True),
+        New Setting("LaunchJavaDownloadSource", 0),
         New Setting("LaunchArgumentIndie", 0),
         New Setting("LaunchArgumentIndieV2", 4),
         New Setting("LaunchArgumentVisible", 5, Source:=Sources.Registry),

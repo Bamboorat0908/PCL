@@ -1,4 +1,4 @@
-﻿Public Module ModWatcher
+Public Module ModWatcher
 
     '对全体的监视
     Public McWatcherList As New List(Of Watcher)
@@ -96,10 +96,11 @@
             Catch
             End Try
             RecordUsage(SessionId)
-            GameProcess.BeginOutputReadLine()
-            GameProcess.BeginErrorReadLine()
+            PendingLogStreams = 2
             AddHandler GameProcess.OutputDataReceived, AddressOf LogReceived
             AddHandler GameProcess.ErrorDataReceived, AddressOf LogReceived
+            GameProcess.BeginOutputReadLine()
+            GameProcess.BeginErrorReadLine()
 
             '初始化时钟
             RunInNewThread(
@@ -151,42 +152,54 @@
         '日志
         Public WaitingLog As New List(Of String)(1000)
         Private ReadOnly WaitingLogLock As New Object
+        Private PendingLogStreams As Integer
+        Private LogDrainTimeoutStart As Long?
+        Private Const LogDrainTimeoutMs As Integer = 1000
+
         Private Sub LogReceived(sender As Object, e As DataReceivedEventArgs)
             SyncLock WaitingLogLock
-                WaitingLog.Add(e.Data)
+                If e.Data Is Nothing Then
+                    PendingLogStreams -= 1
+                Else
+                    WaitingLog.Add(e.Data)
+                End If
             End SyncLock
         End Sub
         Private Sub TimerLog()
             Try
-                '输出文本
-                Dim Copyed As New List(Of String)
+                Dim HasExited = GameProcess.HasExited
+                Dim Logs As List(Of String) = Nothing
+                Dim LogStreamsEnded As Boolean
                 SyncLock WaitingLogLock
-                    If Not WaitingLog.Any() Then Return
-                    Copyed = WaitingLog
-                    WaitingLog = New List(Of String)(1000)
+                    LogStreamsEnded = PendingLogStreams = 0
+                    If WaitingLog.Count > 0 Then
+                        Logs = WaitingLog
+                        WaitingLog = New List(Of String)(1000)
+                    End If
                 End SyncLock
-                For Each Str As String In Copyed
-                    GameLog(Str)
-                Next
-                If State = MinecraftState.Loading Then ProgressUpdate()
-                '游戏退出检查
-                If GameProcess.HasExited Then
-                    WatcherLog("Minecraft 已退出，返回值：" & GameProcess.ExitCode)
-                    'If Process.ExitCode = 1 Then
-                    '    '返回值为 1，考虑是任务管理器结束
-                    '    WatcherLog("Minecraft 返回值为 1，考虑为任务管理器结束") '并不，崩了照样是 1
-                    '    State = MinecraftState.Ended
-                    'Else
-                    If State = MinecraftState.Loading Then
-                        '窗口未出现
-                        WatcherLog("Minecraft 尚未加载完成，可能已崩溃", LogLevel.Error)
-                        Crashed()
-                    ElseIf GameProcess.ExitCode <> 0 AndAlso State = MinecraftState.Running AndAlso Instance.ReleaseTime.Year >= 2012 Then
-                        '返回值不为 0 且未结束
+                If Logs IsNot Nothing Then
+                    For Each Line In Logs
+                        GameLog(Line)
+                    Next
+                    If State = MinecraftState.Loading Then ProgressUpdate()
+                End If
+
+                '进程退出不依赖新日志。短暂等待尾部日志，以便识别关闭或崩溃标记。
+                If Not HasExited OrElse State = MinecraftState.Canceled Then Return
+                If Not LogStreamsEnded Then
+                    Dim NowMs = GetTimeMs()
+                    If Not LogDrainTimeoutStart.HasValue Then LogDrainTimeoutStart = NowMs
+                    If NowMs - LogDrainTimeoutStart.Value < LogDrainTimeoutMs Then Return
+                End If
+                WatcherLog("Minecraft 已退出，返回值：" & GameProcess.ExitCode)
+                If State = MinecraftState.Loading Then
+                    WatcherLog("Minecraft 尚未加载完成，可能已崩溃", LogLevel.Error)
+                    Crashed()
+                ElseIf State = MinecraftState.Running Then
+                    If GameProcess.ExitCode <> 0 AndAlso Instance.ReleaseTime.Year >= 2012 Then
                         WatcherLog("Minecraft 返回值异常，可能已崩溃", LogLevel.Error)
                         Crashed()
-                    ElseIf State <> MinecraftState.Crashed Then
-                        '正常关闭
+                    Else
                         State = MinecraftState.Ended
                     End If
                 End If
@@ -379,7 +392,6 @@
                     Catch
                     End Try
                     QueueMinecraftCrash(Instance, LatestLog.ToList(), StartedUtc, PID, SessionId, ExitText, SharedInstanceDuringSession, JavaInfo)
-                    If CrashMode() = 1 Then RunInNewThread(Sub() OfferPendingReports(), "询问游戏崩溃报告")
                     WatcherLog("崩溃分析开始")
                     Dim Analyzer As New CrashAnalyzer(Instance)
                     Analyzer.Collect(Instance.PathIndie, LatestLog.ToList)

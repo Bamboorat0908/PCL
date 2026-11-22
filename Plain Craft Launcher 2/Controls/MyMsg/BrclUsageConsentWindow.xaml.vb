@@ -17,14 +17,6 @@ Public Class BrclUsageConsentWindow
 
     Public Sub New()
         InitializeComponent()
-        Select Case CrashMode()
-            Case 1
-                LabCrashMode.Text = "当前状态 · 每次询问"
-            Case 2
-                LabCrashMode.Text = "当前状态 · 自动发送脱敏报告"
-            Case Else
-                LabCrashMode.Text = "当前状态 · 不收集、不发送"
-        End Select
     End Sub
 
     Private Sub FocusChoice() Handles Me.ContentRendered

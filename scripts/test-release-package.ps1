@@ -61,17 +61,48 @@ $stream = $assembly.GetManifestResourceStream('BRCL.Changelog.json')
 $reader = New-Object IO.StreamReader($stream)
 try { $log = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
 $releaseDate = [DateTime]::ParseExact((($Version.Split('.') | Select-Object -First 3) -join '.'),'yyyy.MM.dd',[Globalization.CultureInfo]::InvariantCulture).ToString('yyyy-MM-dd')
-$releaseItems = @($log[0].items)
-if ($log[0].title -ne ('BRCL '+$DisplayVersion) -or $log[0].date -ne $releaseDate -or $log[0].status -ne '版本发布' -or $releaseItems.Count -lt 1 -or @($releaseItems | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count) { throw 'Release changelog is missing or invalid.' }
-if (@($log | Where-Object title -eq 'BRCL 1.0.1.1').Count -ne 1) { throw 'Previous release history was lost.' }
+$structured = $null -ne $log[0].sections
+if ($structured) {
+    $previous = $null
+    foreach ($entry in $log) {
+        if ($entry.title -cnotmatch '^[0-9]+(?:\.[0-9]+){2,3}$' -or $entry.date -cnotmatch '^\d{4}-\d{2}-\d{2}$' -or @($entry.sections).Count -lt 1) { throw 'Invalid version entry in changelog.' }
+        $current = [Version]$entry.title
+        if ($null -ne $previous -and $current -ge $previous) { throw 'Changelog must list unique versions newest first.' }
+        $previous = $current
+        foreach ($section in $entry.sections) {
+            if ([string]::IsNullOrWhiteSpace($section.title) -or @($section.items).Count -lt 1) { throw 'Empty changelog section.' }
+            foreach ($item in $section.items) {
+                if ([string]::IsNullOrWhiteSpace($item.summary) -or [string]::IsNullOrWhiteSpace($item.detail)) { throw 'Empty changelog item.' }
+            }
+        }
+    }
+    $releaseItems = @($log[0].sections | ForEach-Object { $_.items } | ForEach-Object { $_.summary + '。' + $_.detail })
+} else {
+    if ($log[0].status -ne '版本发布') { throw 'Previous-format changelog has an invalid status.' }
+    $releaseItems = @($log[0].items)
+}
+$titlePrefix = if ($structured) { '' } else { 'BRCL ' }
+if ($log[0].title -cne ($titlePrefix + $DisplayVersion) -or $log[0].date -ne $releaseDate -or $releaseItems.Count -lt 1 -or @($releaseItems | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count) { throw 'Release changelog is missing or invalid.' }
+if (@($log | Where-Object title -eq ($titlePrefix + '1.0.1.1')).Count -ne 1) { throw 'Previous release history was lost.' }
 Write-Output 'PASS executable file version, updater revision and embedded release history'
+
 $websiteDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\website\brcl\dist'))
 $websiteRelease = [IO.File]::ReadAllText((Join-Path $websiteDirectory 'release.json')) | ConvertFrom-Json
 if ($websiteRelease.display_version -ne $DisplayVersion -or $websiteRelease.version -ne $Version -or $websiteRelease.build_date -ne $releaseDate) { throw 'Website release version/date differs from the executable.' }
 $websiteItems = @($websiteRelease.release_notes)
 $websiteHtml = [IO.File]::ReadAllText((Join-Path $websiteDirectory 'index.html'))
-$visibleList = [regex]::Match($websiteHtml,'<ul\b[^>]*\bid="release-notes-list"[^>]*>(.*?)</ul>',[Text.RegularExpressions.RegexOptions]::Singleline)
-$visibleItems = @([regex]::Matches($visibleList.Groups[1].Value,'<li>(.*?)</li>',[Text.RegularExpressions.RegexOptions]::Singleline) | ForEach-Object { [Net.WebUtility]::HtmlDecode($_.Groups[1].Value) })
+$regexOptions = [Text.RegularExpressions.RegexOptions]::Singleline
+$latestPattern = if ($structured) { '<!-- release-current:start -->(.*?)<!-- release-current:end -->' } else { '<ul\b[^>]*\bid="release-notes-list"[^>]*>(.*?)</ul>' }
+$visibleList = [regex]::Match($websiteHtml, $latestPattern, $regexOptions)
+$visibleItems = @([regex]::Matches($visibleList.Groups[1].Value, '<li>(.*?)</li>', $regexOptions) | ForEach-Object {
+    [Net.WebUtility]::HtmlDecode(($_.Groups[1].Value -replace '</?strong>', ''))
+})
+if ($structured) {
+    $history = [regex]::Match($websiteHtml, '<!-- release-history:start -->(.*?)<!-- release-history:end -->', $regexOptions)
+    $visibleVersions = @([regex]::Matches($history.Groups[1].Value, '<summary><span>([0-9.]+)</span><time') | ForEach-Object { $_.Groups[1].Value })
+    $expectedVersions = @($log | Select-Object -Skip 1 -ExpandProperty title)
+    if (($visibleVersions -join ',') -cne ($expectedVersions -join ',')) { throw 'Website version history differs from the embedded changelog.' }
+}
 if ($websiteItems.Count -ne $releaseItems.Count -or $visibleItems.Count -ne $releaseItems.Count) { throw 'Website release-note count differs from the embedded changelog.' }
 for ($i=0; $i -lt $releaseItems.Count; $i++) {
     if ($websiteItems[$i] -cne $releaseItems[$i] -or $visibleItems[$i] -cne $releaseItems[$i]) { throw 'Website release notes differ from the embedded changelog.' }

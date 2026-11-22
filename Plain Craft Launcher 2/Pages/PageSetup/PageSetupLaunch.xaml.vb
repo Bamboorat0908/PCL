@@ -391,7 +391,7 @@ PreFin:
                     .FontSize = 13, .Height = 24, .IsScaleAnimationEnabled = False, .Type = MyListItem.CheckType.Clickable,
                     .Tag = JavaEntry, .Title = JavaEntry.ToString}
                 AddHandler JavaItem.MouseLeftButtonUp, Sub(sender As Object, e As MouseButtonEventArgs) e.Handled = True
-                AddHandler JavaItem.Click, Sub() Hint("点击选项右侧的箭头可以进行排序，以控制 BRCL 优先选择哪个 Java！")
+                AddHandler JavaItem.Click, Sub() Hint("关闭自动管理后，可用右侧箭头调整优先级；固定使用某个 Java 请前往版本设置。")
                 ComboAdvanceJava.Items.Add(JavaItem)
                 Dim Buttons As New List(Of MyIconButton)
                 '向上移动按钮

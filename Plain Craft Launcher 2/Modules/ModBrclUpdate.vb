@@ -3,8 +3,8 @@ Imports System.Security.Cryptography
 Imports System.Text
 
 Friend Module ModBrclUpdate
-    Public Const BrclReleaseVersion As String = "1.0.2.11"
-    Public Const BrclUpdateRevision As String = "2026.11.19.2"
+    Public Const BrclReleaseVersion As String = "1.0.2.12"
+    Public Const BrclUpdateRevision As String = "2026.11.23.1"
     Friend Const PrimaryDownloadBase As String = "https://zhushu.homes/BRCL/transfer/"
     Friend Const BackupDownloadBase As String = "https://zhushu.homes/BRCL/transfer-mirror/"
     Private Const PublicKey As String = "<RSAKeyValue><Modulus>6nS0PTj2VkIKGLjI9wbulA94ZVggaX0294sTyPmjOiaiFo5gSS03/P73ChiJNeZFwYSRYYWQNpNEXPVQvrcjZqJbQd/KFfJ8Atnyo/YRyIzsB9fNg6HBXlCG44ePm298uoLTbeVQun5MwrX7Sl+6w3u1PkkdguzgXdrOdrjrO/YcABguF4J+oEeiRDEuqjhf9VwZBbYnUAgXkDI5GBKoZp0+hG5EItkoeblOKZaeH1gI4pC4fPYgsTglMgunFn3UfaI9jBpERxVpWjWOA70ATA9BDculrT0KKGUKPlBCWGVapalUH45+AsB+LRD6n0n/3ZzXpfhuZHS0kNYM87QYQaj52dV50uUldwXLekYA9wyL0MACCtr5TTadxgcGiOqJMaozLEQeVqKFErRBWP4pVltE7bSmVYNxeQE4YecWFVOQe3Zs6YON3DL6I6YX1Q4rTPvZXta1dfMd8cTCa61bw2ZnRM1Pj79/qZYtK5OBIRTTVVnJJ0S9AAQZRUBscUo9</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"

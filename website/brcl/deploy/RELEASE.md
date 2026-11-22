@@ -8,6 +8,12 @@
 4. 对 HTTPS 主源、镜像和兼容入口分别运行 `scripts/verify-public-release.ps1 -BaseUrl <入口>`。对整合包验证完整哈希、Range 请求和跨源拼接。验证报告与 `release-record.json` 归档。
 5. 在单独暂存目录将验证过的 EXE 放入 `website/brcl/dist/download/BRCL.exe`，运行 `website/brcl/tools/prepare-release.py --release-record <记录>`。内置更新日志是官网可见列表、文本下载和 JSON 版本信息的来源。按现有 `deploy.py` 流程激活官网，随后用 `verify.py` 验证公网 TLS、响应头、文件哈希和网页资源。
 
+## 更新日志
+
+在内置的 Changelog.json 首位新增一条正式发布记录。title 只填展示版本号，date 使用 YYYY-MM-DD，按版本号从新到旧排列。每条发布记录用 sections 按功能分组，每组用 items 记录改动。summary 概括玩家可感知的变化，detail 说明影响、使用入口和必要的限制。已随版本发布的阶段性改动补入对应版本。
+
+官网的本次更新、可展开的往期版本和最新版本文本下载由 prepare-release.py 从内置日志生成。release.json 中的 release_notes 继续提供最新版本的纯文本条目。
+
 ## HTTPS 地址
 
 - 主源使用 `/BRCL/transfer/` 下的 Nginx 静态文件。带版本的 ZIP 和 EXE 为不可变文件，脚本校对已验证的 `latest.json` 和 `latest.sig` 后用同一软链接激活清单。

@@ -491,7 +491,6 @@ Public Class FormMain
                 End If
                 If Not WindowClosing Then
                     RecordUsage()
-                    OfferPendingReports()
                 End If
             End If
         End Sub, "初始化", ThreadPriority.Lowest)

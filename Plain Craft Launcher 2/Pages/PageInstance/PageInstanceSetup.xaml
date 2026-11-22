@@ -58,7 +58,7 @@
                             </Grid.ColumnDefinitions>
                             <local:MyComboBox x:Name="ComboArgumentJava" local:SettingService.Key="VersionArgumentJavaV2">
                                 <local:MyComboBoxItem Content="自动选择"
-                                                  ToolTip="由 BRCL 自动分析需要的 Java 版本，如果没有合适的 Java 则自动下载。" />
+                                                  ToolTip="由 BRCL 分析游戏与模组需要的 Java。&#xa;全局设置中开启自动管理时，优先选择推荐主版本，缺少时自动下载并切换；关闭时按 Java 列表顺序选择兼容版本。" />
                                 <local:MyComboBoxItem Content="自动选择指定版本的 Java" 
                                                   ToolTip="手动输入一个 Java 版本范围，BRCL 将选择符合该范围的 Java，如果没有合适的 Java 则自动下载。&#xa;适合部分 Mod 需要特定 Java 版本才能启动的情况。" />
                                 <local:MyComboBoxItem Content="使用版本文件夹中的 Java"

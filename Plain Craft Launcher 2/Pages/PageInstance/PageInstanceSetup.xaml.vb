@@ -426,7 +426,9 @@ PreFin:
                         HintArgumentJava.Theme = MyHint.Themes.Red
                     End If
                 Else
-                    HintArgumentJava.Text = $"将会使用：{JavaWorker.LastResult}"
+                    HintArgumentJava.Text = If(ComboArgumentJava.SelectedIndex = 0 AndAlso Settings.Get(Of Boolean)("LaunchJavaAutoSelect"),
+                        $"本机可用：{JavaWorker.LastResult}{vbCrLf}启动时会按推荐主版本重新检查，必要时自动下载并选择。",
+                        $"将会使用：{JavaWorker.LastResult}")
                     HintArgumentJava.Theme = MyHint.Themes.Blue
                 End If
             Case 1
@@ -451,10 +453,12 @@ PreFin:
                     HintArgumentJava.Text = $"正在查找 Java……"
                     HintArgumentJava.Theme = MyHint.Themes.Blue
                 ElseIf JavaWorker.LastResult Is Nothing Then
-                    HintArgumentJava.Text = $"你的电脑上没有任何 Java 符合该版本范围！{vbCrLf}如果 Mojang 提供了对应版本的 Java，BRCL 会在启动游戏时自动下载。"
+                    HintArgumentJava.Text = $"你的电脑上没有任何 Java 符合该版本范围！{vbCrLf}BRCL 会在启动时尝试从所选下载源获取对应的 Java。"
                     HintArgumentJava.Theme = MyHint.Themes.Yellow
                 Else
-                    HintArgumentJava.Text = $"将会使用：{JavaWorker.LastResult}"
+                    HintArgumentJava.Text = If(Settings.Get(Of Boolean)("LaunchJavaAutoSelect"),
+                        $"本机可用：{JavaWorker.LastResult}{vbCrLf}启动时会在指定范围内按推荐主版本重新检查。",
+                        $"将会使用：{JavaWorker.LastResult}")
                     HintArgumentJava.Theme = MyHint.Themes.Blue
                 End If
             Case 3

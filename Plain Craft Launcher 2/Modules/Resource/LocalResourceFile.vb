@@ -182,6 +182,12 @@ Public Class LocalResourceFile
         End Get
     End Property
 
+    Private Function GetHashCacheKey(Platform As String) As String
+        Dim FileStamp = $"{File.FullName}-{File.LastWriteTimeUtc.Ticks}-{File.Length}-{Platform}"
+        '旧键没有包含完整修改时间，不能继续信任旧缓存。
+        Return "v2-" & FileStamp.GetStableHashCode().ToString()
+    End Function
+
     ''' <summary>
     ''' 获取用于 CurseForge 信息获取的 Hash 值（MurmurHash2）。
     ''' </summary>
@@ -189,7 +195,7 @@ Public Class LocalResourceFile
         Get
             If _CurseForgeHash Is Nothing Then
                 '读取缓存
-                Dim CacheKey As String = $"{EnabledFullName}-{File.LastWriteTime.ToLongTimeString}-{File.Length}-C".GetStableHashCode()
+                Dim CacheKey As String = GetHashCacheKey("C")
                 Dim Cached As String = ReadIni(PathTemp & "Cache\ModHash.ini", CacheKey)
                 If Cached <> "" AndAlso Cached.RegexCheck("^\d+$") Then '#5062
                     _CurseForgeHash = Cached
@@ -244,7 +250,7 @@ Public Class LocalResourceFile
         Get
             If _ModrinthHash Is Nothing Then
                 '读取缓存
-                Dim CacheKey As String = $"{EnabledFullName}-{File.LastWriteTime.ToLongTimeString}-{File.Length}-M".GetStableHashCode()
+                Dim CacheKey As String = GetHashCacheKey("M")
                 Dim Cached As String = ReadIni(PathTemp & "Cache\ModHash.ini", CacheKey)
                 If Cached <> "" Then
                     _ModrinthHash = Cached
