@@ -2,6 +2,8 @@
 
 	<PropertyGroup>
 		<TargetFramework>net48</TargetFramework>
+		<AssemblyName>BRCL.Core</AssemblyName>
+		<RootNamespace>BRCL.Core</RootNamespace>
 		<OutputType>Library</OutputType>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<OutDir>bin\</OutDir>

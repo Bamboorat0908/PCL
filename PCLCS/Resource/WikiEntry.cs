@@ -1,4 +1,4 @@
-namespace PCLCS;
+namespace BRCL.Core;
 
 /// <summary>
 /// MC 百科条目。

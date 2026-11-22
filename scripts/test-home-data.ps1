@@ -6,7 +6,7 @@ Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Net.Http
 [void][Reflection.Assembly]::LoadFrom((Join-Path $projectRoot 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $projectRoot "$OutputDirectory\BRCL.exe"))
-$page = $assembly.GetType('PCL.PageLaunchRight', $true)
+$page = $assembly.GetType('BRCL.PageLaunchRight', $true)
 $validate = $page.GetMethod('ValidateHomeData', [Reflection.BindingFlags]'NonPublic, Static')
 if ($null -eq $validate) { throw 'Home validation entry point missing' }
 $valid = '{"server":{"pack":"TRM","season_label":"Season 9"},"season":{"day":23},"status":{"alive":true,"player_count":0,"max_players":100}}'

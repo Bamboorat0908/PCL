@@ -2,7 +2,7 @@ Imports System.Collections.ObjectModel
 Imports System.Globalization
 Imports System.Net.Sockets
 Imports System.Reflection
-Imports PCL
+Imports BRCL
 
 Public Class PageLinkMain
     Private Const INVITE_CODE_VERSION As Integer = 2

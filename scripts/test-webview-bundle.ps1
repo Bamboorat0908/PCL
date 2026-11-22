@@ -2,7 +2,7 @@
 param([string]$Exe = (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\bin\BRCL.exe'))
 $ErrorActionPreference = 'Stop'
 $assembly = [Reflection.Assembly]::LoadFrom([IO.Path]::GetFullPath($Exe))
-$resources = New-Object Resources.ResourceManager('PCL.Resources', $assembly)
+$resources = New-Object Resources.ResourceManager('BRCL.Resources', $assembly)
 $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $nativeBytes = @{}
 [xml]$definition = Get-Content -LiteralPath (Join-Path $project 'BRCL.vbproj') -Raw -Encoding UTF8

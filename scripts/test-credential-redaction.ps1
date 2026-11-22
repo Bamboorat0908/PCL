@@ -6,8 +6,8 @@ $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $assembly = [Reflection.Assembly]::LoadFrom([IO.Path]::GetFullPath($ExePath))
 $flags = [Reflection.BindingFlags]'Public,NonPublic,Static'
 $methods = @(
-    $assembly.GetType('PCL.BrclErrorPresentation', $true).GetMethod('SanitizeBrclDetails', $flags),
-    $assembly.GetType('PCL.ModCrashReports', $true).GetMethod('RedactCrashText', $flags)
+    $assembly.GetType('BRCL.BrclErrorPresentation', $true).GetMethod('SanitizeBrclDetails', $flags),
+    $assembly.GetType('BRCL.ModCrashReports', $true).GetMethod('RedactCrashText', $flags)
 )
 $fixtures = @(
     @{Text='{"password":"private first second","message":"keep detail"}'; Secrets=@('private','first','second')},

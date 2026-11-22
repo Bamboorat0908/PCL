@@ -1,4 +1,4 @@
-namespace PCLCS;
+namespace BRCL.Core;
 public static class Configs {
 
     /// <summary>当前 Java 相关配置的版本。0 代表尚未从老的 Settings 系统中迁移。</summary>

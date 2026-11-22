@@ -5,10 +5,10 @@ $project=Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$type=$assembly.GetType('PCL.MyButton',$true)
+$assembly.GetType('BRCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$type=$assembly.GetType('BRCL.MyButton',$true)
 $button=[Activator]::CreateInstance($type)
 $button.Text='Keyboard test'
 $script:clicks=0

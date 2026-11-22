@@ -9,13 +9,13 @@ New-Item -ItemType Directory -Path $out | Out-Null
 [Reflection.Assembly]::LoadFrom((Join-Path $src 'Resources\ThrottleDebounce.dll')) | Out-Null
 # Reflection does not execute the launcher's embedded assembly resolver. Resolve
 # its unchanged build dependencies explicitly when verifying a copied single EXE.
-foreach ($dependency in 'MeloongCore.dll','MeloongCore.Wpf.dll','PCLCS.dll') {
+foreach ($dependency in 'MeloongCore.dll','MeloongCore.Wpf.dll','BRCL.Core.dll') {
     [Reflection.Assembly]::LoadFrom((Join-Path $src ('bin\' + $dependency))) | Out-Null
 }
 $a = [Reflection.Assembly]::LoadFrom([IO.Path]::GetFullPath($ExePath))
-$diag = $a.GetType('PCL.ModCrashReports',$true)
-$activity = $a.GetType('PCL.ModExperience',$true)
-$settings = $a.GetType('PCL.Settings').GetField('Entries').GetValue($null)
+$diag = $a.GetType('BRCL.ModCrashReports',$true)
+$activity = $a.GetType('BRCL.ModExperience',$true)
+$settings = $a.GetType('BRCL.Settings').GetField('Entries').GetValue($null)
 $flags = [Reflection.BindingFlags]'Public,NonPublic,Static'
 foreach ($key in 'BrclCrashMode','SystemBrclCrashUpload') {
     # Registry-backed client settings stay in the isolated test profile.

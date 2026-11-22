@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
-$store = $assembly.GetType('PCL.BrclDailyFortune', $true)
+$store = $assembly.GetType('BRCL.BrclDailyFortune', $true)
 $read = $store.GetMethod('ReadForDate')
 $draw = $store.GetMethod('DrawForDate')
 $choose = $store.GetMethod('ChooseGrade', [Reflection.BindingFlags]'NonPublic,Static')

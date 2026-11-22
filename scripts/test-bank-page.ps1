@@ -7,11 +7,11 @@ $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launc
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application', $true), $true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application', $true), $true)
 $app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null, 1, $null)
-$module = $assembly.GetType('PCL.BrclBank', $true)
-$type = $assembly.GetType('PCL.PageBank', $true)
+$assembly.GetType('BRCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null, 1, $null)
+$module = $assembly.GetType('BRCL.BrclBank', $true)
+$type = $assembly.GetType('BRCL.PageBank', $true)
 $flags = [Reflection.BindingFlags]'NonPublic,Instance'
 $page = [Activator]::CreateInstance($type)
 $player = '11111111-1111-1111-1111-111111111111'

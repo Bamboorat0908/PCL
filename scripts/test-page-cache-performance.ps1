@@ -6,12 +6,12 @@ if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $static = [Reflection.BindingFlags]'NonPublic,Static'
 $instance = [Reflection.BindingFlags]'NonPublic,Instance'
-$assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$homeType = $assembly.GetType('PCL.PageLaunchRight',$true)
+$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$homeType = $assembly.GetType('BRCL.PageLaunchRight',$true)
 $prepareHome = $homeType.GetMethod('PrepareHomeData',$static)
 $original = [Newtonsoft.Json.Linq.JObject]::Parse('{"server":{"pack":"TRM","season_label":"Season 9"},"status":{"alive":true,"player_count":2,"max_players":100,"players":["A","B"],"rss_kb":2097152},"season":{"day":23},"updated_at":"2026-11-13T12:00:00","history":{"2026-11-13":5},"playtime":[{"name":"A","seconds":100}]}')
 $small = $prepareHome.Invoke($null,[object[]](,$original))
@@ -21,7 +21,7 @@ $small['server']['pack'] = [Newtonsoft.Json.Linq.JValue]::new('changed')
 if ($original['server']['pack'].Value -ne 'TRM') { throw 'Home cache aliases source data' }
 Write-Output 'PASS home cache retains only displayed metadata without aliasing the full response'
 
-$pageType = $assembly.GetType('PCL.PageBRS',$true)
+$pageType = $assembly.GetType('BRCL.PageBRS',$true)
 $page = [Activator]::CreateInstance($pageType)
 $apply = $pageType.GetMethod('ApplyData',$instance)
 $data = [Newtonsoft.Json.Linq.JObject]::Parse('{"status":{"alive":true,"player_count":2,"players":["A","B"],"motd":"Same MOTD"},"history":{"2026-11-13":5}}')
@@ -50,7 +50,7 @@ $applyTimer = $pageType.GetField('ApplyTimer',$instance).GetValue($page)
 if ($applyTimer.IsEnabled) { throw 'Unloaded page retained its pending-apply timer' }
 Write-Output 'PASS late disk snapshots cannot overwrite live results or refresh unloaded controls'
 
-$avatar = $assembly.GetType('PCL.BrsPlayerAvatar',$true)
+$avatar = $assembly.GetType('BRCL.BrsPlayerAvatar',$true)
 $entryType = $avatar.GetNestedType('AvatarEntry',[Reflection.BindingFlags]::NonPublic)
 $cache = $avatar.GetField('Cache',$static).GetValue($null)
 $trim = $avatar.GetMethod('TrimCacheForInsert',$static)

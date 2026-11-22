@@ -5,7 +5,7 @@ $project=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launche
 if(-not $BuildDirectory){$BuildDirectory=Join-Path $project 'bin'}
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $startup=$app.GetType().GetMethod('Application_Startup',[Reflection.BindingFlags]'NonPublic,Instance')
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler],$app,$startup))
@@ -24,7 +24,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Windows.Threading;
-using PCL;
+using BRCL;
 
 public sealed class RecoveryServer : IDisposable {
     private readonly TcpListener listener = new TcpListener(IPAddress.Loopback, 0);
@@ -145,7 +145,7 @@ public static class DownloadRecoveryChecks {
                 for(int i=0;i<expected.Length;i++) expected[i]=0x5a;
                 string digest;
                 using(var sha=SHA256.Create()) digest=BitConverter.ToString(sha.ComputeHash(expected)).Replace("-","");
-                var updater=typeof(ModNet).Assembly.GetType("PCL.ModBrclUpdate",true);
+                var updater=typeof(ModNet).Assembly.GetType("BRCL.ModBrclUpdate",true);
                 var download=updater.GetMethod("DownloadUpdatePackage",BindingFlags.Static|BindingFlags.NonPublic);
                 string updateFile=Path.Combine(stage,"update.zip");
                 download.Invoke(null,new object[]{new[]{root+"/update-broken/",root+"/update-backup/"},"release.zip",updateFile,(long)expected.Length,digest});

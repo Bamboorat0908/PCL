@@ -1,6 +1,6 @@
 <local:MyPageRight xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                   xmlns:local="clr-namespace:PCL" x:Class="PageSpeedRight" PanScroll="PanBack">
+                   xmlns:local="clr-namespace:BRCL" x:Class="PageSpeedRight" PanScroll="PanBack">
     <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
         <StackPanel Margin="25,25,25,15" Grid.IsSharedSizeScope="True">
             <!-- PanMain 仅承载任务卡片，保持 BRCL 的完成/取消检测逻辑。 -->

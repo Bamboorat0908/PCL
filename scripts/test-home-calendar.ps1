@@ -5,13 +5,13 @@ $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application', $true), $true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application', $true), $true)
 $app.InitializeComponent()
 $startup = $app.GetType().GetMethod('Application_Startup', [Reflection.BindingFlags]'NonPublic,Instance')
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler], $app, $startup))
 [Windows.Application].GetField('_startupUri', [Reflection.BindingFlags]'NonPublic,Instance').SetValue($app, $null)
-$assembly.GetType('PCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null, 1, $null)
-$pageType = $assembly.GetType('PCL.PageLaunchRight', $true)
+$assembly.GetType('BRCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null, 1, $null)
+$pageType = $assembly.GetType('BRCL.PageLaunchRight', $true)
 $page = [Activator]::CreateInstance($pageType)
 $flags = [Reflection.BindingFlags]'NonPublic,Instance'
 $calendar = $pageType.GetMethod('UpdateCalendar', $flags)
@@ -132,7 +132,7 @@ $failingPage.FindName('BtnDrawFortune').RaiseEvent([Windows.RoutedEventArgs]::ne
 Wait-Fortune $failingPage
 if ($failingPage.FindName('PanFortuneResult').Visibility -ne 'Collapsed' -or -not $failingPage.FindName('BtnDrawFortune').IsEnabled -or $failingPage.FindName('BtnDrawFortune').Content -ne '重试抽签') { throw 'Save failure revealed an unsaved fortune or consumed the draw' }
 Write-Output 'PASS save failure stays retryable and does not reveal a result'
-$motionSetting = $assembly.GetType('PCL.Settings').GetField('Entries').GetValue($null)['UiReduceMotion']
+$motionSetting = $assembly.GetType('BRCL.Settings').GetField('Entries').GetValue($null)['UiReduceMotion']
 $previousMotion = [bool]$motionSetting.GetCache($null)
 try {
     $motionSetting.Set($true, $null)
@@ -192,7 +192,7 @@ foreach ($theme in @('dark', 'light')) {
       foreach ($height in @(500, 548, 650)) {
        foreach ($fortuneState in @('undrawn', 'drawn')) {
         $sampleFortune = if ($fortuneState -eq 'drawn') {
-            [Activator]::CreateInstance($assembly.GetType('PCL.BrclFortuneResult'), [object[]]@($today, '大吉', '愿你总有重新出发的勇气，也有歇一歇的底气。'))
+            [Activator]::CreateInstance($assembly.GetType('BRCL.BrclFortuneResult'), [object[]]@($today, '大吉', '愿你总有重新出发的勇气，也有歇一歇的底气。'))
         } else { $null }
         $pageType.GetMethod('ShowFortune', $flags).Invoke($page, [object[]]@($sampleFortune, $null)) | Out-Null
        for ($settle = 0; $settle -lt 4; $settle++) {

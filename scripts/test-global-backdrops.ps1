@@ -23,15 +23,15 @@ $project=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launche
 if(-not $BuildDirectory){$BuildDirectory=Join-Path $project 'bin'}
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $startup=$app.GetType().GetMethod('Application_Startup',[Reflection.BindingFlags]'NonPublic,Instance')
 if($startup){$app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler],$app,$startup))}
 $unhandled=$app.GetType().GetMethod('Application_DispatcherUnhandledException',[Reflection.BindingFlags]'NonPublic,Instance')
 if($unhandled){$app.remove_DispatcherUnhandledException([Delegate]::CreateDelegate([Windows.Threading.DispatcherUnhandledExceptionEventHandler],$app,$unhandled))}
 [Windows.Application].GetField('_startupUri',[Reflection.BindingFlags]'NonPublic,Instance').SetValue($app,$null)
-$type=$assembly.GetType('PCL.IndustrialBackdrop',$true)
-$pageType=$assembly.GetType('PCL.MyPageRight',$true)
+$type=$assembly.GetType('BRCL.IndustrialBackdrop',$true)
+$pageType=$assembly.GetType('BRCL.MyPageRight',$true)
 $backdrop=[Activator]::CreateInstance($type)
 $lightThemeProperty=$type.GetField('IsLightThemeProperty',[Reflection.BindingFlags]'Public,Static')
 $transitionProperty=$type.GetField('TransitionProgressProperty',[Reflection.BindingFlags]'Public,Static')
@@ -171,11 +171,11 @@ if($mutated.Hash -eq $beforeMutation.Hash -or $mutated.Hash -ne $replaced.Hash){
 $backdrop.SetResourceReference($lineProperty,'ColorBrush2')
 Write-Output 'PASS an in-place palette change matches a fresh scene drawn with the same brush'
 
-foreach($browserPage in @(@('PCL.PageStock','ViewWeb'),@('PCL.PageMap','ViewMap'))){
+foreach($browserPage in @(@('BRCL.PageStock','ViewWeb'),@('BRCL.PageMap','ViewMap'))){
     $page=[Activator]::CreateInstance($assembly.GetType($browserPage[0],$true))
     $view=$page.FindName($browserPage[1])
     if($null -eq $view -or $view.CoreWebView2 -ne $null -or $page.IsLoaded){throw ('Browser frame started network initialization while unmounted: '+$browserPage[0])}
-    if($browserPage[0] -eq 'PCL.PageStock' -and $null -eq $page.FindName('PanCover')){throw 'Stock loading cover was removed'}
+    if($browserPage[0] -eq 'BRCL.PageStock' -and $null -eq $page.FindName('PanCover')){throw 'Stock loading cover was removed'}
 }
 if($app.Windows.Count -ne 0 -or $backdrop.IsLoaded){throw 'Offscreen verification opened a visible application window'}
 Write-Output 'PASS framed stock and map retain their browser controls without starting WebView2'
@@ -221,7 +221,7 @@ try{
     # An offscreen host can skip its normal compositor render. Capture after
     # Loaded/initial layout so the transition has the same preceding drawing as a visible window.
     $baselineDark=Render-Backdrop 'PageNews' 960 540
-    $motionProperty=$assembly.GetType('PCL.ModAnimation',$true).GetProperty('UiMotionEnabled',[Reflection.BindingFlags]'Public,Static')
+    $motionProperty=$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('UiMotionEnabled',[Reflection.BindingFlags]'Public,Static')
     $motionEnabled=[bool]$motionProperty.GetValue($null,$null)
     Set-BackdropTheme light
     if($motionEnabled){
@@ -292,7 +292,7 @@ try{
         if($backdrop.TransitionProgress -ne 1 -or $backdrop.HasAnimatedProperties){throw 'Background animates while reduced motion or system animations are disabled'}
         Write-Output 'PASS reduced/system motion preference disables theme animation; timed-animation branch skipped without changing user preferences'
     }
-    $setThemeBrush=$assembly.GetType('PCL.ModSecret',$true).GetMethod('SetThemeBrush',[Reflection.BindingFlags]'NonPublic,Static')
+    $setThemeBrush=$assembly.GetType('BRCL.ModSecret',$true).GetMethod('SetThemeBrush',[Reflection.BindingFlags]'NonPublic,Static')
     if($null -eq $setThemeBrush){throw 'Global theme brush transition helper missing'}
     # Application resources freeze publishable Freezables as they are inserted.
     # A detached dictionary misses this production behavior and used to let the

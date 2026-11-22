@@ -5,12 +5,12 @@ $project=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launche
 if(-not $BuildDirectory){$BuildDirectory=Join-Path $project 'bin'}
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $startup=$app.GetType().GetMethod('Application_Startup',[Reflection.BindingFlags]'NonPublic,Instance')
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler],$app,$startup))
 [Windows.Application].GetField('_startupUri',[Reflection.BindingFlags]'NonPublic,Instance').SetValue($app,$null)
-$assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
 New-Item -ItemType Directory -Path $PreviewDirectory -Force | Out-Null
 
 [xml]$icons=Get-Content (Join-Path $project 'Resources\IndustrialIcons.xaml') -Raw -Encoding UTF8
@@ -26,7 +26,7 @@ foreach($key in $keys){
 }
 Write-Output ('PASS {0} embedded vector icon pairs are nonempty and equivalent' -f $keys.Count)
 
-$button=[Activator]::CreateInstance($assembly.GetType('PCL.MyButton',$true))
+$button=[Activator]::CreateInstance($assembly.GetType('BRCL.MyButton',$true))
 $button.Text='Action'
 $button.Height=30
 $button.HorizontalAlignment='Left'
@@ -59,13 +59,13 @@ if($null -ne $fore.Clip -or $fore.Opacity -ne 1){throw 'Previous selected catego
 $button.Icon=$null
 Layout-Button
 if([Math]::Abs($button.DesiredSize.Width-$textOnlyWidth) -gt 0.1){throw 'Plain text buttons reserve an empty icon slot'}
-$inlineButton=[Activator]::CreateInstance($assembly.GetType('PCL.MyButton',$true))
+$inlineButton=[Activator]::CreateInstance($assembly.GetType('BRCL.MyButton',$true))
 $inlineButton.Inlines.Add([Windows.Documents.Run]::new('Inline action'))
 $inlinePeer=[Windows.Automation.Peers.UIElementAutomationPeer]::CreatePeerForElement($inlineButton)
 if($inlinePeer.GetName() -ne 'Inline action'){throw 'Inline button lost its accessible label'}
 Write-Output 'PASS optional icons preserve plain-button width, selected feedback resets, and inline labels stay accessible'
 
-$newPage={param($name) [Activator]::CreateInstance($assembly.GetType('PCL.'+$name,$true))}
+$newPage={param($name) [Activator]::CreateInstance($assembly.GetType('BRCL.'+$name,$true))}
 $news=& $newPage 'PageNews'
 $settings=& $newPage 'PageSetupLaunch'
 $privacy=& $newPage 'PageSetupPrivacy'
@@ -87,7 +87,7 @@ if (-not $privacy.FindName('CheckUsageStatistics') -or -not $privacy.FindName('B
 Write-Output 'PASS launch settings expose ExpandCollapse and privacy has independent consent and diagnostic controls'
 
 $flags=[Reflection.BindingFlags]'Instance,NonPublic'
-$assembly.GetType('PCL.PageMap').GetMethod('ShowUnavailable',$flags).Invoke($map,@('Isolated offline layout sample','Map unavailable')) | Out-Null
+$assembly.GetType('BRCL.PageMap').GetMethod('ShowUnavailable',$flags).Invoke($map,@('Isolated offline layout sample','Map unavailable')) | Out-Null
 if($map.FindName('BtnBrowser').Visibility -ne 'Visible'){throw 'Map has no browser fallback'}
 
 function Set-Theme([string]$theme){

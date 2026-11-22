@@ -5,13 +5,13 @@ $project=Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $project "$OutputDirectory\BRCL.exe"))
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $app.Resources['ColorBrushCardLine']=[Windows.Media.SolidColorBrush]::new([Windows.Media.Color]::FromRgb(55,64,65))
-$assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$builder=$assembly.GetType('PCL.BrclErrorPresentation',$true).GetMethod('BuildBrclError')
-$converterType=$assembly.GetType('PCL.ModMain+MyMsgBoxConverter',$true)
-$controlType=$assembly.GetType('PCL.MyMsgText',$true)
+$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$builder=$assembly.GetType('BRCL.BrclErrorPresentation',$true).GetMethod('BuildBrclError')
+$converterType=$assembly.GetType('BRCL.ModMain+MyMsgBoxConverter',$true)
+$controlType=$assembly.GetType('BRCL.MyMsgText',$true)
 New-Item -ItemType Directory -Path $PreviewDirectory -Force | Out-Null
 function Render-Element($element,[double]$width,[string]$name) {
     $element.InvalidateMeasure()
@@ -71,7 +71,7 @@ $callbacks.Btn2_Click()
 $callbacks.Btn3_Click()
 if ($script:callbackCount -ne 3 -or $converter.IsExited) {throw 'Dialog action callback behavior changed'}
 Write-Output 'PASS three existing callbacks retain their non-closing behavior'
-$startup=$assembly.GetType('PCL.BrclErrorWindow',$true)
+$startup=$assembly.GetType('BRCL.BrclErrorWindow',$true)
 $fatal=$builder.Invoke($null,[object[]]@('startup',[InvalidOperationException]::new('Example fatal diagnostic'),$null,$true))
 $constructor=$startup.GetConstructors([Reflection.BindingFlags]'NonPublic, Instance')[0]
 $window=$constructor.Invoke([object[]]@($fatal,$true))

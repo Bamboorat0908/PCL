@@ -5,7 +5,7 @@ $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launc
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 # Pump only the test dispatcher; do not enter the launcher's real Startup path.
 $startupMethod = $app.GetType().GetMethod('Application_Startup',[Reflection.BindingFlags]'NonPublic,Instance')
@@ -25,7 +25,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
-using PCL;
+using BRCL;
 public static class UiPerformanceChecks {
     static readonly Type Engine = typeof(ModAnimation);
     static readonly BindingFlags PrivateStatic = BindingFlags.NonPublic | BindingFlags.Static;
@@ -96,7 +96,7 @@ public static class UiPerformanceChecks {
         Require(obsolete==0 && tail==1,"Dictionary mutation skipped or executed the wrong callback");
         passed.Add("PASS cross-group cancellation preserves the remaining frame");
 
-        foreach (var pair in new [] { new [] {"PCL.PageSetupLaunch","RamTimer"},new [] {"PCL.PageInstanceSetup","RamTimer"},new [] {"PCL.PageSpeedLeft","WatcherTimer"} }) {
+        foreach (var pair in new [] { new [] {"BRCL.PageSetupLaunch","RamTimer"},new [] {"BRCL.PageInstanceSetup","RamTimer"},new [] {"BRCL.PageSpeedLeft","WatcherTimer"} }) {
             var type=Engine.Assembly.GetType(pair[0],true);
             var page=(FrameworkElement)Activator.CreateInstance(type);
             var timer=(DispatcherTimer)type.GetField(pair[1],BindingFlags.NonPublic|BindingFlags.Instance).GetValue(page);
@@ -139,7 +139,7 @@ public static class UiPerformanceChecks {
         window.Show(); Pump(100);
         try {
             var init=view.EnsureCoreWebView2Async(env.Result); Complete(init);
-            var activityType=Engine.Assembly.GetType("PCL.BrclWebViewActivity",true);
+            var activityType=Engine.Assembly.GetType("BRCL.BrclWebViewActivity",true);
             var activity=Activator.CreateInstance(activityType,BindingFlags.Public|BindingFlags.Instance,null,new object[]{host,view},null);
             view.NavigateToString("<html><body>browser lifecycle test<script>window.marker='preserved';window.ticks=0;setInterval(function(){window.ticks++},50)</script></body></html>");
             Pump(300);
@@ -167,7 +167,7 @@ public static class UiPerformanceChecks {
             activityType.GetMethod("SetVisibility").Invoke(activity,new object[]{Visibility.Visible}); Pump(100);
             Require(view.Visibility==Visibility.Visible,"Ready browser did not become visible");
             passed.Add("PASS restoring a window respects a newer loading or error state");
-            var runtime=Engine.Assembly.GetType("PCL.BrclWebViewRuntime",true);
+            var runtime=Engine.Assembly.GetType("BRCL.BrclWebViewRuntime",true);
             var environmentField=runtime.GetField("SharedEnvironment",BindingFlags.NonPublic|BindingFlags.Static);
             environmentField.SetValue(null,env);
             var getEnvironment=runtime.GetMethod("GetEnvironmentAsync");

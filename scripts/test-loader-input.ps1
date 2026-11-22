@@ -5,9 +5,9 @@ $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\ThrottleDebounce.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
-$generic = $assembly.GetType('PCL.ModLoader+LoaderTask`2',$true).MakeGenericType([object],[object])
+$generic = $assembly.GetType('BRCL.ModLoader+LoaderTask`2',$true).MakeGenericType([object],[object])
 $inputField = $generic.GetField('InputDelegate',[Reflection.BindingFlags]'NonPublic,Instance')
 function Check($condition, [string]$message) {
     if (-not $condition) { throw $message }

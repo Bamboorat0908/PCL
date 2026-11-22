@@ -11,10 +11,10 @@ else { $application = [Windows.Application]::Current }
 $application.Resources['ColorBrushSemiTransparent'] = [Windows.Media.Brushes]::Transparent
 $application.Resources['ColorBrush8'] = New-Object Windows.Media.SolidColorBrush ([Windows.Media.Color]::FromRgb(19,17,32))
 $application.Resources['ColorBrush5'] = [Windows.Media.Brushes]::MediumPurple
-$animation = $assembly.GetType('PCL.ModAnimation', $true)
+$animation = $assembly.GetType('BRCL.ModAnimation', $true)
 $animation.GetProperty('AniControlEnabled').SetValue($null, 1, $null)
-$buttonType = $assembly.GetType('PCL.MyIconButton', $true)
-$themeType = $assembly.GetType('PCL.MyIconButton+Themes', $true)
+$buttonType = $assembly.GetType('BRCL.MyIconButton', $true)
+$themeType = $assembly.GetType('BRCL.MyIconButton+Themes', $true)
 $button = [Activator]::CreateInstance($buttonType)
 $pathProperty = $buttonType.GetProperty('Path', [Reflection.BindingFlags]'Instance, Public, NonPublic')
 $icon = $pathProperty.GetValue($button, $null)

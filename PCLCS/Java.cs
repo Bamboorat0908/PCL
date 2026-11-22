@@ -1,4 +1,4 @@
-namespace PCLCS;
+namespace BRCL.Core;
 
 /// <summary>
 /// 单个 Java 的实例。

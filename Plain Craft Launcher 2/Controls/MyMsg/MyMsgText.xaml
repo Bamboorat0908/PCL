@@ -1,5 +1,5 @@
 <Grid x:Class="MyMsgText" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:my="clr-namespace:PCL"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:my="clr-namespace:BRCL"
  RenderTransformOrigin="0.5,0.5" UseLayoutRounding="True" SnapsToDevicePixels="True"
  MinWidth="340" MaxWidth="640" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" KeyboardNavigation.TabNavigation="Cycle">
  <Grid.RenderTransform><TransformGroup><RotateTransform x:Name="TransformRotate" Angle="0"/><TranslateTransform x:Name="TransformPos" Y="8"/></TransformGroup></Grid.RenderTransform>

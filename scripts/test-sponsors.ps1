@@ -6,7 +6,7 @@ $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launc
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
-$pageType = $assembly.GetType('PCL.PageSetupSponsors',$true)
+$pageType = $assembly.GetType('BRCL.PageSetupSponsors',$true)
 $build = $pageType.GetMethod('BuildSponsors',[Reflection.BindingFlags]'NonPublic,Static')
 function Parse-Sponsors([string]$json) {
     $data = [Newtonsoft.Json.Linq.JObject]::Parse($json)
@@ -36,7 +36,7 @@ foreach ($json in @('{}','{"sponsors":null}','{"sponsors":{}}')) {
     if (-not $rejected) { throw 'Malformed response could replace a useful cached roster' }
 }
 Write-Output 'PASS invalid responses rejected before replacing cached data'
-$avatarType = $assembly.GetType('PCL.BrsPlayerAvatar',$true)
+$avatarType = $assembly.GetType('BRCL.BrsPlayerAvatar',$true)
 $canLoad = $avatarType.GetField('CanLoad',[Reflection.BindingFlags]'NonPublic,Instance')
 foreach ($case in @(
     @{Name='ABDSEN'; HasAvatar=$true; Expected=$true},

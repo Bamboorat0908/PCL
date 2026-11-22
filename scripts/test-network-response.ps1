@@ -3,7 +3,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 
 # A real HTTP server bound only to loopback; no Microsoft account or external API is used.
@@ -95,7 +95,7 @@ public sealed class BrclResponseServer : IDisposable {
 }
 '@
 
-$method = $assembly.GetType('PCL.ModNet',$true).GetMethod('NetRequestByClientMultiple')
+$method = $assembly.GetType('BRCL.ModNet',$true).GetMethod('NetRequestByClientMultiple')
 $server = [BrclResponseServer]::new()
 $script:passed = 0
 function Check($condition, [string]$message) {
@@ -147,12 +147,12 @@ try {
     $cancelArguments = [object[]]@("http://127.0.0.1:$($server.Port)/cancel/1", [Net.Http.HttpMethod]::Get, 3,
         $null, $null, '*/*', $null, $true, 2000, $null, $false)
     Check ($server.CancellationStopsCaller($method, $cancelArguments, '/cancel/1')) 'cancellation releases the waiting caller and does not start additional requests'
-    $retry = $assembly.GetType('PCL.ModNet',$true).GetMethod('NetRequestByClientRetry')
+    $retry = $assembly.GetType('BRCL.ModNet',$true).GetMethod('NetRequestByClientRetry')
     $retryArguments = [object[]]@("http://127.0.0.1:$($server.Port)/fail-primary", [Net.Http.HttpMethod]::Get,
         "http://127.0.0.1:$($server.Port)/backup", $null, $null, '*/*', $null, $true, $null, $false)
     $result = [BrclResponseServer]::Invoke($retry, $retryArguments)
     Check ($result -eq '{"ok":true}' -and $server.Count('/fail-primary') -eq 1 -and $server.Count('/backup') -eq 1) 'failed primary request switches to its configured backup URL'
-    $download = $assembly.GetType('PCL.ModNet',$true).GetMethod('NetDownloadByClient')
+    $download = $assembly.GetType('BRCL.ModNet',$true).GetMethod('NetDownloadByClient')
     $target = [IO.Path]::GetTempFileName()
     try {
         [IO.File]::WriteAllText($target, 'previous copy')
@@ -163,7 +163,7 @@ try {
         [void]$download.Invoke($null, [object[]]@("http://127.0.0.1:$($server.Port)/replacement", $target, $false))
         Check ([IO.File]::ReadAllText($target) -eq '{"ok":true}') 'successful replacement publishes the new complete file'
     } finally { [IO.File]::Delete($target) }
-    $revocation = $assembly.GetType('PCL.ModNet',$true).GetMethod('UpdateCertificateRevocationCheck')
+    $revocation = $assembly.GetType('BRCL.ModNet',$true).GetMethod('UpdateCertificateRevocationCheck')
     foreach ($enabled in @($false, $true)) {
         [void]$revocation.Invoke($null, [object[]]@($enabled))
         Check ([Net.ServicePointManager]::CheckCertificateRevocationList -eq $enabled -and

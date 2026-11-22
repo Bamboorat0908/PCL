@@ -6,7 +6,7 @@ $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launc
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
-$build = $assembly.GetType('PCL.BrsDashboardData',$true).GetMethod('Build')
+$build = $assembly.GetType('BRCL.BrsDashboardData',$true).GetMethod('Build')
 $missing = [string][char]0x2014
 function Get-Dashboard([string]$json) {
     $parsed = [Newtonsoft.Json.Linq.JObject]::Parse($json)

@@ -3,8 +3,8 @@ Add-Type -AssemblyName PresentationFramework,System.Net.Http
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'))
 foreach ($dependency in @('Newtonsoft.Json','NAudio')) { [void][Reflection.Assembly]::LoadFrom((Join-Path $project "Resources\$dependency.dll")) }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
-$audio = $assembly.GetType('PCL.BrclAudio',$true)
-$cueType = $assembly.GetType('PCL.BrclAudio+UiSoundCue',$true)
+$audio = $assembly.GetType('BRCL.BrclAudio',$true)
+$cueType = $assembly.GetType('BRCL.BrclAudio+UiSoundCue',$true)
 $create = $audio.GetMethod('CreateCueSamples',[Reflection.BindingFlags]'NonPublic,Static')
 $samplesByName = @{}
 foreach ($cue in [Enum]::GetValues($cueType)) {
@@ -21,7 +21,7 @@ foreach ($cue in [Enum]::GetValues($cueType)) {
     $samplesByName[$cue.ToString()] = $samples
     Write-Output "PASS $cue cue duration, stereo, finite samples, headroom and fade edges"
 }
-$settings = $assembly.GetType('PCL.Settings',$true)
+$settings = $assembly.GetType('BRCL.Settings',$true)
 $entries = $settings.GetField('Entries').GetValue($null)
 foreach ($key in @('UiSoundEnabled','UiSoundInteraction','UiSoundStartup','UiSoundVolume','UiReduceMotion','SystemDebugAnim')) {
     if (-not $entries.ContainsKey($key)) { throw "Missing preference $key" }
@@ -47,7 +47,7 @@ foreach ($case in @('master','interaction','startup','zero-volume')) {
     if ($null -ne $outputField.GetValue($null)) { throw "Muted cue opened an audio device: $case" }
     Write-Output "PASS $case prevents audio initialization and playback"
 }
-$providerType = $assembly.GetType('PCL.BrclAudio+CueSampleProvider',$true)
+$providerType = $assembly.GetType('BRCL.BrclAudio+CueSampleProvider',$true)
 $provider = [Activator]::CreateInstance($providerType,[object[]]@($samplesByName['Click'],[single]0.25))
 $buffer = New-Object single[] 10000
 $first = $provider.Read($buffer,3,9000)
@@ -64,7 +64,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Threading;
-using PCL;
+using BRCL;
 public static class FeedbackAnimationChecks {
     static void PumpUntil(Func<bool> finished) {
         var frame = new DispatcherFrame();

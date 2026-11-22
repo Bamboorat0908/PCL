@@ -4,7 +4,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'))
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
-$validate = $assembly.GetType('PCL.Application',$true).GetMethod('HasValidStartupArguments',[Reflection.BindingFlags]'NonPublic,Static')
+$validate = $assembly.GetType('BRCL.Application',$true).GetMethod('HasValidStartupArguments',[Reflection.BindingFlags]'NonPublic,Static')
 if ($null -eq $validate) { throw 'Startup argument validator is missing' }
 $cases = @(
     @{Args=[string[]]@(); Valid=$true},

@@ -4,13 +4,13 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application', $true), $true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application', $true), $true)
 $app.InitializeComponent()
 $startup = $app.GetType().GetMethod('Application_Startup', [Reflection.BindingFlags]'NonPublic,Instance')
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler], $app, $startup))
 [Windows.Application].GetField('_startupUri', [Reflection.BindingFlags]'NonPublic,Instance').SetValue($app, $null)
-$assembly.GetType('PCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null, 1, $null)
-$module = $assembly.GetType('PCL.ModLaunch', $true)
+$assembly.GetType('BRCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null, 1, $null)
+$module = $assembly.GetType('BRCL.ModLaunch', $true)
 $compiled = @()
 foreach ($type in @($module) + @($module.GetNestedTypes([Reflection.BindingFlags]'Public,NonPublic'))) {
     foreach ($method in $type.GetMethods([Reflection.BindingFlags]'Public,NonPublic,Static,Instance,DeclaredOnly')) {
@@ -32,14 +32,14 @@ if ('https://afdian.com/a/brszz' -cnotin $compiled -or '支持 BRCL！' -cnotin 
 Write-Output 'PASS compiled sponsorship copy and BRS Afdian action target'
 $paragraph = $paragraph.Substring($paragraph.IndexOf('感谢你使用我们的启动器！'))
 New-Item -ItemType Directory -Path $PreviewDirectory -Force | Out-Null
-$converterType = $assembly.GetType('PCL.ModMain+MyMsgBoxConverter', $true)
+$converterType = $assembly.GetType('BRCL.ModMain+MyMsgBoxConverter', $true)
 foreach ($width in @(640, 390)) {
     $converter = [Activator]::CreateInstance($converterType)
     $converter.Title = '10 次启动！'
     $converter.Text = "BRCL 已经为你启动了 10 次游戏啦！`r`n" + $paragraph
     $converter.Button1 = '支持 BRCL！'
     $converter.Button2 = '但是我拒绝'
-    $control = [Activator]::CreateInstance($assembly.GetType('PCL.MyMsgText', $true), [object[]]@($converter))
+    $control = [Activator]::CreateInstance($assembly.GetType('BRCL.MyMsgText', $true), [object[]]@($converter))
     $control.FindName('PanCaption').MaxHeight = 600
     $control.Measure([Windows.Size]::new($width, [double]::PositiveInfinity))
     $height = [int][Math]::Ceiling($control.DesiredSize.Height)

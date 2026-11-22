@@ -4,8 +4,8 @@ Add-Type -AssemblyName PresentationFramework,System.Net.Http
 $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project "$OutputDirectory\BRCL.exe"))
-$builder = $assembly.GetType('PCL.BrclErrorPresentation',$true).GetMethod('BuildBrclError')
-$sanitize = $assembly.GetType('PCL.BrclErrorPresentation',$true).GetMethod('SanitizeBrclDetails')
+$builder = $assembly.GetType('BRCL.BrclErrorPresentation',$true).GetMethod('BuildBrclError')
+$sanitize = $assembly.GetType('BRCL.BrclErrorPresentation',$true).GetMethod('SanitizeBrclDetails')
 $cases = @(
  @{Name='network failure'; Operation='status'; Ex=[Net.WebException]::new('connection closed'); Code='BRCL-NET-001'},
  @{Name='nested network failure'; Operation='status'; Ex=[Exception]::new('outer',[Net.WebException]::new('inner')); Code='BRCL-NET-001'},
@@ -29,7 +29,7 @@ $sensitive = 'Authorization: Bearer token123.abc access_token=secretOne&refresh_
 $redacted = [string]$sanitize.Invoke($null,[object[]]@($sensitive))
 foreach ($secret in @('token123.abc','secretOne','secretTwo','secretThree','commandToken','commandPassword','jsonIdToken','apiSecret','formPassword')) { if ($redacted.Contains($secret)) {throw "Secret retained: $secret"} }
 Write-Output 'PASS diagnostic token redaction'
-$converter = $assembly.GetType('PCL.ModMain+MyMsgBoxConverter',$true)
+$converter = $assembly.GetType('BRCL.ModMain+MyMsgBoxConverter',$true)
 foreach ($field in @('ErrorDetails','ErrorCode','RecoveryAdvice','Button1Action','Button2Action','Button3Action')) { if (-not $converter.GetField($field)) {throw "Missing converter field $field"} }
 Write-Output 'PASS error fields coexist with existing action callbacks'
 Write-Output '12 BRCL error checks passed.'

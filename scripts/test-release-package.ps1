@@ -55,7 +55,8 @@ if ($singleExe) {
     if ([Convert]::ToBase64String($licenseBytes) -cne [Convert]::ToBase64String([IO.File]::ReadAllBytes([IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\LICENCE'))))) { throw 'Packaged embedded license differs from repository license.' }
     Write-Output 'PASS single-file executable embeds the complete repository license'
 }
-$updates = $assembly.GetType('PCL.ModBrclUpdate',$true)
+$updates = $assembly.GetType('BRCL.ModBrclUpdate',$false)
+if ($null -eq $updates) { $updates = $assembly.GetType('PCL.ModBrclUpdate',$true) }
 if ($updates.GetField('BrclReleaseVersion').GetRawConstantValue() -ne $DisplayVersion -or $updates.GetField('BrclUpdateRevision').GetRawConstantValue() -ne $Version) { throw 'Packaged updater version mismatch.' }
 $stream = $assembly.GetManifestResourceStream('BRCL.Changelog.json')
 $reader = New-Object IO.StreamReader($stream)

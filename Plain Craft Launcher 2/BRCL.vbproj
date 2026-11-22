@@ -7,7 +7,7 @@
     <ProjectGuid>{4499F2D2-18EF-4238-B1F0-7BD547AFF925}</ProjectGuid>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{F184B08F-C81C-45F6-A57F-5ABD9991F28F}</ProjectTypeGuids>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>PCL</RootNamespace>
+    <RootNamespace>BRCL</RootNamespace>
     <AssemblyName>BRCL</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <MyType>Custom</MyType>
@@ -321,7 +321,7 @@
     <Compile Include="Modules\ModExperience.vb" />
     <Compile Include="Modules\BrclWebViewRuntime.vb" />
     <EmbeddedResource Include="Modules\BrclInstall.ps1">
-      <LogicalName>PCL.BrclInstall.ps1</LogicalName>
+      <LogicalName>BRCL.BrclInstall.ps1</LogicalName>
     </EmbeddedResource>
     <Compile Include="Pages\PageDownload\Resource\PageResource.xaml.vb">
       <DependentUpon>PageResource.xaml</DependentUpon>
@@ -791,7 +791,7 @@
     <Import Include="Microsoft.VisualBasic" />
     <Import Include="Newtonsoft.Json" />
     <Import Include="Newtonsoft.Json.Linq" />
-    <Import Include="PCLCS" />
+    <Import Include="BRCL.Core" />
     <Import Include="System" />
     <Import Include="System.Collections.Concurrent" />
     <Import Include="System.Collections.Generic" />
@@ -1040,14 +1040,14 @@
     </ProjectReference>
     <ProjectReference Include="..\PCLCS\PCLCS.csproj">
       <Project>{32de4aaf-f4d6-42c5-9604-19236de96c69}</Project>
-      <Name>PCLCS</Name>
+      <Name>BRCL.Core</Name>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\PCLCS\bin\PCLCS.dll">
-      <LogicalName>PCLCS.dll</LogicalName>
-      <Link>Resources\PCLCS.dll</Link>
+    <None Include="..\PCLCS\bin\BRCL.Core.dll">
+      <LogicalName>BRCL.Core.dll</LogicalName>
+      <Link>Resources\BRCL.Core.dll</Link>
     </None>
     <None Include="..\PCLCS\bin\MeloongCore.dll">
       <LogicalName>MeloongCore.dll</LogicalName>
@@ -1071,7 +1071,7 @@
   <ItemGroup>
     <PackedDependency Include="Resources\NAudio.dll;Resources\WebView2\Microsoft.Web.WebView2.Core.dll;Resources\WebView2\Microsoft.Web.WebView2.Wpf.dll;Resources\WebView2\WebView2Loader.dll;Resources\WebView2\WebView2Loader.x86.dll" />
     <PackedDependency Include="Resources\CacheCow.Client.dll;Resources\CacheCow.Client.FileStore.dll;Resources\CacheCow.Common.dll;Resources\ThrottleDebounce.dll;Resources\Imazen.WebP.dll;Resources\libwebp64.dll;Resources\Newtonsoft.Json.dll;Resources\Ookii.Dialogs.Wpf.dll;Resources\System.Net.Http.Formatting.dll" />
-    <PackedDependency Include="..\PCLCS\bin\PCLCS.dll;..\PCLCS\bin\MeloongCore.dll;..\PCLCS\bin\MeloongCore.Wpf.dll;..\PCLCS\bin\Microsoft.Win32.Registry.dll" />
+    <PackedDependency Include="..\PCLCS\bin\BRCL.Core.dll;..\PCLCS\bin\MeloongCore.dll;..\PCLCS\bin\MeloongCore.Wpf.dll;..\PCLCS\bin\Microsoft.Win32.Registry.dll" />
     <EmbeddedResource Include="@(PackedDependency->'$(IntermediateOutputPath)packed\%(Filename).deflate')">
       <LogicalName>BRCL.Packed.%(Filename)</LogicalName>
       <WithCulture>false</WithCulture>

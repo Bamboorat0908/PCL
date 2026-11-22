@@ -7,10 +7,10 @@ if (-not $BuildDirectory) { $BuildDirectory=Join-Path $project 'bin' }
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$type=$assembly.GetType('PCL.PageNews',$true)
+$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$type=$assembly.GetType('BRCL.PageNews',$true)
 $instanceFlags=[Reflection.BindingFlags]'NonPublic,Instance'
 $staticFlags=[Reflection.BindingFlags]'NonPublic,Static'
 $page=[Activator]::CreateInstance($type)

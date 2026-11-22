@@ -1,5 +1,5 @@
 <local:MyPageRight xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:PCL"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:BRCL"
     x:Class="PageNews" PanScroll="ScrollMain">
     <Grid x:Name="NewsSurface" ClipToBounds="True" Background="Transparent">
     <local:MyScrollViewer x:Name="ScrollMain" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">

@@ -4,7 +4,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'))
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
-$backup = $assembly.GetType('PCL.PageInstanceContent',$true).GetMethod('CreateFolderBackup',[Reflection.BindingFlags]'NonPublic,Static')
+$backup = $assembly.GetType('BRCL.PageInstanceContent',$true).GetMethod('CreateFolderBackup',[Reflection.BindingFlags]'NonPublic,Static')
 if ($null -eq $backup) { throw 'Folder backup helper is missing' }
 $fixture = Join-Path $env:TEMP ('BRCL-BackupChecks-' + [Guid]::NewGuid().ToString('N'))
 $source = Join-Path $fixture 'world'

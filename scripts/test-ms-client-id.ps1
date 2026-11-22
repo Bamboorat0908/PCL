@@ -6,7 +6,7 @@ $root = Join-Path (Split-Path $PSScriptRoot) 'Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $root 'Resources\Newtonsoft.Json.dll'))
 if (-not $AssemblyPath) { $AssemblyPath = Join-Path $root 'bin\BRCL.exe' }
 $assembly = [Reflection.Assembly]::LoadFrom($AssemblyPath)
-$type = $assembly.GetType('PCL.ModSecret', $true)
+$type = $assembly.GetType('BRCL.ModSecret', $true)
 $field = $type.GetField('OAuthClientId', [Reflection.BindingFlags]'Public,Static')
 $method = $type.GetMethod('EnsureMicrosoftClientId', [Reflection.BindingFlags]'Public,Static')
 $field.SetValue($null, '')

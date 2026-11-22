@@ -5,12 +5,12 @@ $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launc
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $startup = $app.GetType().GetMethod('Application_Startup',[Reflection.BindingFlags]'NonPublic,Instance')
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler],$app,$startup))
 [Windows.Application].GetField('_startupUri',[Reflection.BindingFlags]'NonPublic,Instance').SetValue($app,$null)
-$assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
 function Mouse-Event($control,[bool]$up,[bool]$preview=$false,[bool]$right=$false) {
     $button = if ($right) { [Windows.Input.MouseButton]::Right } else { [Windows.Input.MouseButton]::Left }
     $event = [Windows.Input.MouseButtonEventArgs]::new([Windows.Input.Mouse]::PrimaryDevice,0,$button)
@@ -27,7 +27,7 @@ try {
     foreach ($name in @('MyCheckBox','MyRadioBox','MyRadioButton')) {
         foreach ($cancel in @('disable','unload')) {
             $panel = [Windows.Controls.StackPanel]::new()
-            $control = [Activator]::CreateInstance($assembly.GetType('PCL.'+$name,$true))
+            $control = [Activator]::CreateInstance($assembly.GetType('BRCL.'+$name,$true))
             [void]$panel.Children.Add($control)
             Mouse-Event $control $false
             if ($cancel -eq 'disable') {
@@ -43,7 +43,7 @@ try {
     }
     foreach ($name in @('MyButton','MyIconButton','MyIconTextButton','MyTextButton','MyExtraButton','MyExtraTextButton')) {
         foreach ($cancel in @('disable','unload')) {
-            $control = [Activator]::CreateInstance($assembly.GetType('PCL.'+$name,$true))
+            $control = [Activator]::CreateInstance($assembly.GetType('BRCL.'+$name,$true))
             $script:clickCount = 0
             $control.add_Click({ $script:clickCount += 1 })
             $target = if ($name -in @('MyExtraButton','MyExtraTextButton')) { $control.FindName('PanClick') } else { $control }
@@ -63,7 +63,7 @@ try {
             Write-Output "PASS $name ignores a cancelled $cancel click and accepts one fresh click"
         }
     }
-    $icon = [Activator]::CreateInstance($assembly.GetType('PCL.MyIconButton',$true))
+    $icon = [Activator]::CreateInstance($assembly.GetType('BRCL.MyIconButton',$true))
     $script:clickCount = 0
     $icon.add_Click({ $script:clickCount += 1 })
     Mouse-Event $icon $false
@@ -73,7 +73,7 @@ try {
     if ($script:clickCount -ne 0) { throw 'Icon CanClick change retained its previous press' }
     Write-Output 'PASS temporarily disallowing icon clicks cancels the old press'
 
-    $extra = [Activator]::CreateInstance($assembly.GetType('PCL.MyExtraButton',$true))
+    $extra = [Activator]::CreateInstance($assembly.GetType('BRCL.MyExtraButton',$true))
     $extra.CanRightClick = $true
     $script:clickCount = 0
     $extra.add_RightClick({ $script:clickCount += 1 })
@@ -87,33 +87,33 @@ try {
     Write-Output 'PASS temporarily disallowing right clicks cancels the old press'
 
     foreach ($cancel in @('disable','unload')) {
-        $slider = [Activator]::CreateInstance($assembly.GetType('PCL.MySlider',$true))
+        $slider = [Activator]::CreateInstance($assembly.GetType('BRCL.MySlider',$true))
         $slider.Value = 30
         $slider.GetHintText = [Func[int,string]] { param($value) "$value%" }
         $slider.RefreshPopup()
-        $assembly.GetType('PCL.ModMain',$true).GetField('DragControl').SetValue($null,$slider)
+        $assembly.GetType('BRCL.ModMain',$true).GetField('DragControl').SetValue($null,$slider)
         if ($cancel -eq 'disable') {
             $slider.IsEnabled = $false
         } else {
             $slider.RaiseEvent([Windows.RoutedEventArgs]::new([Windows.FrameworkElement]::UnloadedEvent))
         }
-        if ($null -ne $assembly.GetType('PCL.ModMain',$true).GetField('DragControl').GetValue($null)) { throw "Slider retained a drag cancelled by $cancel" }
+        if ($null -ne $assembly.GetType('BRCL.ModMain',$true).GetField('DragControl').GetValue($null)) { throw "Slider retained a drag cancelled by $cancel" }
         if ($slider.FindName('Popup').IsOpen) { throw "Slider retained its popup after $cancel" }
         if ($slider.Value -ne 30) { throw "Cancelling slider drag changed its value" }
         Write-Output "PASS slider $cancel releases global drag and hint without changing its value"
     }
-    $slider = [Activator]::CreateInstance($assembly.GetType('PCL.MySlider',$true))
+    $slider = [Activator]::CreateInstance($assembly.GetType('BRCL.MySlider',$true))
     $slider.Value = 30
     $slider.add_PreviewChange({ param($sender,$event) $event.Handled = $true })
-    $assembly.GetType('PCL.ModMain',$true).GetField('DragControl').SetValue($null,$slider)
-    $assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,0,$null)
+    $assembly.GetType('BRCL.ModMain',$true).GetField('DragControl').SetValue($null,$slider)
+    $assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,0,$null)
     $slider.Value = 60
-    $assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
-    if ($slider.Value -ne 30 -or $null -ne $assembly.GetType('PCL.ModMain',$true).GetField('DragControl').GetValue($null)) { throw 'Rejected slider preview retained its value or global drag' }
+    $assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+    if ($slider.Value -ne 30 -or $null -ne $assembly.GetType('BRCL.ModMain',$true).GetField('DragControl').GetValue($null)) { throw 'Rejected slider preview retained its value or global drag' }
     Write-Output 'PASS a rejected slider preview restores its previous value and ends the drag'
     if ($app.Windows.Count -ne 0) { throw 'Cancelled-input fixtures unexpectedly showed a window' }
     Write-Output 'PASS all fixtures use unloaded controls without settings keys or user configuration writes'
 } finally {
-    $assembly.GetType('PCL.ModMain',$true).GetField('DragControl').SetValue($null,$null)
+    $assembly.GetType('BRCL.ModMain',$true).GetField('DragControl').SetValue($null,$null)
     $app.Shutdown()
 }

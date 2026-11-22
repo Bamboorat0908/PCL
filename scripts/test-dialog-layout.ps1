@@ -4,10 +4,10 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 $project=Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$converterType=$assembly.GetType('PCL.ModMain+MyMsgBoxConverter',$true)
+$assembly.GetType('BRCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$converterType=$assembly.GetType('BRCL.ModMain+MyMsgBoxConverter',$true)
 foreach ($theme in @('dark','light')) {
     $colors=if ($theme -eq 'dark') {@('#E6E8E3','#B8C0BD','#252B2D','#191F21','#424B49')} else {@('#191D1F','#555F60','#E8EAE1','#F5F5EF','#C6CBC7')}
     $keys=@('ColorBrush1','ColorBrush2','ColorBrush6','ColorBrush7','ColorBrushCardLine')
@@ -24,13 +24,13 @@ foreach ($theme in @('dark','light')) {
             } else {
                 $choices=@()
                 foreach ($i in 1..12) {
-                    $choice=[Activator]::CreateInstance($assembly.GetType('PCL.MyRadioBox',$true))
+                    $choice=[Activator]::CreateInstance($assembly.GetType('BRCL.MyRadioBox',$true))
                     $choice.Text="客户端选项 $i"
                     $choices+=,$choice
                 }
                 $converter.Content=$choices
             }
-            $control=[Activator]::CreateInstance($assembly.GetType("PCL.$kind",$true),[object[]]@($converter))
+            $control=[Activator]::CreateInstance($assembly.GetType("BRCL.$kind",$true),[object[]]@($converter))
             if ($control.FindName('Btn1').Text -ne $converter.Button1 -or $control.FindName('Btn2').Text -ne $converter.Button2) {throw "$kind initialization did not finish"}
             $width=$size[0]; $height=$size[1]
             $control.Width=$width-40

@@ -1,4 +1,4 @@
-namespace PCLCS;
+namespace BRCL.Core;
 
 /// <summary>
 /// 社区资源的类型。

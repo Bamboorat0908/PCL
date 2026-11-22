@@ -5,7 +5,7 @@ if (-not $BuildDirectory) { $BuildDirectory = Join-Path $repo 'Plain Craft Launc
 Add-Type -AssemblyName PresentationFramework,System.Net.Http
 [void][Reflection.Assembly]::LoadFrom((Join-Path $repo 'Plain Craft Launcher 2\Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
-$module = $assembly.GetType('PCL.ModBrclUpdate',$true)
+$module = $assembly.GetType('BRCL.ModBrclUpdate',$true)
 $flags = [Reflection.BindingFlags]'NonPublic,Static'
 $present = $module.GetMethod('ShouldPresentUpdate',$flags)
 foreach ($manual in @($false,$true)) {

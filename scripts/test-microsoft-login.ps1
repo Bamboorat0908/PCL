@@ -5,10 +5,10 @@ $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$type = $assembly.GetType('PCL.MicrosoftDeviceLogin',$true)
+$assembly.GetType('BRCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$type = $assembly.GetType('BRCL.MicrosoftDeviceLogin',$true)
 $script:count = 0
 function Check($condition, [string]$message) {
     if (-not $condition) { throw $message }
@@ -73,8 +73,8 @@ Check ($tokens[1] -eq 'previous-refresh') 'refresh response without rotated refr
 foreach ($text in @('{}','{"access_token":""}','{"access_token":"fake","refresh_token":null}','{"access_token":"fake","refresh_token":""}')) {
     Check (Rejected { $type::ReadTokens((Json $text),$null) }) 'incomplete token result rejected'
 }
-$converterType = $assembly.GetType('PCL.ModMain+MyMsgBoxConverter',$true)
-$controlType = $assembly.GetType('PCL.MyMsgLogin',$true)
+$converterType = $assembly.GetType('BRCL.ModMain+MyMsgBoxConverter',$true)
+$controlType = $assembly.GetType('BRCL.MyMsgLogin',$true)
 function New-Dialog($data) {
     $converter = [Activator]::CreateInstance($converterType)
     $converter.Content = $data

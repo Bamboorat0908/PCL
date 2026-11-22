@@ -4,7 +4,7 @@ $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\ThrottleDebounce.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
-$method = $assembly.GetType('PCL.ModMinecraft',$true).GetMethod('McLibListGetWithJson')
+$method = $assembly.GetType('BRCL.ModMinecraft',$true).GetMethod('McLibListGetWithJson')
 $root = Join-Path $env:TEMP ('BRCL-LibraryPaths-' + [guid]::NewGuid().ToString('N'))
 $root += '\'
 function Check($condition, [string]$message) {

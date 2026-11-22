@@ -10,9 +10,9 @@ foreach ($dependency in @('Newtonsoft.Json.dll', 'ThrottleDebounce.dll')) {
 }
 $core = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'MeloongCore.dll'))
 [void][Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'MeloongCore.Wpf.dll'))
-$pclCs = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'PCLCS.dll'))
+$brclCore = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.Core.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
-$javaModule = $assembly.GetType('PCL.ModJava', $true)
+$javaModule = $assembly.GetType('BRCL.ModJava', $true)
 $rangeType = $core.GetType('MeloongCore.ValueRange`1', $true).MakeGenericType([type[]]@([version]))
 $recommend = $javaModule.GetMethod('GetRecommendedJavaMajor')
 $runtimePath = $javaModule.GetMethod('GetJavaRuntimeFilePath')
@@ -58,7 +58,7 @@ Assert-Recommended 'Inclusive boundary allows exact Java 21' '20.0.4' '2023-12-0
 Assert-Recommended 'An empty range cannot select a runtime' '20.0.5' '2024-04-23' 21 (New-Range 'ClosedOpen' @('21.0', '21.0')) 0
 
 $rank = $javaModule.GetMethod('RankJavaCandidates')
-$javaType = $pclCs.GetType('PCLCS.Java', $true)
+$javaType = $brclCore.GetType('BRCL.Core.Java', $true)
 $candidateVersions = @('21.0.9', '17.0.8', '8.0.392', '17.0.9', $null)
 $candidates = [Array]::CreateInstance($javaType, $candidateVersions.Count)
 for ($i = 0; $i -lt $candidateVersions.Count; $i++) {
@@ -124,7 +124,7 @@ function Invoke-Extract([string]$ZipPath, [string]$Destination, [Threading.Cance
     catch { throw $_.Exception.GetBaseException() }
 }
 try {
-    $instanceType = $assembly.GetType('PCL.ModMinecraft+McInstance', $true)
+    $instanceType = $assembly.GetType('BRCL.ModMinecraft+McInstance', $true)
     $fixturePath = Join-Path $archiveTemp 'versions\metadata17'
     [void][IO.Directory]::CreateDirectory($fixturePath)
     $fixtureJson = @{
@@ -206,7 +206,7 @@ try {
     if (Test-Path -LiteralPath $cleanupTarget) { Remove-Item -LiteralPath $cleanupTarget -Recurse -Force }
 }
 
-$sources = $assembly.GetType('PCL.ModJavaDownloadSources', $true)
+$sources = $assembly.GetType('BRCL.ModJavaDownloadSources', $true)
 $mapMojang = $sources.GetMethod('MapMojangJavaUrl')
 $mapTemurin = $sources.GetMethod('MapTemurinJavaUrl')
 function Assert-Throws([Reflection.MethodInfo]$Method, [object[]]$Arguments, [type]$Expected, [string]$Label) {

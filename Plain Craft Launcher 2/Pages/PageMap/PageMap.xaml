@@ -1,7 +1,7 @@
 <local:MyPageRight x:Class="PageMap"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:PCL"
+    xmlns:local="clr-namespace:BRCL"
     xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
     <Grid Margin="20,16,20,20" Background="Transparent">
         <Border BorderBrush="{DynamicResource ColorBrushCardLine}" BorderThickness="1" Background="{DynamicResource ColorBrush7}" CornerRadius="3" ClipToBounds="True">

@@ -49,7 +49,7 @@ Add-Type -TypeDefinition $code -ReferencedAssemblies System.Net.Http
 $out = Join-Path $env:TEMP ('BRCL-public-download-' + [Guid]::NewGuid().ToString('N') + '.zip')
 $watch = [Diagnostics.Stopwatch]::StartNew()
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\bin\BRCL.exe'))
-$module = $assembly.GetType('PCL.ModBrsPack', $true)
+$module = $assembly.GetType('BRCL.ModBrsPack', $true)
 $preset = $module.GetMethod('GetBrsPackPreset', [Reflection.BindingFlags]'Public,NonPublic,Static').Invoke($null, @([bool]$LowPreset))
 $url = if ($BaseUrl) { $BaseUrl.TrimEnd('/') + '/modpacks/' + $preset.FileName } else { $preset.Url }
 $hash = [BrclDownloadProbe]::Run($out, $Parallel, $preset.Size, $url, $preset.Hash, (-not $NoProxy)).GetAwaiter().GetResult()

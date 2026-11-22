@@ -8,16 +8,16 @@ $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project "$OutputDirectory\BRCL.exe"))
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application', $true), $true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application', $true), $true)
 $app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation', $true).GetProperty('AniControlEnabled').SetValue($null, 1, $null)
+$assembly.GetType('BRCL.ModAnimation', $true).GetProperty('AniControlEnabled').SetValue($null, 1, $null)
 [xml]$source = Get-Content -LiteralPath (Join-Path $project 'FormMain.xaml') -Raw -Encoding UTF8
 $namespaces = [Xml.XmlNamespaceManager]::new($source.NameTable)
 $namespaces.AddNamespace('w', 'http://schemas.microsoft.com/winfx/2006/xaml/presentation')
 $namespaces.AddNamespace('x', 'http://schemas.microsoft.com/winfx/2006/xaml')
 $primaryMarkup = $source.SelectSingleNode('//w:TextBlock[@x:Name="LabTitlePage"]', $namespaces).OuterXml
-$innerMarkup = $source.SelectSingleNode('//w:Grid[@x:Name="PanTitleInner"]', $namespaces).OuterXml.Replace('clr-namespace:PCL"', 'clr-namespace:PCL;assembly=BRCL"')
-$markup = '<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:PCL;assembly=BRCL" x:Name="PanTitle" Width="540" Height="48" Background="{DynamicResource ColorBrush8}">' + $primaryMarkup + $innerMarkup + '</Grid>'
+$innerMarkup = $source.SelectSingleNode('//w:Grid[@x:Name="PanTitleInner"]', $namespaces).OuterXml.Replace('clr-namespace:BRCL"', 'clr-namespace:BRCL;assembly=BRCL"')
+$markup = '<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:BRCL;assembly=BRCL" x:Name="PanTitle" Width="540" Height="48" Background="{DynamicResource ColorBrush8}">' + $primaryMarkup + $innerMarkup + '</Grid>'
 New-Item -ItemType Directory -Path $PreviewDirectory -Force | Out-Null
 $title = -join [char[]]@(0x7248, 0x672C, 0x9009, 0x62E9)
 

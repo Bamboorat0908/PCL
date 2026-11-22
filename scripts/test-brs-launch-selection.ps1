@@ -9,11 +9,11 @@ if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 $flags = [Reflection.BindingFlags]'Public,NonPublic,Static'
 $instanceFlags = [Reflection.BindingFlags]'NonPublic,Instance'
-$pack = $assembly.GetType('PCL.ModBrsPack', $true)
-$minecraft = $assembly.GetType('PCL.ModMinecraft', $true)
-$instanceType = $assembly.GetType('PCL.ModMinecraft+McInstance', $true)
-$stateType = $assembly.GetType('PCL.ModMinecraft+McInstanceState', $true)
-$pageType = $assembly.GetType('PCL.PageLaunchLeft', $true)
+$pack = $assembly.GetType('BRCL.ModBrsPack', $true)
+$minecraft = $assembly.GetType('BRCL.ModMinecraft', $true)
+$instanceType = $assembly.GetType('BRCL.ModMinecraft+McInstance', $true)
+$stateType = $assembly.GetType('BRCL.ModMinecraft+McInstanceState', $true)
+$pageType = $assembly.GetType('BRCL.PageLaunchLeft', $true)
 
 function Invoke-Pack([string]$Name, [object[]]$Arguments) {
     $pack.GetMethod($Name, $flags).Invoke($null, $Arguments)
@@ -41,7 +41,7 @@ function Assert-True([bool]$Condition, [string]$Message) {
 }
 
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application', $true), $true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application', $true), $true)
 $app.InitializeComponent()
 $startup = $app.GetType().GetMethod('Application_Startup', $instanceFlags)
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler], $app, $startup))
@@ -87,7 +87,7 @@ try {
     Write-Output 'PASS home defaults to the newest local TRM and shows its version, preset and instance name'
 
     $recorderCode = @'
-using PCL;
+using BRCL;
 
 public sealed class TrmRecordingLoader : ModLoader.LoaderTask<ModLaunch.McLaunchOptions, object> {
     public ModLaunch.McLaunchOptions Options;
@@ -102,7 +102,7 @@ public sealed class TrmRecordingLoader : ModLoader.LoaderTask<ModLaunch.McLaunch
     & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:library "/reference:$($assembly.Location)" "/out:$recorderDll" $recorderSource
     if ($LASTEXITCODE -ne 0) { throw 'Launch recording loader failed to compile.' }
     [void][Reflection.Assembly]::Load([IO.File]::ReadAllBytes($recorderDll))
-    $mainModule = $assembly.GetType('PCL.ModMain', $true)
+    $mainModule = $assembly.GetType('BRCL.ModMain', $true)
     $mainField = $mainModule.GetField('FrmMain', $flags)
     $mainType = $mainField.FieldType
     $main = [Runtime.Serialization.FormatterServices]::GetUninitializedObject($mainType)
@@ -111,7 +111,7 @@ public sealed class TrmRecordingLoader : ModLoader.LoaderTask<ModLaunch.McLaunch
     $mainField.SetValue($null, $main)
     $mainModule.GetField('IsAprilGiveup', $flags).SetValue($null, $true)
     $generalSelection.SetValue($null, $high)
-    $launch = $assembly.GetType('PCL.ModLaunch', $true).GetField('McLaunchLoader', $flags)
+    $launch = $assembly.GetType('BRCL.ModLaunch', $true).GetField('McLaunchLoader', $flags)
     $originalLoader = $launch.GetValue($null)
     $recorder = [TrmRecordingLoader]::new()
     try {
@@ -157,7 +157,7 @@ public sealed class TrmRecordingLoader : ModLoader.LoaderTask<ModLaunch.McLaunch
     $overrideSave = Join-Path $temp 'overrides\saves\旧世界\level.dat'
     [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($overrideSave))
     [IO.File]::WriteAllBytes($overrideSave, [byte[]]@(2, 4, 6))
-    $modpack = $assembly.GetType('PCL.ModModpack', $true)
+    $modpack = $assembly.GetType('BRCL.ModModpack', $true)
     $modpack.GetMethod('CopyOverrideDirectory', $flags).Invoke($null, [object[]]@([string](Join-Path $temp 'overrides'), [string]$newPath, $null))
     Assert-True ((Get-FileHash -LiteralPath $savePath).Hash -eq $oldSaveHash) 'Reserving the upgrade and writing its marker changed the existing save.'
     Assert-True ((Get-FileHash -LiteralPath (Join-Path $newPath 'saves\旧世界\level.dat')).Hash -eq (Get-FileHash -LiteralPath $overrideSave).Hash) 'The upgrade did not use its own save directory.'

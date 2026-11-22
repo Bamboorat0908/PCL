@@ -1,4 +1,4 @@
-namespace PCLCS;
+namespace BRCL.Core;
 public static class Resource {
 
     /// <summary>

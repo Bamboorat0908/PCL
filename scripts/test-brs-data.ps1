@@ -7,7 +7,7 @@ Add-Type -AssemblyName System.Net.Http
 [void][Reflection.Assembly]::LoadFrom((Join-Path $projectRoot 'Resources\Newtonsoft.Json.dll'))
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $projectRoot 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
-$pageType = $assembly.GetType('PCL.PageBRS', $true)
+$pageType = $assembly.GetType('BRCL.PageBRS', $true)
 $method = $pageType.GetMethod('ValidateData', [Reflection.BindingFlags]'NonPublic, Static')
 if ($null -eq $method) { throw 'ValidateData was not found in the built assembly' }
 $cases = @(

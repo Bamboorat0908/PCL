@@ -5,7 +5,7 @@ $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launc
 if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $startup = $app.GetType().GetMethod('Application_Startup',[Reflection.BindingFlags]'NonPublic,Instance')
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler],$app,$startup))
@@ -17,7 +17,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using PCL;
+using BRCL;
 public static class StartupNavigationChecks {
     static void Require(bool condition,string message) { if(!condition) throw new Exception(message); }
     static void Pump(int milliseconds) {
@@ -52,7 +52,7 @@ public static class StartupNavigationChecks {
         foreach(var control in controls) Require(control.IsHitTestVisible && Math.Abs(control.Opacity-1)<0.00001,"Returning page retained hidden or disabled controls: "+control.Text+" opacity="+control.Opacity+" hit="+control.IsHitTestVisible+" state="+page.PageState);
         result.Add("PASS leaving and returning restores every card and preserves page lifecycle callbacks");
 
-        foreach(string name in new[]{"PCL.PageStock","PCL.PageMap"}) {
+        foreach(string name in new[]{"BRCL.PageStock","BRCL.PageMap"}) {
             var shell=(FrameworkElement)Activator.CreateInstance(typeof(MyPageRight).Assembly.GetType(name,true));
             string viewName=name.EndsWith("PageStock") ? "ViewWeb" : "ViewMap";
             var view=shell.FindName(viewName);

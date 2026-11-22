@@ -4,7 +4,7 @@ $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 [Reflection.Assembly]::LoadFrom((Join-Path $repo 'Plain Craft Launcher 2\Resources\Newtonsoft.Json.dll')) | Out-Null
 [Reflection.Assembly]::LoadFrom((Join-Path $repo 'Plain Craft Launcher 2\Resources\ThrottleDebounce.dll')) | Out-Null
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $repo 'Plain Craft Launcher 2\bin\BRCL.exe'))
-$module = $assembly.GetType('PCL.ModBrsPack', $true)
+$module = $assembly.GetType('BRCL.ModBrsPack', $true)
 $method = $module.GetMethod('IsTrmInstanceName', [Reflection.BindingFlags]'Public,NonPublic,Static')
 foreach ($name in @('TRM','TRM 1.10 高预设','BRS-TRM-1.10','trm_1.10','The Retired Machinist 1.10','退休机械工')) {
     if (-not $method.Invoke($null, @($name))) { throw "TRM instance not detected: $name" }

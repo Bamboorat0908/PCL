@@ -5,14 +5,14 @@ $project=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\Plain Craft Launche
 if(-not $BuildDirectory){$BuildDirectory=Join-Path $project 'bin'}
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $startup=$app.GetType().GetMethod('Application_Startup',[Reflection.BindingFlags]'NonPublic,Instance')
 $app.remove_Startup([Delegate]::CreateDelegate([Windows.StartupEventHandler],$app,$startup))
 [Windows.Application].GetField('_startupUri',[Reflection.BindingFlags]'NonPublic,Instance').SetValue($app,$null)
-$assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
 $source=[Windows.Interop.HwndSource]::new([Windows.Interop.HwndSourceParameters]::new('BRCL isolated toggle keys'))
-function New-Control([string]$name){[Activator]::CreateInstance($assembly.GetType('PCL.'+$name,$true))}
+function New-Control([string]$name){[Activator]::CreateInstance($assembly.GetType('BRCL.'+$name,$true))}
 function Key-Event($control,$key,[bool]$up){
     $args=[Windows.Input.KeyEventArgs]::new([Windows.Input.Keyboard]::PrimaryDevice,$source,0,$key)
     $args.RoutedEvent=if($up){[Windows.Input.Keyboard]::KeyUpEvent}else{[Windows.Input.Keyboard]::KeyDownEvent}

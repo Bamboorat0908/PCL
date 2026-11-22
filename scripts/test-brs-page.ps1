@@ -7,10 +7,10 @@ if (-not $BuildDirectory) { $BuildDirectory = Join-Path $project 'bin' }
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $BuildDirectory 'BRCL.exe'))
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$pageType = $assembly.GetType('PCL.PageBRS',$true)
+$assembly.GetType('BRCL.ModAnimation',$true).GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$pageType = $assembly.GetType('BRCL.PageBRS',$true)
 $apply = $pageType.GetMethod('ApplyData',[Reflection.BindingFlags]'NonPublic,Instance')
 $page = [Activator]::CreateInstance($pageType)
 $missing = [string][char]0x2014
@@ -63,7 +63,7 @@ $row = $page.FindName('PanPlayers').Children[0]
 if ($row.Children[2].Text -ne '上次在线') { throw 'Refresh failure kept a current-online player label' }
 Write-Output 'PASS refresh failure preserves roster as a clearly marked snapshot'
 
-$sponsorType = $assembly.GetType('PCL.PageSetupSponsors',$true)
+$sponsorType = $assembly.GetType('BRCL.PageSetupSponsors',$true)
 $sponsors = [Activator]::CreateInstance($sponsorType)
 $sponsorData = [Newtonsoft.Json.Linq.JObject]::Parse('{"sponsors":[{"name":"PlayerA","amount":987654.32,"note":"Thank you","date":"2026-11-13","has_avatar":false},{"name":"Guest","amount":123456.78,"has_avatar":false}]}')
 [void]$sponsorType.GetMethod('ApplyData',[Reflection.BindingFlags]'NonPublic,Instance').Invoke($sponsors,[object[]]@($sponsorData,$false))

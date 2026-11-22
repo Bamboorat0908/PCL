@@ -3,10 +3,10 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 $project=Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
 $flags=[Reflection.BindingFlags]'NonPublic,Instance'
-foreach ($case in @(@('PCL.PageStock','ShowFail','NavigationVersion'),@('PCL.PageMap','ShowUnavailable','ConnectionVersion'))) {
+foreach ($case in @(@('BRCL.PageStock','ShowFail','NavigationVersion'),@('BRCL.PageMap','ShowUnavailable','ConnectionVersion'))) {
     $type=$assembly.GetType($case[0],$true)
     $page=[Activator]::CreateInstance($type)
     $navigation=$type.GetField('ActiveNavigationId',$flags)

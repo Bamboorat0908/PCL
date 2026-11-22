@@ -8,7 +8,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom($AssemblyPath)
 [Windows.Application]::ResourceAssembly = $assembly
-$app = [Activator]::CreateInstance($assembly.GetType('PCL.Application', $true), $true)
+$app = [Activator]::CreateInstance($assembly.GetType('BRCL.Application', $true), $true)
 $app.InitializeComponent()
 
 $source = @'
@@ -187,14 +187,14 @@ public static class BrclMicrosoftLoginPerformance
     public static string[] Run(Assembly assembly)
     {
         BindingFlags privateStatic = BindingFlags.NonPublic | BindingFlags.Static;
-        Type launch = assembly.GetType("PCL.ModLaunch", true);
+        Type launch = assembly.GetType("BRCL.ModLaunch", true);
         MethodInfo request = launch.GetMethod("MsLoginRequest", privateStatic);
         MethodInfo combined = launch.GetMethod("MsLoginStep5And6", privateStatic);
         if (request == null || combined == null) throw new Exception("Build is missing the Microsoft login performance entry points.");
-        FieldInfo clientField = assembly.GetType("PCL.ModNet", true).GetField("RequestClient", privateStatic);
+        FieldInfo clientField = assembly.GetType("BRCL.ModNet", true).GetField("RequestClient", privateStatic);
         if (clientField == null) throw new Exception("RequestClient injection point is missing.");
         // Initialize the launcher's UI-thread marker here, before executing network code on workers.
-        assembly.GetType("PCL.ModBase", true).GetMethod("RunInUi", BindingFlags.Public | BindingFlags.Static,
+        assembly.GetType("BRCL.ModBase", true).GetMethod("RunInUi", BindingFlags.Public | BindingFlags.Static,
             null, Type.EmptyTypes, null).Invoke(null, null);
         object previousClient = clientField.GetValue(null);
         List<string> results = new List<string>();

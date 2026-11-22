@@ -4,7 +4,7 @@ $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\Newtonsoft.Json.dll'))
 [void][Reflection.Assembly]::LoadFrom((Join-Path $project 'Resources\ThrottleDebounce.dll'))
 $assembly = [Reflection.Assembly]::LoadFrom((Join-Path $project 'bin\BRCL.exe'))
-$method = $assembly.GetType('PCL.ModLaunch',$true).GetMethod('ExtractNativesArchive', [Reflection.BindingFlags]'NonPublic,Static')
+$method = $assembly.GetType('BRCL.ModLaunch',$true).GetMethod('ExtractNativesArchive', [Reflection.BindingFlags]'NonPublic,Static')
 if (-not $method) { throw 'Build BRCL with native archive validation before running this test.' }
 $root = Join-Path $env:TEMP ('BRCL-NativesTest-' + [guid]::NewGuid().ToString('N'))
 $target = Join-Path $root 'natives'

@@ -4,14 +4,14 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 New-Item -ItemType Directory -Path $OutputDirectory -Force|Out-Null
 $assembly=[Reflection.Assembly]::LoadFrom((Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\bin\BRCL.exe'))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true);$app.InitializeComponent()
-$assembly.GetType('PCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
-$page=[Activator]::CreateInstance($assembly.GetType('PCL.PageDownloadLeft',$true))
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true);$app.InitializeComponent()
+$assembly.GetType('BRCL.ModAnimation').GetProperty('AniControlEnabled').SetValue($null,1,$null)
+$page=[Activator]::CreateInstance($assembly.GetType('BRCL.PageDownloadLeft',$true))
 if($page.FindName('ItemBrsPack').Title -ne 'TRM 1.11 整合包'){throw 'Missing preset entry'}
 Write-Output 'PASS download page has the TRM 1.11 preset entry'
 foreach($theme in @('dark','light')) {
  foreach($width in @(660,390)) {
-  $window=[Activator]::CreateInstance($assembly.GetType('PCL.BrsPackPresetWindow',$true),[object[]]@('C:\Games\Minecraft'))
+  $window=[Activator]::CreateInstance($assembly.GetType('BRCL.BrsPackPresetWindow',$true),[object[]]@('C:\Games\Minecraft'))
   $window.Width=$width;$window.Height=if($width -lt 520){710}else{520}
   $root=$window.Content
   if($theme -eq 'light'){

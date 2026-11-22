@@ -2,10 +2,10 @@ $ErrorActionPreference='Stop'
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System.Xaml
 $assembly=[Reflection.Assembly]::LoadFrom((Resolve-Path (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\bin\BRCL.exe')))
 [Windows.Application]::ResourceAssembly=$assembly
-$app=[Activator]::CreateInstance($assembly.GetType('PCL.Application',$true),$true)
+$app=[Activator]::CreateInstance($assembly.GetType('BRCL.Application',$true),$true)
 $app.InitializeComponent()
-$legacyType=$assembly.GetType('PCL.MyBitmap',$true)
-$imageType=$assembly.GetType('PCL.MyImage',$true)
+$legacyType=$assembly.GetType('BRCL.MyBitmap',$true)
+$imageType=$assembly.GetType('BRCL.MyImage',$true)
 $convert=$legacyType.GetMethods()|Where-Object {$_.Name -eq 'op_Implicit' -and $_.ReturnType -eq [Windows.Media.ImageSource]}
 function Render-Hash($source){
     $bitmap=[Windows.Media.Imaging.RenderTargetBitmap]::new(284,96,96,96,[Windows.Media.PixelFormats]::Pbgra32)
