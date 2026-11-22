@@ -1,11 +1,11 @@
 {
-  "display_version": "1.4.0",
-  "version": "2026.11.23.7",
+  "display_version": "1.1.6",
+  "version": "2026.11.23.8",
   "site_release": "2026-11-23",
   "build_date": "2026-11-23",
   "published_at": "2026-11-23",
   "size": 6437888,
-  "sha256": "8dcf201245cee074012fff3a9636614ab287228f0cb41f04467f371846f36905",
+  "sha256": "9855d4394cc779c015bdd67f02673b914a6776c2dc0ab9e64c4465366c16991a",
   "download_url": "/BRCL/download/BRCL.exe",
   "platform": "Windows",
   "architecture": "AnyCPU",
@@ -23,6 +23,6 @@
     "减少启动时的后台检查。接受协议后才启动自动更新检查。减少实例设置的重复磁盘检查，以及 Java 下载进度的重复刷新。"
   ],
   "license_url": "/BRCL/license.txt",
-  "git_commit": "ba06ab3385db03d796c40f78df0b2284b834cd2b",
+  "git_commit": "dc56886b5ca575e489e93424caa61552f880e9a1",
   "test_report_sha256": "6b7b8796bcac9238db1023ff047848d53699b0c69be170b1926e1869c80e6684"
 }
