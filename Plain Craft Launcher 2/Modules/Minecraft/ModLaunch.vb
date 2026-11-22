@@ -112,7 +112,7 @@
         Try
             '构造主加载器
             Dim Loaders As New List(Of LoaderBase) From {
-                New LoaderTask(Of Integer, Integer)("获取 Java", AddressOf McLaunchJava) With {.ProgressWeight = 4, .Block = False},
+                New LaunchJavaTask With {.ProgressWeight = 4, .Block = False},
                 McLoginLoader, '.ProgressWeight = 15, .Block = False
                 New LoaderCombo(Of String)("补全文件", DlClientFix(McInstanceSelected, False, True)) With {.ProgressWeight = 15, .Show = False},
                 New LoaderTask(Of String, Integer)("获取启动参数", AddressOf McLaunchArgumentMain) With {.ProgressWeight = 2},
@@ -1235,8 +1235,20 @@ Retry:
 #Region "Java 处理"
 
     Public McLaunchJavaSelected As Java = Nothing
+    Friend NotInheritable Class LaunchJavaTask
+        Inherits LoaderTask(Of Integer, Integer)
+
+        Friend DownloadStatus As JavaDownloadStatus
+
+        Public Sub New()
+            MyBase.New("获取 Java", AddressOf McLaunchJava)
+        End Sub
+    End Class
+
     Private Sub McLaunchJava(Task As LoaderTask(Of Integer, Integer))
-        McLaunchJavaSelected = SelectOrDownloadJava(McInstanceSelected, True, Task.CreateCancellationToken, Task.CreateSyncProgressProvider)
+        Dim JavaTask = DirectCast(Task, LaunchJavaTask)
+        McLaunchJavaSelected = SelectOrDownloadJava(McInstanceSelected, True, Task.CreateCancellationToken, Task.CreateSyncProgressProvider,
+            Sub(Status) Volatile.Write(JavaTask.DownloadStatus, Status))
         If Task.IsCanceled Then Return
         If McLaunchJavaSelected Is Nothing Then Throw New OperationCanceledException 'SelectOrDownloadJava 已经会给予适当的提示
         If ModeDebug Then

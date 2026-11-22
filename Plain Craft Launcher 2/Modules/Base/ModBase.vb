@@ -548,6 +548,8 @@ Public Module ModBase
             Dim Current = NormalizeIniPath(FileName)
             SyncLock IniStorageLock
                 If Current.Equals(NormalizeIniPath("Setup"), StringComparison.OrdinalIgnoreCase) Then Return LoadGlobalSetup(Current)
+                Dim Cached As ConcurrentDictionary(Of String, String) = Nothing
+                If IniCache.TryGetValue(Current, Cached) Then Return Cached
                 Return LoadIniFile(ResolveDataFile(Current, LegacyIniPath(Current)))
             End SyncLock
         Catch ex As Exception

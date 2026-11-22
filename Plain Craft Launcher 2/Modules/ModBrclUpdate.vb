@@ -3,26 +3,22 @@ Imports System.Security.Cryptography
 Imports System.Text
 
 Friend Module ModBrclUpdate
-    Public Const BrclReleaseVersion As String = "1.3.1"
-    Public Const BrclUpdateRevision As String = "2026.11.23.6"
+    Public Const BrclReleaseVersion As String = "1.4.0"
+    Public Const BrclUpdateRevision As String = "2026.11.23.7"
     Friend Const PrimaryDownloadBase As String = "https://zhushu.homes/BRCL/transfer/"
     Friend Const BackupDownloadBase As String = "https://zhushu.homes/BRCL/transfer-mirror/"
     Private Const PublicKey As String = "<RSAKeyValue><Modulus>6nS0PTj2VkIKGLjI9wbulA94ZVggaX0294sTyPmjOiaiFo5gSS03/P73ChiJNeZFwYSRYYWQNpNEXPVQvrcjZqJbQd/KFfJ8Atnyo/YRyIzsB9fNg6HBXlCG44ePm298uoLTbeVQun5MwrX7Sl+6w3u1PkkdguzgXdrOdrjrO/YcABguF4J+oEeiRDEuqjhf9VwZBbYnUAgXkDI5GBKoZp0+hG5EItkoeblOKZaeH1gI4pC4fPYgsTglMgunFn3UfaI9jBpERxVpWjWOA70ATA9BDculrT0KKGUKPlBCWGVapalUH45+AsB+LRD6n0n/3ZzXpfhuZHS0kNYM87QYQaj52dV50uUldwXLekYA9wyL0MACCtr5TTadxgcGiOqJMaozLEQeVqKFErRBWP4pVltE7bSmVYNxeQE4YecWFVOQe3Zs6YON3DL6I6YX1Q4rTPvZXta1dfMd8cTCa61bw2ZnRM1Pj79/qZYtK5OBIRTTVVnJJ0S9AAQZRUBscUo9</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
     Private Checking As Integer
     Private StartupCheckScheduled As Integer
 
-    ''' <summary>首屏就绪后独立启动一次更新检查，不依赖 Java 搜索等初始化任务。</summary>
+    ''' <summary>首屏就绪且协议已确认后，独立启动一次更新检查。</summary>
     Public Sub StartStartupUpdateCheck()
         If Environment.GetEnvironmentVariable("BRCL_UI_PREVIEW") = "1" Then Return
+        If Settings.Get(Of Integer)("SystemEulaVersion") < UserAgreementVersion Then Return
         If Not TryReserveStartupCheck() Then Return
         Dim Worker As New Thread(
             Sub()
                 Try
-                    '等待用户确认当前协议。
-                    Do While Settings.Get(Of Integer)("SystemEulaVersion") < UserAgreementVersion
-                        If Application.Current Is Nothing OrElse Application.Current.Dispatcher.HasShutdownStarted Then Return
-                        Thread.Sleep(250)
-                    Loop
                     Logger.Info("开始本次启动的自动更新检查")
                     CheckBrclUpdate(False)
                 Catch ex As Exception

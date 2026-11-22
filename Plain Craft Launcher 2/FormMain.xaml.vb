@@ -456,6 +456,11 @@ Public Class FormMain
                     Select Case MyMsgBox(AgreementPrompt, UserAgreementTitle, "同意并继续", "拒绝并退出", "查看协议")
                         Case 1
                             Settings.Set("SystemEulaVersion", UserAgreementVersion)
+                            If Settings.Get(Of Integer)("SystemEulaVersion") < UserAgreementVersion Then
+                                MyMsgBox("无法保存协议确认。请检查启动器设置的写入权限后重试。", UserAgreementTitle, "退出", ForceWait:=True)
+                                EndProgram(False)
+                                Return
+                            End If
                             Exit Do
                         Case 3
                             MyMsgBox(UserAgreementText, UserAgreementTitle, "返回", ForceWait:=True)
@@ -465,6 +470,8 @@ Public Class FormMain
                     End Select
                 Loop
             End If
+            If WindowClosing Then Return
+            If StartupUiReady.IsSet Then StartStartupUpdateCheck()
             '启动加载器池
             Try
                 JavaInit() '延后到同意协议后再执行，避免在初次启动时进行进程操作

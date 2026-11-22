@@ -125,6 +125,7 @@ Public Class PageLaunchLeft
         '初始化页面
         LabLaunchingName.Text = McInstanceSelected.Name
         LabLaunchingStage.Text = "初始化"
+        RefreshJavaDownload(Nothing)
         LabLaunchingTitle.Text = If(CurrentLaunchOptions?.SaveBatch Is Nothing, "正在启动游戏", "正在导出启动脚本")
         LabLaunchingProgress.Text = "0.00 %"
         LabLaunchingProgress.Opacity = 1
@@ -163,6 +164,7 @@ Public Class PageLaunchLeft
     ''' 切换至登录页面。
     ''' </summary>
     Public Sub PageChangeToLogin()
+        RefreshJavaDownload(Nothing)
         PageGet(PageCurrent).Reload(KeepInput:=False)
         PanInput.IsHitTestVisible = False
         PanLaunching.IsHitTestVisible = False
@@ -733,13 +735,19 @@ Finish:
     ''' </summary>
     Public Sub LaunchingRefresh()
         Try
-            If McLaunchLoaderReal.State = LoadState.Canceled Then Return
+            If McLaunchLoaderReal.State = LoadState.Canceled Then
+                RefreshJavaDownload(Nothing)
+                Return
+            End If
             '阶段状态获取
             Dim IsLaunched As Boolean = False '是否已经启动游戏，只是在等待窗口
+            Dim JavaStatus As JavaDownloadStatus = Nothing
             Try
                 For Each Loader In McLaunchLoaderReal.GetLoaderList(False)
                     If Loader.State = LoadState.Loading OrElse Loader.State = LoadState.Waiting Then
                         LabLaunchingStage.Text = Loader.Name
+                        Dim JavaTask = TryCast(Loader, LaunchJavaTask)
+                        If JavaTask IsNot Nothing Then JavaStatus = Volatile.Read(JavaTask.DownloadStatus)
                         IsLaunched = Loader.Name = "等待游戏窗口出现" OrElse Loader.Name = "结束处理"
                         Exit Try
                     End If
@@ -749,6 +757,12 @@ Finish:
                 Logger.Warn(ex, "获取是否启动完成失败，可能是由于启动状态改变导致集合已修改")
                 Return
             End Try
+            Dim Now = GetTimeMs()
+            If JavaStatus IsNot LastJavaStatus OrElse (JavaStatus IsNot Nothing AndAlso Now - LastJavaRefresh >= 200) Then
+                RefreshJavaDownload(JavaStatus)
+                LastJavaStatus = JavaStatus
+                LastJavaRefresh = Now
+            End If
             LabLaunchingTitle.Text = If(IsLaunched OrElse McLaunchLoaderReal.State = LoadState.Finished,
                 "已启动游戏",
                 If(CurrentLaunchOptions.SaveBatch Is Nothing, "正在启动游戏", "正在导出启动脚本"))
@@ -762,7 +776,7 @@ Finish:
             '更新下载速度
             Dim HasLaunchDownloader As Boolean = False
             Try
-                If NetManager.Speed = 0 AndAlso LabLaunchingDownload.Visibility = Visibility.Collapsed Then
+                If JavaStatus IsNot Nothing OrElse (NetManager.Speed = 0 AndAlso LabLaunchingDownload.Visibility = Visibility.Collapsed) Then
                     '可能只是在检查文件，没有实际下载
                     HasLaunchDownloader = False
                 Else
@@ -810,6 +824,31 @@ Finish:
             Logger.Error(ex, "刷新启动信息失败")
         End Try
     End Sub
+
+    Private LastJavaStatus As JavaDownloadStatus
+    Private LastJavaRefresh As Long
+
+    Friend Sub RefreshJavaDownload(Status As JavaDownloadStatus)
+        PanJavaDownload.Visibility = If(Status Is Nothing, Visibility.Collapsed, Visibility.Visible)
+        If Status Is Nothing Then Return
+
+        Dim Snapshot = Status.GetSnapshot()
+        If Snapshot.Installing Then
+            LabJavaDownloadStage.Text = $"正在校验并安装 Java {Status.Major}"
+        ElseIf Snapshot.Downloading Then
+            LabJavaDownloadStage.Text = $"正在下载 Java {Status.Major}"
+        Else
+            LabJavaDownloadStage.Text = $"正在准备 Java {Status.Major} 下载"
+        End If
+
+        PanJavaTransfer.Visibility = If(Snapshot.Downloading OrElse Snapshot.Installing, Visibility.Visible, Visibility.Collapsed)
+        PanJavaNetwork.Visibility = If(Snapshot.Downloading, Visibility.Visible, Visibility.Collapsed)
+        BarJavaDownload.Value = Snapshot.Progress
+        LabJavaDownloadProgress.Text = Snapshot.Progress.ToString("0.0%")
+        LabJavaDownloadSpeed.Text = StringUtils.FormatByteSize(Snapshot.Speed) & "/s"
+        LabJavaDownloadSource.Text = If(Snapshot.Sources.Length = 0, "等待连接…", String.Join("、", Snapshot.Sources))
+    End Sub
+
     Private ShowProgress As Double = 0
     '尺寸改变动画
     Private IsWidthAnimating As Boolean = False

@@ -8,6 +8,17 @@ Imports System.Threading.Tasks
 ''' <summary>Java 专用下载源：仅映射经过确认的运行时资源，测速不下载完整安装包。</summary>
 Public Module ModJavaDownloadSources
 
+    Friend Function JavaDownloadHostName(Host As String) As String
+        Select Case Host.ToLowerInvariant()
+            Case "github.com" : Return "Adoptium 官方"
+            Case "piston-data.mojang.com", "launcher.mojang.com" : Return "Mojang 官方"
+            Case "bmclapi2.bangbang93.com" : Return "BMCLAPI"
+            Case "mirrors.tuna.tsinghua.edu.cn" : Return "清华 TUNA"
+            Case "mirrors.nju.edu.cn" : Return "南京 NJU"
+            Case Else : Return Host
+        End Select
+    End Function
+
     '设置值必须与启动设置页一致：0 自动，1 官方，2 BMCLAPI，3 TUNA，4 NJU。
     Public Function JavaDownloadSourceName(SourceId As Integer) As String
         Select Case SourceId

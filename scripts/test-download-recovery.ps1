@@ -58,6 +58,7 @@ public sealed class RecoveryServer : IDisposable {
                 bool bulk=path.Contains("bmclapi-bulk");
                 bool unknown=path.Contains("unknown-length");
                 bool broken=path.Contains("broken");
+                bool java=path.Contains("java-fixture");
                 if(path.Contains("update-backup")) Interlocked.Exchange(ref UpdateResumeOffset,start);
                 else if(broken) Interlocked.Increment(ref BrokenRequests);
                 else if(path.Contains("rate-backup")) Interlocked.Increment(ref RateBackupRequests);
@@ -68,11 +69,12 @@ public sealed class RecoveryServer : IDisposable {
                 if(start>0) headers+="Content-Range: bytes "+start+"-"+(total-1)+"/"+total+"\r\n";
                 byte[] head=Encoding.ASCII.GetBytes(headers+"\r\n"); stream.Write(head,0,head.Length);
                 byte[] block=new byte[32768]; for(int i=0;i<block.Length;i++) block[i]=0x5a;
-                long remaining=broken ? 65536 : total-start;
+                long remaining=broken ? (java ? 512*1024 : 65536) : total-start;
                 while(remaining>0 && !stopped) {
                     int count=(int)Math.Min(block.Length,remaining); stream.Write(block,0,count); remaining-=count;
                     if(bulk) {Interlocked.Add(ref BulkBytes,count); Thread.Sleep(10);}
                     if(unknown && Interlocked.Add(ref UnknownBytes,count)==4*1024*1024) AllowUnknownFinish.Wait(6000);
+                    if(java) Thread.Sleep(35);
                 }
                 // The primary deliberately closes after a partial body.
             }
@@ -131,6 +133,38 @@ public static class DownloadRecoveryChecks {
                 foreach(byte value in bytes) Require(value==0x5a,"Partial fallback corrupted the merged body");
                 Require(server.BrokenRequests==1 && server.BackupRequests==1,"Retry recovery duplicated a live transfer");
                 passed.Add("PASS fallback preserves the partial bytes, merges the full body and starts no duplicate transfer");
+                string javaBackup="http://localhost:"+server.Port+"/bmclapi-java-fixture-backup";
+                var javaFile=new ModNet.NetFile(new[]{root+"/bmclapi-java-fixture-broken",javaBackup},Path.Combine(stage,"runtime.bin"),
+                    new MeloongCore.FileChecker {ActualSize=2*1024*1024},false);
+                var javaTransfer=new ModNet.LoaderDownload("Java download",new[]{javaFile});
+                var javaStatus=new ModJava.JavaDownloadStatus(17);
+                var setTransfer=javaStatus.GetType().GetMethod("SetTransfer",BindingFlags.Instance|BindingFlags.NonPublic);
+                var refreshJava=typeof(PageLaunchLeft).GetMethod("RefreshJavaDownload",BindingFlags.Instance|BindingFlags.NonPublic);
+                var launchPage=new PageLaunchLeft();
+                var panel=(System.Windows.FrameworkElement)launchPage.FindName("PanJavaDownload");
+                var sourceLabel=(System.Windows.Controls.TextBlock)launchPage.FindName("LabJavaDownloadSource");
+                var speedLabel=(System.Windows.Controls.TextBlock)launchPage.FindName("LabJavaDownloadSpeed");
+                var progress=(System.Windows.Controls.ProgressBar)launchPage.FindName("BarJavaDownload");
+                bool sawPrimary=false, sawBackup=false;
+                try {
+                    setTransfer.Invoke(javaStatus,new object[]{javaTransfer});
+                    javaTransfer.Start(null,false);
+                    waiting.Restart();
+                    while(javaTransfer.State==ModBase.LoadState.Loading && waiting.ElapsedMilliseconds<6000) {
+                        refreshJava.Invoke(launchPage,new object[]{javaStatus});
+                        if(sourceLabel.Text=="127.0.0.1" && progress.Value>0 && progress.Value<=0.25 && speedLabel.Text!="0 B/s") sawPrimary=true;
+                        if(sourceLabel.Text=="localhost" && progress.Value>=0.25 && progress.Value<1 && speedLabel.Text!="0 B/s") sawBackup=true;
+                        Pump(25);
+                    }
+                    Require(javaTransfer.State==ModBase.LoadState.Finished,"Java download fixture did not finish");
+                    Require(sawPrimary && sawBackup,"Java launch UI did not report live progress and speed on both sources");
+                    refreshJava.Invoke(launchPage,new object[]{javaStatus});
+                    Require(progress.Value==1 && (System.Windows.Visibility)((System.Windows.FrameworkElement)launchPage.FindName("PanJavaNetwork")).Visibility==System.Windows.Visibility.Collapsed,
+                        "Java launch UI did not enter installation after the transfer finished");
+                    refreshJava.Invoke(launchPage,new object[]{null});
+                    Require(panel.Visibility==System.Windows.Visibility.Collapsed,"Java download panel was not cleared");
+                    passed.Add("PASS Java launch UI shows byte progress and speed, updates the active source on fallback, and clears after installation");
+                } finally {javaTransfer.Cancel();}
                 var limitedFile=new ModNet.NetFile(new[]{root+"/bmclapi-rate-limited",root+"/rate-backup"},Path.Combine(stage,"rate-limited.bin"),null,false);
                 var limitedTask=new ModNet.LoaderDownload("Loopback rate-limited dependency",new[]{limitedFile});
                 try {

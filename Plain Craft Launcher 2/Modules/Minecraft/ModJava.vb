@@ -296,7 +296,8 @@
     End Function
 
     Private Function SelectAutomaticJava(Instance As McInstance, Range As ValueRange(Of Version), RecommendedComponent As String,
-                                         TryFixOrHint As Boolean, c As CancellationToken, p As ProgressProvider) As Java
+                                         TryFixOrHint As Boolean, c As CancellationToken, p As ProgressProvider,
+                                         ReportDownload As Action(Of JavaDownloadStatus)) As Java
         Dim AutoManage = Instance IsNot Nothing AndAlso Settings.Get(Of Boolean)("LaunchJavaAutoSelect")
         Dim Preferred = If(Instance Is Nothing, GetRecommendedJavaMajor(Nothing, Date.MinValue, 21, Range),
             GetRecommendedJavaMajor(If(Instance.Version.Vaild, Instance.Version.Vanilla, Nothing), Instance.ReleaseTime,
@@ -328,7 +329,9 @@
             If Not TryFixOrHint Then Return Result
             Try
                 Hint($"正在准备适合此版本的 Java {Preferred}，完成后将自动继续启动")
-                Dim Installed = DownloadManagedJava(Range, Preferred, RecommendedComponent, c, p)
+                Dim Status As New JavaDownloadStatus(Preferred)
+                ReportDownload?.Invoke(Status)
+                Dim Installed = DownloadManagedJava(Range, Preferred, RecommendedComponent, c, p, Status)
                 p?.Finish()
                 Hint($"已自动选择 Java {Installed.Version.Major}", HintType.Green)
                 Return Installed
@@ -340,6 +343,8 @@
                     Return Result
                 End If
                 Throw New InvalidOperationException($"未能准备 Java {Preferred}。请检查网络，或在【设置 → 启动 → Java 运行环境】中更换下载源、导入 Java。", ex)
+            Finally
+                ReportDownload?.Invoke(Nothing)
             End Try
         End SyncLock
     End Function
@@ -356,7 +361,9 @@
     ''' 若指定了 <paramref name="TryFixOrHint"/>，则会在找不到时会尝试下载 Java 或提示用户下载，否则只会静默运行。
     ''' </summary>
     ''' <returns>最适合的 Java。若找不到或失败则返回 null，除非取消否则不会抛出异常。</returns>
-    Public Function SelectOrDownloadJava(Target As OneOf(Of ValueRange(Of Version), McInstance), TryFixOrHint As Boolean, Optional c As CancellationToken = Nothing, Optional p As ProgressProvider = Nothing) As Java
+    Public Function SelectOrDownloadJava(Target As OneOf(Of ValueRange(Of Version), McInstance), TryFixOrHint As Boolean,
+                                         Optional c As CancellationToken = Nothing, Optional p As ProgressProvider = Nothing,
+                                         Optional ReportDownload As Action(Of JavaDownloadStatus) = Nothing) As Java
         Try
             If Target.Is(Of McInstance) Then MigrateInstanceJavaSettings(Target.As(Of McInstance), c, p?.SplitTo(0.2)) '迁移
             Dim Instance As McInstance = If(Target.Is(Of McInstance), Target.As(Of McInstance), Nothing)
@@ -416,7 +423,7 @@
                 Case Else '======================== 根据版本范围自动选择 JavaList 中的 Java ========================
 
                     Dim Requirement = If(Instance Is Nothing, (Target.As(Of ValueRange(Of Version)), CType(Nothing, String)), GetJavaRequirement(Instance))
-                    Return SelectAutomaticJava(Instance, Requirement.Item1, Requirement.Item2, TryFixOrHint, c, p)
+                    Return SelectAutomaticJava(Instance, Requirement.Item1, Requirement.Item2, TryFixOrHint, c, p, ReportDownload)
             End Select
         Catch ex As Exception
             ex.ThrowIfCanceled()
@@ -489,19 +496,60 @@ NoForcedJava:
 
     Private Const JavaRuntimeIndex As String = "https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"
 
+    ''' <summary>一次启动的 Java 下载状态，仅统计运行时文件，不计测速、清单与其他游戏下载。</summary>
+    Public NotInheritable Class JavaDownloadStatus
+        Public ReadOnly Major As Integer
+        Private Transfer As LoaderDownload
+
+        Public Sub New(Major As Integer)
+            Me.Major = Major
+        End Sub
+
+        Friend Sub SetTransfer(Loader As LoaderDownload)
+            Volatile.Write(Transfer, Loader)
+        End Sub
+
+        Public Function GetSnapshot() As (Downloading As Boolean, Installing As Boolean, Progress As Double, Speed As Long, Sources As String())
+            Dim Loader = Volatile.Read(Transfer)
+            If Loader Is Nothing Then Return (False, False, 0, 0, Array.Empty(Of String)())
+            If Loader.State = LoadState.Finished Then Return (False, True, 1, 0, Array.Empty(Of String)())
+
+            Dim TotalBytes As Long = 0, ReadyBytes As Long = 0, Speed As Long = 0
+            Dim Sources As New SortedSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            For Each File In Loader.Files
+                Dim Size = Math.Max(0, File.Check.ActualSize) '运行时清单和 ZIP 元数据均提供准确字节数
+                TotalBytes += Size
+                Dim State = File.State
+                ReadyBytes += If(State = NetState.Finished, Size, Math.Min(Size, Math.Max(0, Interlocked.Read(File.DownloadDone))))
+                If State < NetState.Connecting OrElse State >= NetState.Merging Then Continue For
+                SyncLock File.LockChain
+                    If File.Threads Is Nothing Then Continue For
+                    For Each Segment In File.Threads
+                        Dim SegmentState = Segment.State
+                        If SegmentState >= NetState.Merging OrElse (Segment.Source.IsFailed AndAlso Segment.Source.SingleThread IsNot Segment) Then Continue For
+                        Sources.Add(JavaDownloadHostName(New Uri(Segment.Source.Url).Host))
+                        If SegmentState = NetState.Downloading Then Speed += Math.Max(0, Segment.Speed)
+                    Next
+                End SyncLock
+            Next
+            Return (True, False, If(TotalBytes > 0, ReadyBytes / TotalBytes, 0), Speed, Sources.ToArray())
+        End Function
+    End Class
+
     Private Function DownloadManagedJava(Range As ValueRange(Of Version), Preferred As Integer, Component As String,
-                                         c As CancellationToken, p As ProgressProvider) As Java
+                                         c As CancellationToken, p As ProgressProvider, Status As JavaDownloadStatus) As Java
         Dim Source = Settings.Get(Of Integer)("LaunchJavaDownloadSource")
         Logger.Info($"准备 Java {Preferred}，下载源：{JavaDownloadSourceName(Source)}")
         'Temurin 的同一份安装包在官方、清华、南京间测速；特殊旧版使用 Mojang 运行环境。
         If Source <> 2 Then
             Try
                 Dim Archive = ResolveTemurinJavaArchive(Preferred, Range, Source, c)
-                If Archive IsNot Nothing Then Return InstallJavaArchive(Archive, Range, c, p)
+                If Archive IsNot Nothing Then Return InstallJavaArchive(Archive, Range, c, p, Status)
                 If Source = 3 OrElse Source = 4 Then Throw New InvalidOperationException("所选镜像没有满足兼容范围的 Java，请切换为自动测速或导入 Java。")
             Catch ex As Exception
                 ex.ThrowIfCanceled()
                 If Source = 3 OrElse Source = 4 Then Throw
+                Status.SetTransfer(Nothing)
                 Logger.Warn(ex, "Temurin Java 获取失败，尝试同一下载策略下的 Mojang 运行环境")
             End Try
         End If
@@ -546,7 +594,7 @@ NoForcedJava:
                 Downloads.Add(New NetFile(SourceOrder.Select(Function(Id) MapMojangJavaUrl(Info("url").ToString(), Id)), Destination,
                     New FileChecker With {.Hash = FileHash, .ActualSize = CLng(Info("size"))}))
             Next
-            RunJavaFileDownload(Downloads, c, p)
+            RunJavaFileDownload(Downloads, c, p, Status)
             Return PublishJavaRuntime(Stage, Range, Preferred, c)
         Finally
             CleanupJavaStage(Stage)
@@ -572,8 +620,10 @@ NoForcedJava:
         End Try
     End Function
 
-    Private Sub RunJavaFileDownload(Files As List(Of NetFile), c As CancellationToken, p As ProgressProvider)
+    Private Sub RunJavaFileDownload(Files As List(Of NetFile), c As CancellationToken, p As ProgressProvider,
+                                   Optional Status As JavaDownloadStatus = Nothing)
         Dim Loader As New LoaderDownload("下载 Java 运行环境", Files)
+        Status?.SetTransfer(Loader)
         Try
             Loader.WaitForExit(c:=c, p:=p?.SplitTo(0.85))
         Finally
@@ -581,13 +631,14 @@ NoForcedJava:
         End Try
     End Sub
 
-    Private Function InstallJavaArchive(Archive As JavaArchiveDownloadInfo, Range As ValueRange(Of Version), c As CancellationToken, p As ProgressProvider) As Java
+    Private Function InstallJavaArchive(Archive As JavaArchiveDownloadInfo, Range As ValueRange(Of Version),
+                                        c As CancellationToken, p As ProgressProvider, Status As JavaDownloadStatus) As Java
         Dim Stage = CreateJavaStageDirectory()
         Try
             Dim ZipPath = IO.Path.Combine(Stage, "runtime.zip")
             Dim ExtractPath = IO.Path.Combine(Stage, "runtime")
             Dim Checker As New FileChecker With {.Hash = Archive.Sha256, .ActualSize = Archive.Size}
-            RunJavaFileDownload(New List(Of NetFile) From {New NetFile(Archive.Urls, ZipPath, Checker)}, c, p)
+            RunJavaFileDownload(New List(Of NetFile) From {New NetFile(Archive.Urls, ZipPath, Checker)}, c, p, Status)
             c.ThrowIfCancellationRequested()
             Dim CheckError = Checker.Check(ZipPath)
             If CheckError IsNot Nothing Then Throw New InvalidDataException("Java 安装包校验失败：" & CheckError)

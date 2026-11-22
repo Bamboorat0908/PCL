@@ -5,45 +5,38 @@
     "launch": {
       "src": "/BRCL/assets/screens/launch-1.0.2.7.webp",
       "alt": "BRCL 首页布局预览：服务器状态、趣味日历与每日运势示意",
-      "caption": "布局预览 · 首页日历与每日运势，结果为示例",
-      "index": "01 / 06"
+      "caption": "首页日历与每日运势（示例）"
     },
     "bank": {
       "src": "/BRCL/assets/screens/bank-1.0.2.7.webp",
       "alt": "BRCL 银行账户总览布局预览，使用示例数据，非真实账户",
-      "caption": "布局预览 · 银行账户总览，示例数据，非真实账户",
-      "index": "02 / 06"
+      "caption": "团队账户总览（示例数据）"
     },
     "presets": {
       "src": "/BRCL/assets/screens/presets-1.0.2.7.webp",
       "alt": "TRM 1.11 高预设与低预设选择面板",
-      "caption": "界面预览 · TRM 1.11 高、低预设选择",
-      "index": "03 / 06"
+      "caption": "TRM 1.11 高、低预设选择"
     },
     "news": {
       "src": "/BRCL/assets/screens/news.webp",
       "alt": "BRCL 新闻频道布局预览",
-      "caption": "布局预览 · 新闻频道，给阅读留出更多空间",
-      "index": "04 / 06"
+      "caption": "新闻频道（界面示意）"
     },
     "settings": {
       "src": "/BRCL/assets/screens/settings.webp",
       "alt": "BRCL 偏好设置布局预览",
-      "caption": "布局预览 · 偏好设置，常用选项与个人习惯",
-      "index": "05 / 06"
+      "caption": "偏好设置（界面示意）"
     },
     "map": {
       "src": "/BRCL/assets/screens/map.webp",
       "alt": "BRCL 卫星地图界面",
-      "caption": "卫星地图 · 从另一个角度探索 BRS",
-      "index": "06 / 06"
+      "caption": "BRS 卫星地图"
     }
   };
   const tabs = Array.from(document.querySelectorAll(".showcase-tab"));
   const image = document.getElementById("showcase-image");
   const panel = document.getElementById("showcase-panel");
   const caption = document.getElementById("screen-caption");
-  const index = document.getElementById("screen-index");
   const openImage = document.getElementById("showcase-open");
   let selectionVersion = 0;
   const selectScreen = tab => {
@@ -57,7 +50,6 @@
     }
     panel.setAttribute("aria-labelledby", tab.id);
     caption.textContent = screen.caption;
-    index.textContent = screen.index;
     const current = ++selectionVersion;
     image.classList.add("is-loading");
     const next = new Image();

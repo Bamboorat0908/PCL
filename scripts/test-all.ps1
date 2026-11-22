@@ -20,6 +20,7 @@ if (-not (Test-Path -LiteralPath $exe)) { throw 'Build Release before running th
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $cases = @(
     @{Name='data-migration'; File='test-data-migration.ps1'; Args=@('-FixtureDirectory',(Join-Path $OutputDirectory 'migration-fixture'))},
+    @{Name='user-agreement'; File='test-user-agreement.ps1'; Args=@()},
     @{Name='instance-game'; File='test-instance-game.ps1'; Args=@()},
     @{Name='instance-backup'; File='test-instance-backup.ps1'; Args=@()},
     @{Name='directory-safety'; File='test-directory-safety.ps1'; Args=@()},
