@@ -20,8 +20,8 @@ if not isinstance(entries, list) or not entries:
 previous_version = None
 for entry in entries:
     version = entry['title']
-    if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){2,3}', version):
-        raise ValueError('Changelog headings must contain only the version number')
+    if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){2}', version):
+        raise ValueError('Changelog headings must use three-part version numbers')
     numeric_version = tuple(map(int, version.split('.')))
     if previous_version is not None and numeric_version >= previous_version:
         raise ValueError('Changelog versions must be unique and ordered newest first')

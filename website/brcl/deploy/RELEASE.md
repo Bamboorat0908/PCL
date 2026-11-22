@@ -1,6 +1,6 @@
 # BRCL 客户端发布
 
-源码版本由 `ModBrclUpdate.vb`、`AssemblyInfo.vb` 和 `Changelog.json` 共同定义。修订号为四段递增值。发布提交使用 `brcl-v<展示版本>` 标签。
+源码版本由 `ModBrclUpdate.vb`、`AssemblyInfo.vb` 和 `Changelog.json` 共同定义。展示版本使用三段式。新增功能升中间一位，小修复升末位，重大改版或破坏性兼容变更升首位。自动更新按独立的四段修订号递增。发布提交使用 `brcl-v<展示版本>` 标签。
 
 1. 在干净检出上执行 `scripts/verify-release.ps1`，保存产物和回归报告。正式发布可加 `-PackArchive` 校验本次服务器整合包。
 2. 执行 `scripts/publish-update.ps1 -PrepareOnly -Version <修订> -DisplayVersion <版本> -VerifiedReleaseDirectory <验证目录>`。准备环节使用外部私钥，校验并签名验证目录里的 ZIP 与 EXE。运行 `scripts/test-release-package.ps1` 校验包和签名。
@@ -10,9 +10,11 @@
 
 ## 更新日志
 
-在内置的 Changelog.json 首位新增一条正式发布记录。title 只填展示版本号，date 使用 YYYY-MM-DD，按版本号从新到旧排列。每条发布记录用 sections 按功能分组，每组用 items 记录改动。summary 概括玩家可感知的变化，detail 说明影响、使用入口和必要的限制。已随版本发布的阶段性改动补入对应版本。
+在内置的 Changelog.json 首位新增一条正式发布记录。title 只填三段式展示版本号，date 使用 YYYY-MM-DD，按版本号从新到旧排列。每条发布记录用 sections 按功能分组，每组用 items 记录改动。summary 概括玩家可感知的变化，detail 说明影响、使用入口和必要的限制。已随版本发布的阶段性改动补入对应版本。
 
 官网的本次更新、可展开的往期版本和最新版本文本下载由 prepare-release.py 从内置日志生成。release.json 中的 release_notes 继续提供最新版本的纯文本条目。
+
+1.1.0 对应 2026-11-23 的发布内容。往期条目的原始发行编号可以通过 changelog 中的 original_version 查询。历史编号按发布时间从 1.0.0 排到 1.0.13，标题有变化的条目保留原编号，供查询此前的安装包和发布凭据。
 
 ## HTTPS 地址
 

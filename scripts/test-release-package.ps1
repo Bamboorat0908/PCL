@@ -62,10 +62,12 @@ $reader = New-Object IO.StreamReader($stream)
 try { $log = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
 $releaseDate = [DateTime]::ParseExact((($Version.Split('.') | Select-Object -First 3) -join '.'),'yyyy.MM.dd',[Globalization.CultureInfo]::InvariantCulture).ToString('yyyy-MM-dd')
 $structured = $null -ne $log[0].sections
+$threePart = $structured -and $DisplayVersion -match '^\d+\.\d+\.\d+$'
+$versionPattern = if ($threePart) { '^[0-9]+(?:\.[0-9]+){2}$' } else { '^[0-9]+(?:\.[0-9]+){2,3}$' }
 if ($structured) {
     $previous = $null
     foreach ($entry in $log) {
-        if ($entry.title -cnotmatch '^[0-9]+(?:\.[0-9]+){2,3}$' -or $entry.date -cnotmatch '^\d{4}-\d{2}-\d{2}$' -or @($entry.sections).Count -lt 1) { throw 'Invalid version entry in changelog.' }
+        if ($entry.title -cnotmatch $versionPattern -or $entry.date -cnotmatch '^\d{4}-\d{2}-\d{2}$' -or @($entry.sections).Count -lt 1) { throw 'Invalid version entry in changelog.' }
         $current = [Version]$entry.title
         if ($null -ne $previous -and $current -ge $previous) { throw 'Changelog must list unique versions newest first.' }
         $previous = $current
@@ -83,7 +85,10 @@ if ($structured) {
 }
 $titlePrefix = if ($structured) { '' } else { 'BRCL ' }
 if ($log[0].title -cne ($titlePrefix + $DisplayVersion) -or $log[0].date -ne $releaseDate -or $releaseItems.Count -lt 1 -or @($releaseItems | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count) { throw 'Release changelog is missing or invalid.' }
-if (@($log | Where-Object title -eq ($titlePrefix + '1.0.1.1')).Count -ne 1) { throw 'Previous release history was lost.' }
+$originalRelease = @($log | Where-Object {
+    $_.title -ceq ($titlePrefix + '1.0.1.1') -or $_.original_version -ceq '1.0.1.1'
+})
+if ($originalRelease.Count -ne 1) { throw 'Previous release history was lost.' }
 Write-Output 'PASS executable file version, updater revision and embedded release history'
 
 $websiteDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\website\brcl\dist'))

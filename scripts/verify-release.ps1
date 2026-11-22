@@ -25,7 +25,8 @@ $exe = Join-Path $repo 'Plain Craft Launcher 2\bin\BRCL.exe'
 $updateSource = [IO.File]::ReadAllText((Join-Path $repo 'Plain Craft Launcher 2\Modules\ModBrclUpdate.vb'))
 $revision = [regex]::Match($updateSource, 'BrclUpdateRevision As String = "([0-9.]+)"').Groups[1].Value
 $display = [regex]::Match($updateSource, 'BrclReleaseVersion As String = "([0-9.]+)"').Groups[1].Value
-if ($revision -notmatch '^\d+\.\d+\.\d+\.\d+$' -or (Get-Item -LiteralPath $exe).VersionInfo.FileVersion -ne $display) { throw 'Release version metadata differs.' }
+if ($revision -notmatch '^\d+\.\d+\.\d+\.\d+$' -or $display -notmatch '^\d+\.\d+\.\d+$' -or
+    (Get-Item -LiteralPath $exe).VersionInfo.FileVersion -ne "$display.0") { throw 'Release version metadata differs.' }
 $payload = Join-Path $out 'payload'
 & (Join-Path $PSScriptRoot 'export-single-exe.ps1') -Exe $exe -OutputDirectory $payload
 Add-Type -AssemblyName System.IO.Compression.FileSystem
