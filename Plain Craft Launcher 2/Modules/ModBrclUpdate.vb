@@ -18,8 +18,8 @@ Friend Module ModBrclUpdate
         Dim Worker As New Thread(
             Sub()
                 Try
-                    '全新安装先完成协议授权；等待只占用后台线程，不阻塞 UI。
-                    Do While Settings.Get(Of Integer)("SystemEulaVersion") < 2
+                    '等待用户确认当前协议。
+                    Do While Settings.Get(Of Integer)("SystemEulaVersion") < UserAgreementVersion
                         If Application.Current Is Nothing OrElse Application.Current.Dispatcher.HasShutdownStarted Then Return
                         Thread.Sleep(250)
                     Loop

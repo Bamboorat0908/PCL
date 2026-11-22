@@ -900,8 +900,8 @@ NextFile:
         Text = Text.RegexReplace("\{hint\}", Function() Replacer(PageOtherTest.GetRandomHint()))
         Text = Text.RegexReplace("\{cave\}", Function() Replacer(PageOtherTest.GetRandomCave()))
         Text = Text.RegexReplace("\{setup:([a-zA-Z0-9]+)\}", Function(m) Replacer(Settings.GetSafe(m.Groups(1).Value, McInstanceSelected)))
-        Text = Text.RegexReplace("\{varible:([^:\}]+)(?::([^\}]+))?\}", Function(m) Replacer(RegistryUtils.TryRead($"HKEY_CURRENT_USER\Software\{RegFolder}", $"CustomEvent{m.Groups(1).Value}", m.Groups(2).Value)))
-        Text = Text.RegexReplace("\{variable:([^:\}]+)(?::([^\}]+))?\}", Function(m) Replacer(RegistryUtils.TryRead($"HKEY_CURRENT_USER\Software\{RegFolder}", $"CustomEvent{m.Groups(1).Value}", m.Groups(2).Value)))
+        Text = Text.RegexReplace("\{varible:([^:\}]+)(?::([^\}]+))?\}", Function(m) Replacer(ReadDataRegistry($"CustomEvent{m.Groups(1).Value}", m.Groups(2).Value)))
+        Text = Text.RegexReplace("\{variable:([^:\}]+)(?::([^\}]+))?\}", Function(m) Replacer(ReadDataRegistry($"CustomEvent{m.Groups(1).Value}", m.Groups(2).Value)))
         Return Text
     End Function
 
@@ -922,7 +922,7 @@ NextFile:
             IsTaskTempClearing = True
             Try
                 Logger.Info("开始清理任务缓存文件夹")
-                DirectoryUtils.Delete($"{OsDrive}ProgramData\PCL\TaskTemp\")
+                DirectoryUtils.Delete($"{OsDrive}ProgramData\BRCL\TaskTemp\")
                 DirectoryUtils.Delete($"{PathTemp}TaskTemp\")
                 Logger.Info("已清理任务缓存文件夹")
             Catch ex As Exception
@@ -955,7 +955,7 @@ NextFile:
         Catch
         End Try
         '使用备用路径
-        ResultFolder = $"{OsDrive}ProgramData\PCL\TaskTemp\{GetUuid()}-{RandomInteger(0, 1000000)}\"
+        ResultFolder = $"{OsDrive}ProgramData\BRCL\TaskTemp\{GetUuid()}-{RandomInteger(0, 1000000)}\"
         DirectoryUtils.Create(ResultFolder)
         CheckPermission(ResultFolder)
         Return ResultFolder

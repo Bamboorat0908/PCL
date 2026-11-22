@@ -6,7 +6,7 @@ Friend Module ModBrsPack
     Public Const BrsPackName As String = "TRM 1.11（高预设 / 低预设）"
     Private Const LaunchSelectionFile As String = "BRCL-TRM-selection.txt"
     Private Const CurrentPackVersion As String = "1.11"
-    Private Const MarkerFile As String = "PCL\BRS-TRM.json"
+    Private Const MarkerFile As String = "BRS-TRM.json"
 
     Friend Class BrsLaunchTarget
         Public ReadOnly Instance As McInstance
@@ -83,7 +83,7 @@ Friend Module ModBrsPack
     Friend Function ReadBrsLaunchTarget(Instance As McInstance) As BrsLaunchTarget
         If Instance Is Nothing OrElse Instance.State = McInstanceState.Error Then Return Nothing
         Dim RecognizedName = IsTrmInstanceName(Instance.Name)
-        Dim MarkerPath = Path.Combine(Instance.PathVersion, MarkerFile)
+        Dim MarkerPath = InstanceDataFile(Instance.PathVersion, MarkerFile)
         Dim HasMarker = File.Exists(MarkerPath)
         If Not (HasMarker OrElse RecognizedName) Then Return Nothing
 
@@ -134,14 +134,14 @@ Friend Module ModBrsPack
 
     Friend Sub PreserveBrsMetadataBeforeRename(Instance As McInstance)
         Dim Target = ReadBrsLaunchTarget(Instance)
-        If Target IsNot Nothing AndAlso Not File.Exists(Path.Combine(Instance.PathVersion, MarkerFile)) Then
+        If Target IsNot Nothing AndAlso Not File.Exists(InstanceDataFile(Instance.PathVersion, MarkerFile)) Then
             WriteBrsMarker(Instance.PathVersion, Target.PackVersion?.ToString(), Target.PresetId)
         End If
     End Sub
 
     Private Sub WriteBrsMarker(Folder As String, PackVersion As String, PresetId As String)
         Dim Metadata As New JObject From {{"name", "TRM"}, {"version", PackVersion}, {"preset", PresetId}}
-        FileUtils.WriteAtomic(Path.Combine(Folder, MarkerFile), Metadata.ToString(Formatting.None))
+        FileUtils.WriteAtomic(InstanceDataFile(Folder, MarkerFile, ForWrite:=True), Metadata.ToString(Formatting.None))
     End Sub
 
     Friend Function SelectBrsLaunchTarget(Folder As String, Instances As IEnumerable(Of McInstance), SavedName As String) As BrsLaunchTarget

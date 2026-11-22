@@ -256,29 +256,25 @@ Public Class Settings
         ''' <summary>
         ''' 立即将当前的 Value 写入对应的注册表或文件。
         ''' </summary>
-        Public Sub Save(Optional Instance As McInstance = Nothing)
-            Dim Value As String = GetCache(Instance)
+        Public Sub SaveValue(SettingValue As Object, Optional Instance As McInstance = Nothing)
+            Dim Value As String = SettingValue
             Logger.Trace($"保存设置：{Key} {If(Encrypted, "", "= " & Value)}{If(Instance Is Nothing, "", $"（实例：{Instance?.PathVersion}）")}")
             If Encrypted Then
                 Try
                     If Value Is Nothing Then Value = ""
                     Value = DesEncrypt(Value, "PCL" & Identify)
                 Catch ex As Exception
-                    Logger.Warn(ex, $"加密设置失败：{Key}")
+                    Throw New InvalidOperationException($"无法加密设置项：{Key}", ex)
                 End Try
             End If
             Select Case Source
                 Case Sources.Normal
-                    WriteIni("Setup", Key, Value)
+                    WriteIniRequired("Setup", Key, Value)
                 Case Sources.Registry
-                    Try
-                        RegistryUtils.Write($"HKEY_CURRENT_USER\Software\{RegFolder}", Key, Value)
-                    Catch ex As Exception
-                        Logger.Warn(ex, $"写入注册表失败（{Key} → {Value}）", LogBehavior.Toast)
-                    End Try
+                    WriteDataRegistry(Key, Value)
                 Case Sources.Instance
                     If Instance Is Nothing Then Throw New Exception($"保存版本独立设置 {Key} 时未提供目标版本")
-                    WriteIni(Instance.PathVersion & "PCL\Setup.ini", Key, Value)
+                    WriteIniRequired(Instance.PathVersion & "BRCL\Setup.ini", Key, Value)
             End Select
         End Sub
 
@@ -296,12 +292,12 @@ Public Class Settings
             If Entry.GetCache(Instance) Is Nothing Then [Get](Key, Instance)
             If Entry.GetCache(Instance) = Value Then Return
             '设置新值
+            Entry.SaveValue(Value, Instance)
             Entry.Set(Value, Instance)
-            Entry.Save(Instance)
             '触发改变事件（必须在保存之后，以保证 VersionServerLogin 之类的在事件中读取到的是最新的值）
             If Entry.OnChanged IsNot Nothing Then Entry.OnChanged.Invoke(Value)
         Catch ex As Exception
-            Logger.Error(ex, $"设置设置项时出错（{Key}, {Value}）")
+            Logger.Error(ex, $"设置设置项时出错（{Key}）", LogBehavior.Toast)
         End Try
     End Sub
     ''' <summary>
@@ -341,12 +337,12 @@ Public Class Settings
                 Case Sources.Normal
                     GotValue = ReadIni("Setup", Key, DefaultValue)
                 Case Sources.Registry
-                    GotValue = RegistryUtils.TryRead($"HKEY_CURRENT_USER\Software\{RegFolder}", Key, DefaultValue)
+                    GotValue = ReadDataRegistry(Key, DefaultValue)
                 Case Sources.Instance
                     If Instance Is Nothing Then
                         Throw New Exception($"读取版本设置 {Key} 时未提供目标版本")
                     Else
-                        GotValue = ReadIni(Instance.PathVersion & "PCL\Setup.ini", Key, DefaultValue)
+                        GotValue = ReadIni(Instance.PathVersion & "BRCL\Setup.ini", Key, DefaultValue)
                     End If
             End Select
             If Entry.Encrypted Then
@@ -358,8 +354,7 @@ Public Class Settings
                     Catch ex As Exception
                         Logger.Warn(ex, $"解密设置失败：{Key}")
                         GotValue = Entry.DefaultValue
-                        Entry.Set(Entry.DefaultValue, Instance)
-                        Entry.Save(Instance)
+                        Entry.SaveValue(Entry.DefaultValue, Instance)
                     End Try
                 End If
             End If
@@ -395,20 +390,16 @@ Public Class Settings
             If Entry.GetCache(Instance) Is Nothing Then [Get](Key, Instance)
             If Entry.GetCache(Instance) = Entry.DefaultValue Then Return
             '设置新值
-            Entry.Set(Entry.DefaultValue, Instance)
             Select Case Entry.Source
                 Case Sources.Normal
-                    DeleteIniKey("Setup", Key)
+                    WriteIniRequired("Setup", Key, Nothing)
                 Case Sources.Registry
-                    Try
-                        RegistryUtils.Delete($"HKEY_CURRENT_USER\Software\{RegFolder}", Key)
-                    Catch ex As Exception
-                        Logger.Warn(ex, $"删除注册表失败（{Key}）", LogBehavior.Toast)
-                    End Try
+                    WriteDataRegistry(Key, Nothing)
                 Case Sources.Instance
                     If Instance Is Nothing Then Throw New Exception($"重置版本设置 {Key} 时未提供目标版本")
-                    DeleteIniKey(Instance.PathVersion & "PCL\Setup.ini", Key)
+                    WriteIniRequired(Instance.PathVersion & "BRCL\Setup.ini", Key, Nothing)
             End Select
+            Entry.Set(Entry.DefaultValue, Instance)
             '触发改变事件
             If Entry.OnChanged IsNot Nothing Then Entry.OnChanged.Invoke(Entry.DefaultValue)
         Catch ex As Exception
@@ -433,14 +424,14 @@ Public Class Settings
                 Return HasIniKey("Setup", Key)
             Case Sources.Registry
                 Try
-                    Return RegistryUtils.Has($"HKEY_CURRENT_USER\Software\{RegFolder}", Key)
+                    Return ReadDataRegistry(Key, Nothing) IsNot Nothing
                 Catch ex As Exception
                     Logger.Warn(ex, $"判断注册表 {Key} 是否存在时出错")
                     Return False
                 End Try
             Case Else 'Source.Instance
                 If Instance Is Nothing Then Throw New Exception($"判断版本设置 {Key} 是否存在时未提供目标版本")
-                Return HasIniKey(Instance.PathVersion & "PCL\Setup.ini", Key)
+                Return HasIniKey(Instance.PathVersion & "BRCL\Setup.ini", Key)
         End Select
     End Function
 

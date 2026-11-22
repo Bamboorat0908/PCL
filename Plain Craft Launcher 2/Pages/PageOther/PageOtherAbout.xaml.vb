@@ -32,6 +32,10 @@
         End Try
     End Sub
 
+    Private Sub ShowUserAgreement() Handles BtnUserAgreement.Click
+        MyMsgBox(UserAgreementText, UserAgreementTitle, "关闭")
+    End Sub
+
     Private Sub OpenLink(sender As Object, e As EventArgs) Handles BtnBrsWebsite.Click, BtnPclSource.Click, BtnPclLicense.Click, BtnCoreSource.Click, BtnWebViewInfo.Click, BtnSupportAuthor.Click
         Dim Url As String
         If sender Is BtnBrsWebsite Then

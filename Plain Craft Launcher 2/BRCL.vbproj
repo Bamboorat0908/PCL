@@ -316,6 +316,8 @@
     <Compile Include="Modules\Minecraft\ModWatcher.vb" />
     <Compile Include="Modules\ModSecret.vb" />
     <Compile Include="Modules\ModBrclUpdate.vb" />
+    <Compile Include="Modules\ModBrclUserAgreement.vb" />
+    <Compile Include="Modules\ModDataMigration.vb" />
     <Compile Include="Modules\ModBrsPack.vb" /><Compile Include="Controls\MyMsg\BrsPackPresetWindow.vb" />
     <Compile Include="Modules\ModCrashReports.vb" />
     <Compile Include="Modules\ModExperience.vb" />

@@ -270,12 +270,17 @@ Public Class PageSelectLeft
             Dim Target As McFolder = CType(CType(CType(sender.Parent, ContextMenu).Parent, Primitives.Popup).PlacementTarget, MyListItem).Tag
             '若为 “移除”，则提醒是否删除 BRCL 的配置文件
             If Target.Type = McFolder.Types.Custom Then
-                Select Case MyMsgBox("是否需要清理 BRCL 在该文件夹中的配置文件？" & vbCrLf & "这包括各个版本的独立设置（如自定义图标、第三方登录配置）等，对游戏本身没有影响。", "配置文件清理", "删除", "保留", "取消")
+                Select Case MyMsgBox("是否需要清理 BRCL 在该文件夹中的配置文件？" & vbCrLf & "这包括各个版本的独立设置（如自定义图标、第三方登录配置）等。旧版启动器配置和游戏文件会保留。", "配置文件清理", "清理", "保留", "取消")
                     Case 1
-                        '删除配置文件
-                        FileUtils.Delete(Target.Location & "PCL.ini")
+                        Dim FolderIni = Target.Location & "BRCL.ini"
+                        FileUtils.WriteAtomic(FolderIni, "")
+                        IniClearCache(FolderIni)
                         For Each Instance In DirectoryUtils.EnumerateDirectories(Target.Location & "versions\")
-                            DirectoryUtils.Delete(Path.Combine(Instance, "PCL"), True)
+                            Dim SetupFile = Path.Combine(Instance, "BRCL", "Setup.ini")
+                            FileUtils.WriteAtomic(SetupFile, "")
+                            IniClearCache(SetupFile)
+                            FileUtils.WriteAtomic(Path.Combine(Instance, "BRCL", "config.json"), "{}")
+                            FileUtils.Delete(Path.Combine(Instance, "BRCL", "Logo.png"))
                         Next
                     Case 2
                         '不删除
@@ -348,7 +353,7 @@ Public Class PageSelectLeft
         RefreshCurrent(McFolderSelected)
     End Sub
     Public Shared Sub RefreshCurrent(Folder As String)
-        WriteIni(Folder & "PCL.ini", "InstanceCache", "") '删除缓存以强制要求下一次加载时更新列表
+        WriteIni(Folder & "BRCL.ini", "InstanceCache", "") '删除缓存以强制要求下一次加载时更新列表
         If Folder = McFolderSelected Then LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
     End Sub
     Public Sub Rename_Click(sender As Object, e As RoutedEventArgs)

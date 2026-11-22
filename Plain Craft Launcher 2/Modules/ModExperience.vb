@@ -27,7 +27,7 @@ Friend Module ModExperience
         Settings.Set(UsageSetting, Enabled)
         Settings.Set("BrclCrashMode", If(Enabled, 2, 0))
         'The first explicit refusal must be saved even though False is the default.
-        If Not Enabled AndAlso Not Settings.HasSaved(UsageSetting) Then Settings.Entries(UsageSetting).Save()
+        If Not Enabled AndAlso Not Settings.HasSaved(UsageSetting) Then Settings.Entries(UsageSetting).SaveValue(Enabled)
         If Application.Current IsNot Nothing Then RunInUi(Sub() FrmSetupPrivacy?.RefreshUsagePreference())
     End Sub
 

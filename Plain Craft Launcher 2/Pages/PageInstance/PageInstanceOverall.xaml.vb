@@ -24,7 +24,7 @@ Public Class PageInstanceOverall
         AniControlEnabled += 1
 
         '刷新设置项目
-        ComboDisplayType.SelectedIndex = ReadIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "DisplayType", McInstanceCardType.Auto)
+        ComboDisplayType.SelectedIndex = ReadIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "DisplayType", McInstanceCardType.Auto)
         BtnDisplayStar.Text = If(PageInstanceLeft.Instance.IsStar, "从收藏夹中移除", "加入收藏夹")
         BtnFolderMods.Visibility = If(PageInstanceLeft.Instance.Modable, Visibility.Visible, Visibility.Collapsed)
         '刷新版本显示
@@ -35,11 +35,11 @@ Public Class PageInstanceOverall
         FrmMain.PageNameRefresh()
         '刷新版本图标
         ComboDisplayLogo.SelectedIndex = 0
-        Dim Logo As String = ReadIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "Logo", "")
-        Dim LogoCustom As Boolean = ReadIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "LogoCustom", "False")
+        Dim Logo As String = ReadIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "Logo", "")
+        Dim LogoCustom As Boolean = ReadIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "LogoCustom", "False")
         If LogoCustom Then
             For Each Selection As MyComboBoxItem In ComboDisplayLogo.Items
-                If Selection.Tag = Logo OrElse (Selection.Tag = "PCL\Logo.png" AndAlso Logo.EndsWithF("PCL\Logo.png")) Then
+                If Selection.Tag = Logo OrElse (Selection Is ItemDisplayLogoCustom AndAlso IsInstanceLogoReference(Logo)) Then
                     ComboDisplayLogo.SelectedItem = Selection
                     Exit For
                 End If
@@ -58,11 +58,11 @@ Public Class PageInstanceOverall
             '改为不隐藏
             Try
                 '若设置分类为可安装 Mod，则显示正常的 Mod 管理页面
-                WriteIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "DisplayType", ComboDisplayType.SelectedIndex)
-                PageInstanceLeft.Instance.DisplayType = ReadIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "DisplayType", McInstanceCardType.Auto)
+                WriteIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "DisplayType", ComboDisplayType.SelectedIndex)
+                PageInstanceLeft.Instance.DisplayType = ReadIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "DisplayType", McInstanceCardType.Auto)
                 FrmInstanceLeft.RefreshModDisabled()
 
-                WriteIni(McFolderSelected & "PCL.ini", "InstanceCache", "") '要求刷新缓存
+                WriteIni(McFolderSelected & "BRCL.ini", "InstanceCache", "") '要求刷新缓存
                 LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
             Catch ex As Exception
                 Logger.Error(ex, $"修改版本分类失败（{PageInstanceLeft.Instance.Name}）")
@@ -78,8 +78,8 @@ Public Class PageInstanceOverall
                     End If
                     Settings.Set("HintHide", True)
                 End If
-                WriteIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "DisplayType", McInstanceCardType.Hidden)
-                WriteIni(McFolderSelected & "PCL.ini", "InstanceCache", "") '要求刷新缓存
+                WriteIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "DisplayType", McInstanceCardType.Hidden)
+                WriteIni(McFolderSelected & "BRCL.ini", "InstanceCache", "") '要求刷新缓存
                 LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
             Catch ex As Exception
                 Logger.Error(ex, $"隐藏版本 {PageInstanceLeft.Instance.Name} 失败")
@@ -90,9 +90,9 @@ Public Class PageInstanceOverall
     '更改描述
     Private Sub BtnDisplayDesc_Click(sender As Object, e As EventArgs) Handles BtnDisplayDesc.Click
         Try
-            Dim OldInfo As String = ReadIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "CustomInfo")
+            Dim OldInfo As String = ReadIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "CustomInfo")
             Dim NewInfo As String = MyMsgBoxInput("更改描述", "修改版本的描述文本，留空则使用 BRCL 的默认描述。", OldInfo, New ObjectModel.Collection(Of Validate), "默认描述")
-            If NewInfo IsNot Nothing AndAlso OldInfo <> NewInfo Then WriteIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "CustomInfo", NewInfo)
+            If NewInfo IsNot Nothing AndAlso OldInfo <> NewInfo Then WriteIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "CustomInfo", NewInfo)
             PageInstanceLeft.Instance = New McInstance(PageInstanceLeft.Instance.Name).Load()
             Reload()
             LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
@@ -123,6 +123,7 @@ Public Class PageInstanceOverall
                 JsonObject = PageInstanceLeft.Instance.JsonObject
             End Try
             '重命名主文件夹
+            InstanceDataFile(OldPath, "Setup.ini", ForWrite:=True)
             PreserveBrsMetadataBeforeRename(PageInstanceLeft.Instance)
             DirectoryUtils.Move(OldPath, NewPath)
             '清理 ini 缓存
@@ -132,12 +133,13 @@ Public Class PageInstanceOverall
             If DirectoryUtils.Exists($"{NewPath}{OldName}-natives") Then DirectoryUtils.Move($"{NewPath}{OldName}-natives", $"{NewPath}{NewName}-natives")
             If FileUtils.Exists($"{NewPath}{OldName}.jar") Then FileUtils.Move($"{NewPath}{OldName}.jar", $"{NewPath}{NewName}.jar")
             '替换版本设置文件中的路径
-            If FileUtils.Exists(NewPath & "PCL\Setup.ini") Then
-                FileUtils.Write(NewPath & "PCL\Setup.ini", FileUtils.ReadAsString(NewPath & "PCL\Setup.ini").Replace(OldPath, NewPath))
+            If FileUtils.Exists(NewPath & "BRCL\Setup.ini") Then
+                FileUtils.WriteAtomic(NewPath & "BRCL\Setup.ini", FileUtils.ReadAsString(NewPath & "BRCL\Setup.ini").Replace(OldPath, NewPath))
+                IniClearCache(NewPath & "BRCL\Setup.ini")
             End If
             '更改已选中的版本
-            If ReadIni(McFolderSelected & "PCL.ini", "Version") = OldName Then
-                WriteIni(McFolderSelected & "PCL.ini", "Version", NewName)
+            If ReadIni(McFolderSelected & "BRCL.ini", "Version") = OldName Then
+                WriteIni(McFolderSelected & "BRCL.ini", "Version", NewName)
             End If
             RenameBrsSelection(McFolderSelected, OldName, NewName)
             '更新版本 Json
@@ -151,7 +153,7 @@ Public Class PageInstanceOverall
             '刷新与提示
             Hint("重命名成功！", HintType.Green)
             PageInstanceLeft.Instance = New McInstance(NewName).Load()
-            If Not IsNothing(McInstanceSelected) AndAlso McInstanceSelected.Equals(PageInstanceLeft.Instance) Then WriteIni(McFolderSelected & "PCL.ini", "Version", NewName)
+            If Not IsNothing(McInstanceSelected) AndAlso McInstanceSelected.Equals(PageInstanceLeft.Instance) Then WriteIni(McFolderSelected & "BRCL.ini", "Version", NewName)
             Reload()
             LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
         Catch ex As Exception
@@ -170,20 +172,22 @@ Public Class PageInstanceOverall
                     Reload() '还原选项
                     Return
                 End If
-                FileUtils.Copy(FileName, PageInstanceLeft.Instance.PathVersion & "PCL\Logo.png")
+                FileUtils.Copy(FileName, InstanceDataFile(PageInstanceLeft.Instance.PathVersion, "Logo.png", ForWrite:=True))
             Else
-                FileUtils.Delete(PageInstanceLeft.Instance.PathVersion & "PCL\Logo.png")
+                FileUtils.Delete(PageInstanceLeft.Instance.PathVersion & "BRCL\Logo.png")
             End If
         Catch ex As Exception
             Logger.Error(ex, $"更改自定义版本图标失败（{PageInstanceLeft.Instance.Name}）")
+            Reload()
+            Return
         End Try
         '进行更改
         Try
             Dim NewLogo As String = ComboDisplayLogo.SelectedItem.Tag
-            WriteIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "Logo", NewLogo)
-            WriteIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "LogoCustom", Not NewLogo = "")
+            WriteIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "Logo", NewLogo)
+            WriteIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "LogoCustom", Not NewLogo = "")
             '刷新显示
-            WriteIni(McFolderSelected & "PCL.ini", "InstanceCache", "") '要求刷新缓存
+            WriteIni(McFolderSelected & "BRCL.ini", "InstanceCache", "") '要求刷新缓存
             PageInstanceLeft.Instance = New McInstance(PageInstanceLeft.Instance.Name).Load()
             Reload()
             LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
@@ -195,7 +199,7 @@ Public Class PageInstanceOverall
     '收藏夹
     Private Sub BtnDisplayStar_Click(sender As Object, e As EventArgs) Handles BtnDisplayStar.Click
         Try
-            WriteIni(PageInstanceLeft.Instance.PathVersion & "PCL\Setup.ini", "IsStar", Not PageInstanceLeft.Instance.IsStar)
+            WriteIni(PageInstanceLeft.Instance.PathVersion & "BRCL\Setup.ini", "IsStar", Not PageInstanceLeft.Instance.IsStar)
             PageInstanceLeft.Instance = New McInstance(PageInstanceLeft.Instance.Name).Load()
             Reload()
             McInstanceListForceRefresh = True

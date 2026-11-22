@@ -19,6 +19,7 @@ $exe = Join-Path $repo 'Plain Craft Launcher 2\bin\BRCL.exe'
 if (-not (Test-Path -LiteralPath $exe)) { throw 'Build Release before running the checks.' }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $cases = @(
+    @{Name='data-migration'; File='test-data-migration.ps1'; Args=@('-FixtureDirectory',(Join-Path $OutputDirectory 'migration-fixture'))},
     @{Name='instance-game'; File='test-instance-game.ps1'; Args=@()},
     @{Name='instance-backup'; File='test-instance-backup.ps1'; Args=@()},
     @{Name='directory-safety'; File='test-directory-safety.ps1'; Args=@()},
@@ -74,6 +75,10 @@ $cases = @(
 )
 if ($PackArchive) { $cases += @{Name='pack'; File='test-brs-pack.ps1'; Args=@('-Archive',[IO.Path]::GetFullPath($PackArchive))} }
 $results = @()
+$previousRegistryId = $env:BRCL_TEST_REGISTRY_ID
+$registryId = [Guid]::NewGuid().ToString('N')
+$env:BRCL_TEST_REGISTRY_ID = $registryId
+try {
 foreach ($case in $cases) {
     $script = Join-Path $PSScriptRoot $case.File
     $arguments = @('-NoProfile','-STA','-ExecutionPolicy','Bypass','-File',$script) + $case.Args
@@ -120,3 +125,7 @@ $results | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $OutputDirectory
 if (@($results | Where-Object ExitCode -ne 0).Count) { throw "Checks failed; inspect $OutputDirectory" }
 $total = ($results | Measure-Object -Property PassedAssertions -Sum).Sum
 Write-Output "$($results.Count) groups passed, $total reported checks. Results: $OutputDirectory"
+} finally {
+    $env:BRCL_TEST_REGISTRY_ID = $previousRegistryId
+    [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree("Software\BRCLRegression\$registryId", $false)
+}

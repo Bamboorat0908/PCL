@@ -1799,7 +1799,7 @@ Retry:
     Public Sub McInstallState(Loader As LoaderBase)
         Select Case Loader.State
             Case LoadState.Finished
-                WriteIni(McFolderSelected & "PCL.ini", "InstanceCache", "") '清空缓存（合并安装会先生成文件夹，这会在刷新时误判为可以使用缓存）
+                WriteIni(McFolderSelected & "BRCL.ini", "InstanceCache", "") '清空缓存（合并安装会先生成文件夹，这会在刷新时误判为可以使用缓存）
                 Hint(Loader.Name & "成功！", HintType.Green)
                 'TODO: 自动选择安装成功的版本
             Case LoadState.Failed

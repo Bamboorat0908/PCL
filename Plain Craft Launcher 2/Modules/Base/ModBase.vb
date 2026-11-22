@@ -467,14 +467,76 @@ Public Module ModBase
 
     'ini
 
-    Private ReadOnly IniCache As New ConcurrentDictionary(Of String, ConcurrentDictionary(Of String, String))
+    Private Const GlobalSetupMigrationMarker As String = "__BRCL_LegacySetupMerged"
+    Private ReadOnly IniCache As New ConcurrentDictionary(Of String, ConcurrentDictionary(Of String, String))(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly IniStorageLock As New Object()
+
+    Private Function NormalizeIniPath(FileName As String) As String
+        If IO.Path.IsPathRooted(FileName) Then Return FileName
+        Return IO.Path.Combine(Paths.Base, "BRCL", FileName & ".ini")
+    End Function
+
+    Private Function LegacyIniPath(Current As String) As String
+        Dim Folder = IO.Path.GetDirectoryName(Current)
+        Dim FileName = IO.Path.GetFileName(Current)
+        If FileName.Equals("BRCL.ini", StringComparison.OrdinalIgnoreCase) Then Return IO.Path.Combine(Folder, "PCL.ini")
+        If String.Equals(IO.Path.GetFileName(Folder), "BRCL", StringComparison.OrdinalIgnoreCase) AndAlso
+           FileName.Equals("Setup.ini", StringComparison.OrdinalIgnoreCase) Then
+            Return IO.Path.Combine(IO.Path.GetDirectoryName(Folder), "PCL", FileName)
+        End If
+        Return Current
+    End Function
+
+    Private Function LoadIniFile(FileName As String) As ConcurrentDictionary(Of String, String)
+        Dim Cached As ConcurrentDictionary(Of String, String) = Nothing
+        If IniCache.TryGetValue(FileName, Cached) Then Return Cached
+        If Not FileUtils.Exists(FileName) Then Return Nothing
+        Dim Content As New ConcurrentDictionary(Of String, String)
+        For Each Line In FileUtils.ReadAsLines(FileName, True)
+            Dim Index = Line.IndexOfF(":")
+            If Index > 0 Then Content(Line.Substring(0, Index)) = Line.Substring(Index + 1)
+        Next
+        IniCache(FileName) = Content
+        Return Content
+    End Function
+
+    Private Sub SaveIniFile(FileName As String, Content As ConcurrentDictionary(Of String, String))
+        Dim FileContent As New StringBuilder()
+        For Each Pair In Content
+            FileContent.Append(Pair.Key).Append(":").Append(Pair.Value).Append(vbCrLf)
+        Next
+        FileUtils.WriteAtomic(FileName, FileContent.ToString())
+        IniCache(FileName) = Content
+    End Sub
+
+    Private Function LoadGlobalSetup(Current As String, Optional ForWrite As Boolean = False) As ConcurrentDictionary(Of String, String)
+        Dim Content = LoadIniFile(Current)
+        If Content IsNot Nothing AndAlso Content.ContainsKey(GlobalSetupMigrationMarker) Then Return Content
+        Dim Legacy = LoadIniFile(LegacyIniPath(Current))
+        If Legacy Is Nothing Then Return Content
+        '旧版本曾复制过 BRCL\Setup.ini，仍向 PCL 写入；合并旧文件独有的键。
+        Dim Merged As New ConcurrentDictionary(Of String, String)(If(Content, New ConcurrentDictionary(Of String, String)()))
+        For Each Pair In Legacy
+            Merged.TryAdd(Pair.Key, Pair.Value)
+        Next
+        Merged(GlobalSetupMigrationMarker) = "1"
+        Try
+            SaveIniFile(Current, Merged)
+        Catch ex As Exception When Not ForWrite AndAlso (TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException)
+            Logger.Warn(ex, "全局设置迁移未完成，本次仍可读取已有设置。")
+        End Try
+        Return Merged
+    End Function
     ''' <summary>
     ''' 清除某 ini 文件的运行时缓存。
     ''' </summary>
     ''' <param name="FileName">文件完整路径或简写文件名。简写将会使用“ApplicationName\文件名.ini”作为路径。</param>
     Public Sub IniClearCache(FileName As String)
-        If Not FileName.Contains(":\") Then FileName = $"{Paths.Base}PCL\{FileName}.ini"
-        IniCache.Remove(FileName)
+        Dim Current = NormalizeIniPath(FileName)
+        SyncLock IniStorageLock
+            IniCache.Remove(Current)
+            IniCache.Remove(LegacyIniPath(Current))
+        End SyncLock
     End Sub
     ''' <summary>
     ''' 获取 ini 文件缓存。如果没有，则新读取 ini 文件内容。
@@ -483,20 +545,11 @@ Public Module ModBase
     ''' <param name="FileName">文件完整路径或简写文件名。简写将会使用“ApplicationName\文件名.ini”作为路径。</param>
     Private Function IniGetContent(FileName As String) As ConcurrentDictionary(Of String, String)
         Try
-            '还原文件路径
-            If Not FileName.Contains(":\") Then FileName = $"{Paths.Base}PCL\{FileName}.ini"
-            '检索缓存
-            Dim Cache As ConcurrentDictionary(Of String, String) = Nothing
-            If IniCache.TryGetValue(FileName, Cache) Then Return Cache
-            '读取文件
-            If Not FileUtils.Exists(FileName) Then Return Nothing
-            Dim Ini As New ConcurrentDictionary(Of String, String)
-            For Each Line In FileUtils.ReadAsLines(FileName, True)
-                Dim Index As Integer = Line.IndexOfF(":")
-                If Index > 0 Then Ini(Line.Substring(0, Index)) = Line.Substring(Index + 1) '可能会有重复键，见 #3616
-            Next
-            IniCache(FileName) = Ini
-            Return Ini
+            Dim Current = NormalizeIniPath(FileName)
+            SyncLock IniStorageLock
+                If Current.Equals(NormalizeIniPath("Setup"), StringComparison.OrdinalIgnoreCase) Then Return LoadGlobalSetup(Current)
+                Return LoadIniFile(ResolveDataFile(Current, LegacyIniPath(Current)))
+            End SyncLock
         Catch ex As Exception
             Logger.Error(ex, $"生成 ini 文件缓存失败（{FileName}）", LogBehavior.Toast)
             Return Nothing
@@ -535,36 +588,30 @@ Public Module ModBase
     ''' <param name="Value">值。</param>
     Public Sub WriteIni(FileName As String, Key As String, Value As String)
         Try
-            '预处理
-            If Key.Contains(":") Then Throw New Exception($"尝试写入 ini 文件 {FileName} 的键名中包含了冒号：{Key}")
-            Key = Key.ReplaceLineEndings("")
-            Value = Value?.ReplaceLineEndings("")
-            '获取目前文件
-            Dim Content = IniGetContent(FileName)
-            If Content Is Nothing Then Content = New ConcurrentDictionary(Of String, String)
-            '更新值
+            WriteIniRequired(FileName, Key, Value)
+        Catch ex As Exception
+            Logger.Error(ex, $"写入文件失败（{FileName}，设置项 {Key}）", LogBehavior.Toast)
+        End Try
+    End Sub
+
+    Friend Sub WriteIniRequired(FileName As String, Key As String, Value As String)
+        If Key.Contains(":") Then Throw New ArgumentException($"INI 键名包含冒号：{Key}")
+        Key = Key.ReplaceLineEndings("")
+        Value = Value?.ReplaceLineEndings("")
+        Dim Current = NormalizeIniPath(FileName)
+        SyncLock IniStorageLock
+            Dim Previous = If(Current.Equals(NormalizeIniPath("Setup"), StringComparison.OrdinalIgnoreCase),
+                              LoadGlobalSetup(Current, ForWrite:=True), LoadIniFile(ResolveDataFile(Current, LegacyIniPath(Current), ForWrite:=True)))
+            Dim Content As New ConcurrentDictionary(Of String, String)(If(Previous, New ConcurrentDictionary(Of String, String)()))
             If Value Is Nothing Then
-                If Not Content.Remove(Key) Then Return '无需处理
+                If Not Content.Remove(Key) Then Return
             Else
                 Dim ExistingValue As String = Nothing
-                If Content.TryGetValue(Key, ExistingValue) AndAlso ExistingValue = Value Then Return '无需处理
+                If Content.TryGetValue(Key, ExistingValue) AndAlso ExistingValue = Value Then Return
                 Content(Key) = Value
             End If
-            '写入文件
-            Dim FileContent As New StringBuilder
-            For Each Pair In Content
-                FileContent.Append(Pair.Key)
-                FileContent.Append(":")
-                FileContent.Append(Pair.Value)
-                FileContent.Append(vbCrLf)
-            Next
-            If Not FileName.Contains(":\") Then FileName = $"{Paths.Base}PCL\{FileName}.ini"
-            '处理相对路径
-            FileName = If(FileName.Contains(":\"), FileName, Paths.Base & FileName)
-            FileUtils.Write(FileName, FileContent.ToString)
-        Catch ex As Exception
-            Logger.Error(ex, $"写入文件失败（{FileName} → {Key}:{Value}）", LogBehavior.Toast)
-        End Try
+            SaveIniFile(Current, Content)
+        End SyncLock
     End Sub
 
     '权限检查
@@ -797,7 +844,7 @@ Public Module ModBase
         ElseIf PathTemp.IsAsciiOnly() Then
             Return PathTemp
         Else
-            Return OsDrive & "ProgramData\PCL\"
+            Return OsDrive & "ProgramData\BRCL\"
         End If
     End Function)
 

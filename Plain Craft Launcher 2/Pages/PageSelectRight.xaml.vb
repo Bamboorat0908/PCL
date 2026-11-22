@@ -129,7 +129,7 @@ Public Class PageSelectRight
             BtnStar.Logo = Logo.IconButtonLikeLine
         End If
         AddHandler BtnStar.Click, Sub()
-                                      WriteIni(Instance.PathVersion & "PCL\Setup.ini", "IsStar", Not Instance.IsStar)
+                                      WriteIni(Instance.PathVersion & "BRCL\Setup.ini", "IsStar", Not Instance.IsStar)
                                       McInstanceListForceRefresh = True
                                       LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
                                   End Sub

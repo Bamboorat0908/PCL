@@ -447,20 +447,23 @@ Public Class FormMain
             'Filesystem scans and Java probing must not contend with the first render.
             StartupUiReady.Wait(TimeSpan.FromSeconds(5))
             If WindowClosing Then Return
-            'EULA 提示
-            Const EulaVersion As Integer = 2
-            If Settings.Get(Of Integer)("SystemEulaVersion") < EulaVersion Then
-                Select Case MyMsgBox(
-                    If(Settings.Get(Of Integer)("SystemEulaVersion") = 0,
-                        "在使用 BRCL 前，请先阅读用户协议与免责声明。",
-                        $"BRCL 的用户协议与免责声明已更新。{vbCrLf}请阅读更新后的用户协议与免责声明。"),
-                        "协议授权", "同意", "拒绝", "查看用户协议与免责声明",
-                        Button3Action:=Sub() OpenWebsite("https://shimo.im/docs/rGrd8pY8xWkt6ryW"))
-                    Case 1
-                        Settings.Set("SystemEulaVersion", EulaVersion)
-                    Case 2
-                        EndProgram(False)
-                End Select
+            Dim AcceptedAgreementVersion = Settings.Get(Of Integer)("SystemEulaVersion")
+            If AcceptedAgreementVersion < UserAgreementVersion Then
+                Dim AgreementPrompt = If(AcceptedAgreementVersion = 0,
+                                         "请在使用 BRCL 前阅读用户协议与免责声明。",
+                                         "BRCL 用户协议与免责声明已更新，请阅读后确认。")
+                Do
+                    Select Case MyMsgBox(AgreementPrompt, UserAgreementTitle, "同意并继续", "拒绝并退出", "查看协议")
+                        Case 1
+                            Settings.Set("SystemEulaVersion", UserAgreementVersion)
+                            Exit Do
+                        Case 3
+                            MyMsgBox(UserAgreementText, UserAgreementTitle, "返回", ForceWait:=True)
+                        Case Else
+                            EndProgram(False)
+                            Return
+                    End Select
+                Loop
             End If
             '启动加载器池
             Try
@@ -1442,7 +1445,7 @@ Public Class FormMain
                     FrmSetupUI.PanLogoChange.Visibility = Visibility.Visible
                 End If
                 Try
-                    ImageTitleLogo.Source = Paths.Base & "BRCL\Logo.png"
+                    ImageTitleLogo.Source = ReadTitleLogoFile()
                 Catch ex As Exception
                     ImageTitleLogo.Source = Nothing
                     Logger.Error(ex, "显示标题栏图片失败", LogBehavior.Alert)

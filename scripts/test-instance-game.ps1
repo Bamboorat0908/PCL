@@ -91,7 +91,7 @@ foreach ($name in @('Saves','ResourcePacks','Shaders','Screenshots','Schematics'
     Assert (-not [string]::IsNullOrEmpty((Invoke-Store 'FolderName' @([Enum]::Parse($kind,$name))))) "$name maps to game directory"
 }
 
-# Verify the existing PCL setting path stays scoped to the selected version.
+# Verify the new BRCL setting path stays scoped to the selected version.
 $instanceType = $assembly.GetType('BRCL.ModMinecraft+McInstance')
 if (-not $instanceType) { $instanceType = $assembly.GetType('BRCL.McInstance', $true) }
 $one = [Activator]::CreateInstance($instanceType,[object[]]@([string](Join-Path $root 'versions\one')))
@@ -99,6 +99,6 @@ $two = [Activator]::CreateInstance($instanceType,[object[]]@([string](Join-Path 
 $settings = $assembly.GetType('BRCL.Settings')
 $settings.GetMethod('Set').Invoke($null,[object[]]@('VersionArgumentTitle','One title',$one))
 $settings.GetMethod('Set').Invoke($null,[object[]]@('VersionArgumentTitle','Two title',$two))
-Assert (([IO.File]::ReadAllText((Join-Path $one.PathVersion 'PCL\Setup.ini'))).Contains('One title')) 'PCL version settings persist to selected version'
-Assert (([IO.File]::ReadAllText((Join-Path $two.PathVersion 'PCL\Setup.ini'))).Contains('Two title')) 'different versions keep separate settings'
+Assert (([IO.File]::ReadAllText((Join-Path $one.PathVersion 'BRCL\Setup.ini'))).Contains('One title')) 'BRCL version settings persist to selected version'
+Assert (([IO.File]::ReadAllText((Join-Path $two.PathVersion 'BRCL\Setup.ini'))).Contains('Two title')) 'different versions keep separate settings'
 Write-Output "Fixtures: $root"

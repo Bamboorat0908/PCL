@@ -69,19 +69,7 @@ Public Class Application
                     End If
                 End If
             End If
-            '从原 BRCL 数据目录一次性迁移配置（BRCL 更名后首次运行）
-            Try
-                Dim OldDir As String = Paths.Base & "PCL\"
-                Dim NewDir As String = Paths.Base & "BRCL\"
-                If Not Directory.Exists(NewDir) AndAlso Directory.Exists(OldDir) Then
-                    Directory.CreateDirectory(NewDir)
-                    For Each FileName As String In {"Setup.ini", "Logo.png"}
-                        If File.Exists(OldDir & FileName) Then File.Copy(OldDir & FileName, NewDir & FileName, False)
-                    Next
-                End If
-            Catch ex As Exception
-                '迁移失败不影响启动
-            End Try
+            WaitingMutex(e)
             '初始化文件结构
             Try
                 DirectoryUtils.Create(Paths.Base & "BRCL\Pictures\")
@@ -96,19 +84,17 @@ RetryCacheCheck:
                 DirectoryUtils.Create(PathTemp)
                 CheckPermissionWithException(PathTemp)
             Catch ex As Exception
-                If PathTemp = Path.GetTempPath() & "PCL\" Then
+                If PathTemp.Equals(Path.GetTempPath() & "BRCL\", StringComparison.OrdinalIgnoreCase) Then
                     MyMsgBox("BRCL 无法访问缓存文件夹，可能导致程序出错或无法正常使用！" & vbCrLf & vbCrLf & "错误原因：" & ex.GetDisplay(True), "缓存文件夹不可用")
                 Else
                     MyMsgBox("手动设置的缓存文件夹不可用，BRCL 将使用默认缓存文件夹。" & vbCrLf & vbCrLf & "错误原因：" & ex.GetDisplay(True), "缓存文件夹不可用")
                     Settings.Set("SystemSystemCache", "")
-                    PathTemp = Path.GetTempPath() & "PCL\"
+                    PathTemp = Path.GetTempPath() & "BRCL\"
                     GoTo RetryCacheCheck
                 End If
             End Try
             DirectoryUtils.Create(PathTemp & "Cache\")
             DirectoryUtils.Create(Paths.AppDataThenName)
-            '要求单例
-            WaitingMutex(e)
             InitializeCrashReports()
             '设置 ToolTipService 默认值
             ToolTipService.InitialShowDelayProperty.OverrideMetadata(GetType(DependencyObject), New FrameworkPropertyMetadata(100))

@@ -564,7 +564,10 @@ Public Class PageInstanceExport
             Loader.Progress = 0.97
             '复制 BRCL 版本设置
             If DirectoryUtils.Exists(McVersion.PathVersion & "PCL\") Then DirectoryUtils.Copy(McVersion.PathVersion & "PCL\", OverridesFolder & "PCL\")
-            WriteIni(OverridesFolder & "PCL\Setup.ini", "IsStar", False)
+            If DirectoryUtils.Exists(McVersion.PathVersion & "BRCL\") Then DirectoryUtils.Copy(McVersion.PathVersion & "BRCL\", OverridesFolder & "PCL\")
+            Dim ExportedSetup = OverridesFolder & "PCL\Setup.ini"
+            If IsInstanceLogoReference(ReadIni(ExportedSetup, "Logo")) Then WriteIniRequired(ExportedSetup, "Logo", "PCL\Logo.png")
+            WriteIniRequired(ExportedSetup, "IsStar", False)
             '复制 BRCL 本体（正式版）
             If BuildType = BuildTypes.Release AndAlso IncludePCL Then FileUtils.Copy(PathExe, CacheFolder & "Plain Craft Launcher.exe")
             '复制 BRCL 个性化内容
@@ -575,7 +578,8 @@ Public Class PageInstanceExport
                 If FileUtils.Exists(Paths.Base & "BRCL\Custom.xaml") Then FileUtils.Copy(Paths.Base & "BRCL\Custom.xaml", CacheFolder & "PCL\Custom.xaml")
                 If FileUtils.Exists(Paths.Base & "BRCL\Setup.ini") Then FileUtils.Copy(Paths.Base & "BRCL\Setup.ini", CacheFolder & "PCL\Setup.ini")
                 If FileUtils.Exists(Paths.Base & "BRCL\hints.txt") Then FileUtils.Copy(Paths.Base & "BRCL\hints.txt", CacheFolder & "PCL\hints.txt")
-                If FileUtils.Exists(Paths.Base & "BRCL\Logo.png") Then FileUtils.Copy(Paths.Base & "BRCL\Logo.png", CacheFolder & "PCL\Logo.png")
+                Dim TitleLogo = ReadTitleLogoFile()
+                If FileUtils.Exists(TitleLogo) Then FileUtils.Copy(TitleLogo, CacheFolder & "PCL\Logo.png")
             End If
         End Sub) With {.ProgressWeight = 5})
 

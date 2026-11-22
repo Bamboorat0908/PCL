@@ -178,10 +178,11 @@
 Refresh:
         '已有图片则不再选择
         Dim TargetPath As String = Paths.Base & "BRCL\Logo.png"
-        If FileUtils.Exists(TargetPath) Then
+        Dim ExistingLogo As String = ReadTitleLogoFile()
+        If FileUtils.Exists(ExistingLogo) Then
             Try
                 FrmMain.ImageTitleLogo.Source = Nothing '防止因为 Source 属性前后的值相同而不更新 (#5628)
-                FrmMain.ImageTitleLogo.Source = TargetPath
+                FrmMain.ImageTitleLogo.Source = ExistingLogo
             Catch ex As Exception
                 If ex.Message.Contains("参数无效") Then
                     Logger.Error($"改变标题栏图片失败，该图片文件可能并非标准格式。{vbCrLf}你可以尝试使用画图打开该文件并重新保存，这会让图片变为标准格式。{vbCrLf}文件：{TargetPath}", LogBehavior.Alert)
@@ -191,7 +192,7 @@ Refresh:
                 FrmMain.ImageTitleLogo.Source = Nothing
                 e.Handled = True
                 Try
-                    FileUtils.Delete(TargetPath)
+                    ClearTitleLogoFile()
                 Catch exx As Exception
                     Logger.Error(exx, "清理错误的标题栏图片失败", LogBehavior.Alert)
                 End Try
@@ -214,7 +215,7 @@ Refresh:
     End Sub
     Private Sub BtnLogoDelete_Click(sender As Object, e As EventArgs) Handles BtnLogoDelete.Click
         Try
-            FileUtils.Delete(Paths.Base & "BRCL\Logo.png")
+            ClearTitleLogoFile()
             RadioLogoType1.SetChecked(True, True)
             Hint("标题栏图片已清空！", HintType.Green)
         Catch ex As Exception
