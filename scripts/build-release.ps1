@@ -7,7 +7,7 @@ param(
     [string]$CoreTestLog
 )
 $ErrorActionPreference = 'Stop'
-$projectPath = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\Plain Craft Launcher 2.vbproj'
+$projectPath = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\BRCL.vbproj'
 if (-not $MSBuildPath) {
     $MSBuildPath = (Get-Command msbuild.exe -ErrorAction SilentlyContinue).Source
     if (-not $MSBuildPath) {

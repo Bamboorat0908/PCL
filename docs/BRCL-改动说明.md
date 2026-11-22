@@ -132,7 +132,7 @@ export DOTNET_ROOT="C:\\works\\BRCL\\tools\\dotnet8"
 export MSBuildSDKsPath="C:\\works\\BRCL\\tools\\dotnet8\\sdk\\8.0.404\\Sdks"
 export DOTNET_HOST_PATH="C:\\works\\BRCL\\tools\\dotnet8\\dotnet.exe"
 "/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/MSBuild.exe" \
-  "Plain Craft Launcher 2.vbproj" \
+  "BRCL.vbproj" \
   -p:Configuration=Release \
   -p:MSBuildEnableWorkloadResolver=false \
   "-p:TargetFrameworkRootPath=C:\works\BRCL\tools\net48ref\build" \

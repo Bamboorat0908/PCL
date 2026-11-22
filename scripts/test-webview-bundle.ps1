@@ -5,7 +5,7 @@ $assembly = [Reflection.Assembly]::LoadFrom([IO.Path]::GetFullPath($Exe))
 $resources = New-Object Resources.ResourceManager('PCL.Resources', $assembly)
 $project = Join-Path $PSScriptRoot '..\Plain Craft Launcher 2'
 $nativeBytes = @{}
-[xml]$definition = Get-Content -LiteralPath (Join-Path $project 'Plain Craft Launcher 2.vbproj') -Raw -Encoding UTF8
+[xml]$definition = Get-Content -LiteralPath (Join-Path $project 'BRCL.vbproj') -Raw -Encoding UTF8
 $paths = @($definition.Project.ItemGroup.PackedDependency | Where-Object {$_} | ForEach-Object {$_.Include -split ';'})
 if ($paths.Count -ne 18 -or @($assembly.GetManifestResourceNames() -like 'BRCL.Packed.*').Count -ne 18) { throw 'Expected fifteen managed and three native dependencies' }
 foreach ($path in $paths) {
