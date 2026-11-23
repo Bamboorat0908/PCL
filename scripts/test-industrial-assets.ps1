@@ -8,10 +8,12 @@ $reader = [Resources.ResourceReader]::new($stream)
 $entries = $reader.GetEnumerator()
 $keys = @()
 while ($entries.MoveNext()) { $keys += [string]$entries.Key }
-foreach ($required in @('images/launcherlogo.png','images/launchersplash.png','images/brsserverlogo.png','images/brsmachinist.jpg','images/icon.ico','formmain.baml','pages/pagelaunch/pagelaunchright.baml')) {
+foreach ($required in @('images/launcherlogo.png','images/launchersplash.png','images/brsserverlogo.png','images/brsmachinist.jpg','formmain.baml','pages/pagelaunch/pagelaunchright.baml')) {
     if ($required -notin $keys) { throw "Missing packaged asset: $required. Run a full Rebuild." }
     Write-Output "PASS $required"
 }
 if ('images/brsmachinist.png' -in $keys) { throw 'The original home image should remain in source only.' }
 $reader.Dispose()
+if ('images/icon.ico' -in $keys) { throw 'The native EXE icon must not also be packaged in WPF resources.' }
+Write-Output 'PASS the native launcher icon is packaged once'
 Write-Output '7 packaged asset checks passed.'

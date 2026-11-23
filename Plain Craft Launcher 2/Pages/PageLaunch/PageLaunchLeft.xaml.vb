@@ -42,7 +42,9 @@ Public Class PageLaunchLeft
                 Else
                     Logger.Warn($"Minecraft 文件夹无效，该文件夹已不存在：{McFolderSelected}")
                 End If
-                McFolderListLoader.WaitForExit(IsForceRestart:=True)
+                'Use the folder scan already started by FormMain. Restarting it can interrupt writes
+                'and repeats the same disk work on every startup without a saved folder.
+                McFolderListLoader.WaitForExit(0)
                 McFolderSelected = McFolderList.First.Location
             End If
             If Settings.Get(Of Boolean)("SystemDebugDelay") Then Thread.Sleep(RandomInteger(500, 3000))

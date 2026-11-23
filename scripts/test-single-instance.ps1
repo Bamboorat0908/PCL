@@ -44,6 +44,7 @@ try {
     $data = [IO.Directory]::CreateDirectory((Join-Path $directory 'BRCL')).FullName
     [IO.File]::WriteAllLines((Join-Path $data 'Setup.ini'), [string[]]@('SystemSystemUpdate:3','BrclUsageEnabled:False'))
     $env:TEMP = $env:TMP = [IO.Directory]::CreateDirectory((Join-Path $directory 'cache')).FullName
+    $portable = [IO.Directory]::CreateDirectory((Join-Path $directory 'Portable Game\versions')).Parent.FullName
     $installed = Join-Path $directory 'BRCL.exe'
     Copy-Item -LiteralPath $exe -Destination $installed
     $log = Join-Path $directory 'BRCL\Log1.txt'
@@ -66,7 +67,11 @@ try {
     Require (-not [SingleInstanceProbe]::IsIconic($wide)) "The existing launcher window was not restored by the second launch (code page $([SingleInstanceProbe]::GetACP()))."
     Require (Select-String -LiteralPath $log -SimpleMatch '收到置顶信息' -Quiet) 'The running launcher never received the bring-to-front message.'
     Write-Output 'PASS the second launch brings the existing window back on this code page'
-    Write-Output '2 single-instance checks passed.'
+    Require (Wait-Log $first $log ("已创建 launcher_profiles.json：" + $portable)) 'The launcher never discovered the portable game directory.'
+    Require (Test-Path -LiteralPath (Join-Path $portable 'launcher_profiles.json') -PathType Leaf) 'The portable game directory was not initialized.'
+    Write-Output 'PASS startup discovers sibling game directories with a versions folder'
+    & (Join-Path $PSScriptRoot 'test-single-exe-icon.ps1') -ExePath $installed -WindowHandle $wide |
+        Where-Object { $_ -like 'PASS the live launcher*' }
 } finally {
     foreach ($process in @($second, $first)) {
         if ($process -and -not $process.HasExited) { [void]$process.CloseMainWindow(); if (-not $process.WaitForExit(5000)) { $process.Kill(); $process.WaitForExit() } }

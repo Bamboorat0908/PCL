@@ -337,9 +337,13 @@ Public Module ModWatcher
         ''' </summary>
         Private Function TryGetMinecraftWindow() As KeyValuePair(Of IntPtr, String)?
             Dim Result As KeyValuePair(Of IntPtr, String)? = Nothing
+            Dim GameProcessId = GameProcess.Id
             Dim Buffer As New StringBuilder(512)
             EnumWindows(
                 Function(hwnd As IntPtr, lParam As IntPtr) As Boolean
+                    Dim OwnerProcessId As Integer
+                    GetWindowThreadProcessId(hwnd, OwnerProcessId)
+                    If OwnerProcessId <> GameProcessId Then Return True
                     '检查类名
                     Buffer.Clear()
                     GetClassName(hwnd, Buffer, Buffer.Capacity)
@@ -350,16 +354,6 @@ Public Module ModWatcher
                     GetWindowText(hwnd, Buffer, Buffer.Capacity)
                     Dim WindowText As String = Buffer.ToString()
                     If Not (WindowText.StartsWithF("FML") OrElse (WindowText <> "PopupMessageWindow") AndAlso Not WindowText.StartsWithF("GLFW")) Then Return True
-                    Dim ProcessId As Integer
-                    GetWindowThreadProcessId(hwnd, ProcessId)
-                    Try
-                        Using Candidate = Process.GetProcessById(ProcessId)
-                            If Candidate.StartTime < GameProcess.StartTime Then Return True
-                        End Using
-                    Catch ex As Exception
-                        Logger.Warn(ex, "枚举 Minecraft 窗口进程失败")
-                        Return True
-                    End Try
                     Result = New KeyValuePair(Of IntPtr, String)(hwnd, WindowText)
                     Return False
                 End Function, IntPtr.Zero)

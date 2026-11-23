@@ -1,7 +1,7 @@
 ﻿param([switch]$Quiet)
 $ErrorActionPreference = 'Stop'
 $stage = $PSScriptRoot
-$settings = Get-Content -LiteralPath (Join-Path $stage 'install.json') -Raw | ConvertFrom-Json
+$settings = Get-Content -LiteralPath (Join-Path $stage 'install.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $target = [IO.Path]::GetFullPath($settings.target)
 $backup = Join-Path $target ('BRCL\UpdateBackups\' + (Get-Date -Format 'yyyyMMdd-HHmmss-ffff'))
 $changed = @()
@@ -53,17 +53,22 @@ try {
     } catch { }
 } catch {
     $failure = $_.ToString()
-    foreach ($item in $changed) {
+    $restoreFailures = foreach ($item in $changed) {
         $destination = Join-Path $target $item.Name
-        if ($item.Existed) { Copy-Item -LiteralPath (Join-Path $backup $item.Name) -Destination $destination -Force -ErrorAction Continue }
-        else { Remove-Item -LiteralPath $destination -Force -ErrorAction Continue }
+        try {
+            if ($item.Existed) { Copy-Item -LiteralPath (Join-Path $backup $item.Name) -Destination $destination -Force }
+            elseif (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Force }
+        } catch {
+            "Rollback failed for ${destination}: $($_.Exception.Message)"
+        }
     }
-    $failure | Set-Content -LiteralPath (Join-Path $stage 'error.txt')
+    @($failure) + @($restoreFailures) | Set-Content -LiteralPath (Join-Path $stage 'error.txt') -Encoding UTF8
     if (-not $Quiet) {
         Add-Type -AssemblyName PresentationFramework
-        [System.Windows.MessageBox]::Show("BRCL 更新失败，已尝试恢复原文件。错误记录：$stage\error.txt", 'BRCL 更新失败') | Out-Null
+        $status = if ($restoreFailures) { '部分文件恢复失败，请保留更新备份。' } else { '原文件已保留或恢复。' }
+        [System.Windows.MessageBox]::Show("BRCL 更新失败。$status 错误记录：$stage\error.txt", 'BRCL 更新失败') | Out-Null
         # The launcher closed itself to be replaced; reopen the restored copy so the user is not left without it.
-        if ($restartName) {
+        if ($restartName -and -not $restoreFailures) {
             try {
                 $restored = Join-Path $target $restartName
                 if (Test-Path -LiteralPath $restored -PathType Leaf) { Start-Process -FilePath $restored -WorkingDirectory $target -ErrorAction Stop }

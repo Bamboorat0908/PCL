@@ -88,6 +88,15 @@ try {
     $result = $findWindow.Invoke($watcher, @())
     Require ($result.Key -eq $window -and $result.Value -ceq $secondTitle) 'The watcher did not preserve the updated Unicode title.'
     Write-Output 'PASS the watcher finds a Win32 game window and reads and writes its Unicode title'
+
+    $parentId = (Get-CimInstance Win32_Process -Filter "ProcessId=$PID").ParentProcessId
+    $otherProcess = [Diagnostics.Process]::GetProcessById($parentId)
+    try {
+        $watcher.GameProcess = $otherProcess
+        $result = $findWindow.Invoke($watcher, @())
+        Require ($null -eq $result -or $result.Key -ne $window) 'The watcher associated an unrelated game window with its process.'
+        Write-Output 'PASS game windows remain associated with their owning process'
+    } finally { $otherProcess.Dispose() }
 } finally {
     if ($window -ne [IntPtr]::Zero) { [WatcherWindowFixture]::Close($window) }
     $process.Dispose()

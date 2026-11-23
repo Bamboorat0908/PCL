@@ -35,26 +35,35 @@
             Hint("已有游戏正在启动中！", HintType.Red)
             Return False
         End If
-        '拒绝重复启动后再替换参数，避免改写正在运行的启动任务所使用的选项。
-        CurrentLaunchOptions = If(Options, New McLaunchOptions)
+        Dim Requested = If(Options, New McLaunchOptions)
+        If Requested.Instance Is Nothing AndAlso McInstanceSelected Is Nothing Then
+            Hint("未选择 Minecraft 版本！", HintType.Red)
+            Return False
+        End If
+        Dim LaunchOptions As New McLaunchOptions With {
+            .Instance = Requested.Instance,
+            .SaveBatch = Requested.SaveBatch,
+            .ServerIp = Requested.ServerIp,
+            .ExtraGameArgs = New List(Of String)(Requested.ExtraGameArgs)
+        }
         '强制切换需要启动的版本
-        If CurrentLaunchOptions.Instance IsNot Nothing AndAlso McInstanceSelected <> CurrentLaunchOptions.Instance Then
-            McLaunchLog("在启动前切换到版本 " & CurrentLaunchOptions.Instance.Name)
+        If LaunchOptions.Instance IsNot Nothing AndAlso McInstanceSelected <> LaunchOptions.Instance Then
+            McLaunchLog("在启动前切换到版本 " & LaunchOptions.Instance.Name)
             '检查版本是否存在
             Try
-                CurrentLaunchOptions.Instance.GetJsonPath()
+                LaunchOptions.Instance.GetJsonPath()
             Catch
-                Hint($"无法启动 {CurrentLaunchOptions.Instance.Name}：当前 Minecraft 文件夹中尚未安装该版本！", HintType.Red)
+                Hint($"无法启动 {LaunchOptions.Instance.Name}：当前 Minecraft 文件夹中尚未安装该版本！", HintType.Red)
                 Return False
             End Try
             '检查版本
-            CurrentLaunchOptions.Instance.Load()
-            If CurrentLaunchOptions.Instance.State = McInstanceState.Error Then
-                Hint($"无法启动 {CurrentLaunchOptions.Instance.Name}：{CurrentLaunchOptions.Instance.Info}", HintType.Red)
+            LaunchOptions.Instance.Load()
+            If LaunchOptions.Instance.State = McInstanceState.Error Then
+                Hint($"无法启动 {LaunchOptions.Instance.Name}：{LaunchOptions.Instance.Info}", HintType.Red)
                 Return False
             End If
             '切换版本
-            McInstanceSelected = CurrentLaunchOptions.Instance
+            McInstanceSelected = LaunchOptions.Instance
             FrmLaunchLeft.RefreshButtonsUI()
             FrmLaunchLeft.RefreshPage(False, False)
         End If
@@ -62,7 +71,8 @@
         '禁止进入版本选择页面（否则就可以在启动中切换 McInstanceSelected 了）
         FrmMain.PageStack = FrmMain.PageStack.Where(Function(p) p.Page <> FormMain.PageType.InstanceSelect).ToList
         '实际启动加载器
-        McLaunchLoader.Start(Options, IsForceRestart:=True)
+        CurrentLaunchOptions = LaunchOptions
+        McLaunchLoader.Start(LaunchOptions, IsForceRestart:=True)
         Return True
     End Function
 
@@ -70,7 +80,7 @@
     ''' 记录启动日志。
     ''' </summary>
     Public Sub McLaunchLog(Text As String, Optional Level As LogLevel = LogLevel.Info)
-        Text = FilterUserName(FilterAccessToken(Text, "*"), "*")
+        Text = SanitizeBrclDetails(Text)
         If ModeDebug Then RunInUi(Sub() FrmLaunchRight.LabLog.Text += $"{vbCrLf}[{Date.Now:HH':'mm':'ss'.'fff}] {Text}")
         Logger.Log(Text, Level)
     End Sub
@@ -537,14 +547,15 @@ NextInner:
         Data.Progress = 0.05
         '检查是否已经登录完成
         Dim ExpiresAt = Settings.Get(Of Long)("CacheMsV2Expires")
-        If Not Data.IsForceRestarting AndAlso '不要求强行重启
-           ExpiresAt > 0 AndAlso ExpiresAt > GetUnixTimestampUtc() + 120 AndAlso 'AccessToken 尚未过期
-           Input.UserName = Settings.Get(Of String)("CacheMsV2Name") Then
+        Dim CachedToken = Settings.Get(Of String)("CacheMsV2Access")
+        Dim CachedUuid = Settings.Get(Of String)("CacheMsV2Uuid")
+        If Not Data.IsForceRestarting AndAlso CanReuseMicrosoftLogin(Input.UserName, Settings.Get(Of String)("CacheMsV2Name"),
+                                                                    CachedToken, CachedUuid, ExpiresAt, GetUnixTimestampUtc()) Then
             Data.Output = New McLoginResult With {
                 .Name = Input.UserName, .Type = "Microsoft",
-                .AccessToken = Settings.Get(Of String)("CacheMsV2Access"),
-                .Uuid = Settings.Get(Of String)("CacheMsV2Uuid"),
-                .ClientToken = Settings.Get(Of String)("CacheMsV2Uuid"),
+                .AccessToken = CachedToken,
+                .Uuid = CachedUuid,
+                .ClientToken = CachedUuid,
                 .ProfileJson = Settings.Get(Of String)("CacheMsV2ProfileJson")
             }
             McLaunchLog("无需登录，AccessToken 尚未过期")
@@ -588,19 +599,21 @@ Relogin:
         If Data.IsCanceled Then Throw New OperationCanceledException
         StepTimer.Restart()
         Dim Result = MsLoginStep5And6(LoginResult.AccessToken, Data)
+        If Data.IsCanceled Then Throw New OperationCanceledException
         McLaunchLog($"微软登录步骤 5–6/6 完成，用时 {StepTimer.ElapsedMilliseconds} ms；本次登录共 {LoginTimer.ElapsedMilliseconds} ms")
         Data.Progress = 0.98
-        '输出登录结果
+        'Only publish the new expiry after all session fields have been saved.
+        Settings.Set("CacheMsV2Expires", 0L)
         Settings.Set("CacheMsV2OAuthRefresh", OAuthRefreshToken)
         Settings.Set("CacheMsV2Access", LoginResult.AccessToken)
         Settings.Set("CacheMsV2Uuid", Result.UUID)
         Settings.Set("CacheMsV2Name", Result.UserName)
         Settings.Set("CacheMsV2ProfileJson", Result.ProfileJson)
-        Settings.Set("CacheMsV2Expires", LoginResult.ExpiresAt)
         Dim MsJson As JObject = Settings.Get(Of String)("LoginMsJson").DeserializeJson()
         MsJson.Remove(Input.UserName) '如果更改了玩家名……
         MsJson(Result.UserName) = OAuthRefreshToken
         Settings.Set("LoginMsJson", MsJson.ToString(Newtonsoft.Json.Formatting.None))
+        Settings.Set("CacheMsV2Expires", LoginResult.ExpiresAt)
         Data.Output = New McLoginResult With {.AccessToken = LoginResult.AccessToken, .Name = Result.UserName, .Uuid = Result.UUID, .Type = "Microsoft", .ClientToken = Result.UUID, .ProfileJson = Result.ProfileJson}
         '结束
 SkipLogin:
@@ -608,6 +621,14 @@ SkipLogin:
         Settings.Set("HintBuy", True) '关闭正版购买提示
         If ThemeUnlock(10, False) Then MyMsgBox("感谢你对正版游戏的支持！" & vbCrLf & "隐藏主题 跳票红 已解锁！", "提示")
     End Sub
+    Friend Function CanReuseMicrosoftLogin(RequestedName As String, CachedName As String, AccessToken As String, Uuid As String,
+                                          ExpiresAt As Long, NowUtc As Long) As Boolean
+        Dim ProfileUuid As Guid
+        Return Not String.IsNullOrWhiteSpace(RequestedName) AndAlso String.Equals(RequestedName, CachedName, StringComparison.Ordinal) AndAlso
+            Not String.IsNullOrWhiteSpace(AccessToken) AndAlso Guid.TryParse(Uuid, ProfileUuid) AndAlso ProfileUuid <> Guid.Empty AndAlso
+            ExpiresAt > NowUtc AndAlso ExpiresAt - NowUtc > 120
+    End Function
+
     Private Sub McLoginServerStart(Data As LoaderTask(Of McLoginServer, McLoginResult))
         Dim Input As McLoginServer = Data.Input
         Dim NeedRefresh As Boolean = False, WasRefreshed As Boolean = False
@@ -916,7 +937,7 @@ Retry:
         Dim PrepareJson As JObject = MsLoginRequest("https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode", HttpMethod.Post,
             Content:=$"client_id={OAuthClientId}&scope=XboxLive.signin%20offline_access",
             ContentType:="application/x-www-form-urlencoded").DeserializeJson()
-        McLaunchLog("网页登录地址：" & PrepareJson("verification_uri").ToString)
+        If Data.IsCanceled Then Throw New OperationCanceledException
 
         '弹窗
         Dim Converter As New MyMsgBoxConverter With {.Content = PrepareJson, .ForceWait = True, .Type = MyMsgBoxType.Login}
@@ -960,9 +981,7 @@ Retry:
         Catch ex As HttpRequestCodeException
             '修改错误列表时，同时检查 MyMsgLogin.xaml.vb 中的对应代码
             Dim Response = ex.Response
-            If Response.Contains("invalid_grant") OrElse Response.Contains("interaction_required") OrElse Response.ContainsIgnoreCase("must sign in again") OrElse Response.ContainsIgnoreCase("password expired") OrElse
-               (Response.Contains("refresh_token") AndAlso Response.ContainsIgnoreCase("is not valid")) OrElse '#269
-               Response.ContainsIgnoreCase("expired") Then '#8611
+            If MicrosoftDeviceLogin.RequiresNewAuthorization(Response) Then
                 Return ("Relogin", "")
             ElseIf Response.Contains("Account security interrupt") Then
                 MyMsgBox("该账号由于安全问题无法登陆，请前往微软账户页获取更多信息。", "登录失败", "我知道了", IsWarn:=True)
@@ -1282,17 +1301,25 @@ Retry:
                 Arg = Arg.Replace(Replacement.Key, Replacement.Value)
             Next
             '为带特殊字符的参数添加双引号
-            If Arg.IndexOfAny({"&"c, "|"c, "<"c, ">"c, "^"c, " "c}) >= 0 AndAlso Not Arg.StartsWithF("""") AndAlso Not Arg.EndsWithF("""") Then
-                Arg = $"""{Arg.Replace("""", "\""")}""" '转义在原本参数中间的双引号
-            End If
-            '输出
-            McLaunchLog(Arg)
+            Arg = FormatLaunchArgument(Arg)
             Argument &= Arg & " "
         Next
-        McLaunchLog("=================== 启动参数结束 ===================")
-        '输出
         McLaunchArgument = Argument.TrimEnd
+        'Redact the whole command so credential names and their separate arguments are processed together.
+        McLaunchLog(McLaunchArgument)
+        McLaunchLog("=================== 启动参数结束 ===================")
     End Sub
+
+    Friend Function FormatLaunchArgument(Value As String) As String
+        If Value.Length = 0 Then Return New String(""""c, 2)
+        If Value.IndexOfAny({"&"c, "|"c, "<"c, ">"c, "^"c, " "c, ControlChars.Tab}) < 0 OrElse
+           Value.StartsWithF("""") OrElse Value.EndsWithF("""") Then Return Value
+
+        'Windows requires doubling trailing backslashes and those that precede an embedded quote.
+        Dim Escaped = System.Text.RegularExpressions.Regex.Replace(Value, "(\\*)""", "$1$1\""")
+        Dim TrailingSlashes = Escaped.Length - Escaped.TrimEnd("\"c).Length
+        Return """" & Escaped & New String("\"c, TrailingSlashes) & """"
+    End Function
 
     'JVM 部分
     Private Function McLaunchArgumentsJVM() As List(Of String)
@@ -2268,8 +2295,6 @@ IgnoreCustomSkin:
         McLaunchLog("")
         McLaunchLog("~ 登录参数 ~")
         McLaunchLog("玩家用户名：" & McLoginLoader.Output.Name)
-        McLaunchLog("AccessToken：" & McLoginLoader.Output.AccessToken)
-        McLaunchLog("ClientToken：" & McLoginLoader.Output.ClientToken)
         McLaunchLog("UUID：" & McLoginLoader.Output.Uuid)
         McLaunchLog("登录方式：" & McLoginLoader.Output.Type)
         McLaunchLog("")

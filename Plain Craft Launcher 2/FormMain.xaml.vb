@@ -617,11 +617,19 @@ Public Class FormMain
             Dim Bitmap As New Global.System.Windows.Media.Imaging.BitmapImage
             Using Input = IO.File.OpenRead(Address)
                 Dim Decoder = Global.System.Windows.Media.Imaging.BitmapDecoder.Create(Input, Global.System.Windows.Media.Imaging.BitmapCreateOptions.DelayCreation, Global.System.Windows.Media.Imaging.BitmapCacheOption.None)
-                Dim PixelWidth = Decoder.Frames(0).PixelWidth
+                Dim Frame = Decoder.Frames(0)
+                Const MaxDecodeHeight As Integer = 3840
+                Dim Width = Math.Min(DecodeWidth, Frame.PixelWidth)
+                Dim Height = Math.Min(MaxDecodeHeight, Frame.PixelHeight)
                 Input.Position = 0
                 Bitmap.BeginInit()
                 Bitmap.CacheOption = Global.System.Windows.Media.Imaging.BitmapCacheOption.OnLoad
-                Bitmap.DecodePixelWidth = Math.Min(DecodeWidth, PixelWidth)
+                'Setting both dimensions would stretch the bitmap. Use the tighter bound.
+                If CLng(Width) * Frame.PixelHeight <= CLng(Height) * Frame.PixelWidth Then
+                    Bitmap.DecodePixelWidth = Width
+                Else
+                    Bitmap.DecodePixelHeight = Height
+                End If
                 Bitmap.StreamSource = Input
                 Bitmap.EndInit()
             End Using
@@ -666,7 +674,8 @@ Public Class FormMain
                                 ImgBack.Background = New ImageBrush(Picture)
                                 ImgBack.Visibility = Visibility.Visible
                                 UpdateBackgroundAndTitleBar()
-                                Logger.Info($"已应用背景图片：{Picture.Width:0} x {Picture.Height:0}")
+                                Dim PixelImage = DirectCast(Picture, Global.System.Windows.Media.Imaging.BitmapSource)
+                                Logger.Info($"已应用背景图片：{PixelImage.PixelWidth} x {PixelImage.PixelHeight}")
                                 If FrmSetupUI IsNot Nothing Then FrmSetupUI.BackgroundRefreshUI(True, Pictures.Count)
                             End Sub))
                     End If

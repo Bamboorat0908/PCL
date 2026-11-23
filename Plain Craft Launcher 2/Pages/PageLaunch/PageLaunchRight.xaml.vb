@@ -27,6 +27,8 @@ Public Class PageLaunchRight
     Private CurrentFortune As BrclFortuneResult
     Private FortuneBusy As Boolean
     Private FortuneVersion As Integer
+    Private RequestedHeroWidth As Integer
+    Private HeroDecodeRunning As Boolean
     Private Const HeroImageWidth As Integer = 1672
     Private Const HeroImageHeight As Integer = 941
     Private Shared ReadOnly HeroImageUri As New Uri("pack://application:,,,/BRCL;component/Images/BrsMachinist.jpg")
@@ -40,21 +42,43 @@ Public Class PageLaunchRight
         If Hero IsNot Nothing Then UpdateHeroImage(NewDpi)
     End Sub
 
-    Private Sub UpdateHeroImage(Dpi As DpiScale)
+    Private Async Sub UpdateHeroImage(Dpi As DpiScale)
         If Hero.ActualWidth <= 0 OrElse Hero.ActualHeight <= 0 Then Return
         'UniformToFill 可能按高度放大后裁边。按实际物理像素选择解码尺寸，并合并相近的窗口尺寸。
         Dim Required = Math.Max(Hero.ActualWidth * Dpi.DpiScaleX,
                                 Hero.ActualHeight * Dpi.DpiScaleY * HeroImageWidth / HeroImageHeight)
-        Dim DecodeWidth = CInt(Math.Min(HeroImageWidth, Math.Ceiling(Required / 256) * 256))
-        If TryCast(HeroImage.Source, BitmapImage)?.DecodePixelWidth = DecodeWidth Then Return
+        RequestedHeroWidth = CInt(Math.Min(HeroImageWidth, Math.Ceiling(Required / 256) * 256))
+        If HeroDecodeRunning Then Return
+
+        HeroDecodeRunning = True
+        Try
+            Do
+                Dim DecodeWidth = RequestedHeroWidth
+                If TryCast(HeroImage.Source, BitmapImage)?.DecodePixelWidth = DecodeWidth Then Exit Do
+                Dim Bitmap = Await Task.Run(Function() DecodeHeroImage(DecodeWidth))
+                'If the window was resized during decoding, reuse the result only when it still fits.
+                If DecodeWidth = RequestedHeroWidth Then
+                    HeroImage.Source = Bitmap
+                    Exit Do
+                End If
+            Loop
+        Catch ex As Exception
+            Logger.Warn(ex, "解码首页背景图失败")
+        Finally
+            HeroDecodeRunning = False
+        End Try
+    End Sub
+
+    Private Shared Function DecodeHeroImage(DecodeWidth As Integer) As BitmapImage
         Dim Bitmap As New BitmapImage()
         Bitmap.BeginInit()
         Bitmap.UriSource = HeroImageUri
+        Bitmap.CacheOption = BitmapCacheOption.OnLoad
         Bitmap.DecodePixelWidth = DecodeWidth
         Bitmap.EndInit()
         Bitmap.Freeze()
-        HeroImage.Source = Bitmap
-    End Sub
+        Return Bitmap
+    End Function
 
     Private Shared Function CreateClient() As HttpClient
         Dim Client As New HttpClient With {.Timeout = TimeSpan.FromSeconds(12), .MaxResponseContentBufferSize = 4 * 1024 * 1024}

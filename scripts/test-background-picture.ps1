@@ -33,7 +33,7 @@ try {
     $env:BRCL_UI_PREVIEW = '1'
     $env:TEMP = $env:TMP = [IO.Directory]::CreateDirectory((Join-Path $fixture 'cache')).FullName
     # 1920x1080 uses the fitted (UniformToFill) branch; 64x64 uses the smart tiling branch with an absolute viewport.
-    foreach ($case in @(@{ Name = 'large'; Width = 1920; Height = 1080 }, @{ Name = 'tile'; Width = 64; Height = 64 })) {
+    foreach ($case in @(@{ Name = 'large'; Width = 1920; Height = 1080 }, @{ Name = 'tile'; Width = 64; Height = 64 }, @{ Name = 'portrait'; Width = 256; Height = 4608 })) {
         $env:BRCL_TEST_REGISTRY_ID = [Guid]::NewGuid().ToString('N')
         $keyPath = 'Software\BRCLRegression\' + $env:BRCL_TEST_REGISTRY_ID
         $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey("$keyPath\Software\BRCL")
@@ -42,6 +42,7 @@ try {
         $pictures = [IO.Directory]::CreateDirectory((Join-Path $directory 'BRCL\Pictures')).FullName
         $bitmap = New-Object System.Drawing.Bitmap $case.Width, $case.Height
         try {
+            $bitmap.SetResolution(96, 96)
             $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
             try { $graphics.Clear([System.Drawing.Color]::FromArgb(255, 40, 90, 140)) } finally { $graphics.Dispose() }
             $bitmap.Save((Join-Path $pictures 'background.png'), [System.Drawing.Imaging.ImageFormat]::Png)
@@ -60,13 +61,16 @@ try {
             Require ($errors.Count -eq 0) "Applying the $($case.Name) background raised: $($errors[0].Line)"
             Require $applied "The $($case.Name) background was never applied. See $log."
             Require (-not $process.HasExited) "The launcher exited after applying the $($case.Name) background."
+            if ($case.Name -eq 'portrait') {
+                Require (Select-String -LiteralPath $log -SimpleMatch '已应用背景图片：213 x 3840' -Quiet) 'A tall wallpaper was not downsampled with its aspect ratio intact.'
+            }
             Write-Output "PASS $($case.Name) background picture is applied at startup without a UI exception"
         } finally {
             Stop-TestLauncher $process
             [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($keyPath, $false)
         }
     }
-    Write-Output '2 background picture checks passed.'
+    Write-Output '3 background picture checks passed.'
 } finally {
     $env:BRCL_TEST_REGISTRY_ID = $saved.Registry; $env:BRCL_UI_PREVIEW = $saved.Preview; $env:TEMP = $saved.Temp; $env:TMP = $saved.Tmp
     if ($script:Failed) { Write-Output "Fixture kept for inspection: $fixture" }

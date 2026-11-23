@@ -1,6 +1,7 @@
 param(
     [string]$ExePath = (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\bin\BRCL.exe'),
-    [string]$IconPath = (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\Images\icon.ico')
+    [string]$IconPath = (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\Images\icon.ico'),
+    [IntPtr]$WindowHandle
 )
 $ErrorActionPreference = 'Stop'
 $ExePath = [IO.Path]::GetFullPath($ExePath)
@@ -27,6 +28,12 @@ public static class BrclStandaloneIconChecks {
     [DllImport("user32.dll",EntryPoint="PrivateExtractIconsW",CharSet=CharSet.Unicode,ExactSpelling=true,SetLastError=true)]
     static extern uint PrivateExtractIcons(string path,int index,int width,int height,[Out] IntPtr[] icons,[Out] uint[] ids,uint count,uint flags);
     [DllImport("user32.dll",ExactSpelling=true)] static extern bool DestroyIcon(IntPtr icon);
+    [DllImport("user32.dll", EntryPoint="SendMessageTimeoutW", ExactSpelling=true)]
+    static extern IntPtr SendMessageTimeout(IntPtr window,uint message,IntPtr wParam,IntPtr lParam,uint flags,uint timeout,out IntPtr result);
+    [DllImport("user32.dll", EntryPoint="GetClassLongPtrW", ExactSpelling=true)]
+    static extern IntPtr GetClassLongPtr(IntPtr window,int index);
+    [DllImport("user32.dll", EntryPoint="GetClassLongW", ExactSpelling=true)]
+    static extern uint GetClassLong(IntPtr window,int index);
     static Bitmap CopyIcon(IntPtr handle) {
         if(handle==IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error(),"Icon extraction returned a null handle");
         using(var icon=Icon.FromHandle(handle)) return icon.ToBitmap();
@@ -62,6 +69,17 @@ public static class BrclStandaloneIconChecks {
             return CopyIcon(info.Icon);
         } finally { if(info.Icon!=IntPtr.Zero) DestroyIcon(info.Icon); }
     }
+    public static void CheckWindow(IntPtr window,string source) {
+        foreach(int kind in new[]{0,1}) {
+            IntPtr handle;
+            if(SendMessageTimeout(window,0x007F,new IntPtr(kind),IntPtr.Zero,0x2,2000,out handle)==IntPtr.Zero)
+                throw new Exception("The launcher did not answer a window icon request.");
+            if(handle==IntPtr.Zero)
+                handle=IntPtr.Size==8 ? GetClassLongPtr(window,kind==0?-34:-14) : new IntPtr(unchecked((int)GetClassLong(window,kind==0?-34:-14)));
+            using(var actual=CopyIcon(handle)) using(var expected=Extract(source,actual.Width))
+                RequireSame(actual,expected,kind==0?"Live small window icon":"Live large window icon");
+        }
+    }
     public static void CheckShell(string exe,string source,bool small) {
         using(var actual=ShellIcon(exe,small)) using(var expected=ShellIcon(source,small)) RequireSame(actual,expected,small?"Explorer small icon":"Explorer large icon");
     }
@@ -85,32 +103,17 @@ $assembly = [Reflection.Assembly]::LoadFrom($freshExe)
 $resourceName = @($assembly.GetManifestResourceNames() | Where-Object { $_ -like '*.g.resources' })
 if ($resourceName.Count -ne 1) { throw 'Expected one WPF resource dictionary.' }
 $reader = New-Object Resources.ResourceReader($assembly.GetManifestResourceStream($resourceName[0]))
-$windowIcon = $null
 try {
     $entries = $reader.GetEnumerator()
     while ($entries.MoveNext()) {
-        if ($entries.Key -ceq 'images/icon.ico') {
-            $iconStream = $entries.Value
-            $iconStream.Position = 0
-            $memory = New-Object IO.MemoryStream
-            try { $iconStream.CopyTo($memory); $windowIcon=$memory.ToArray() }
-            finally { $memory.Dispose() }
-            break
-        }
+        if ($entries.Key -ceq 'images/icon.ico') { throw 'A duplicate WPF icon is still embedded in the standalone EXE.' }
     }
 } finally { $reader.Dispose() }
-if ($null -eq $windowIcon) { throw 'Window icon is not embedded in the single EXE.' }
-$sha = [Security.Cryptography.SHA256]::Create()
-try {
-    if ([Convert]::ToBase64String($sha.ComputeHash($windowIcon)) -ne [Convert]::ToBase64String($sha.ComputeHash([IO.File]::ReadAllBytes($IconPath)))) { throw 'WPF window icon differs from the native EXE icon.' }
-} finally { $sha.Dispose() }
-$stream = New-Object IO.MemoryStream(,$windowIcon)
-try {
-    $decoder = [Windows.Media.Imaging.BitmapDecoder]::Create($stream,[Windows.Media.Imaging.BitmapCreateOptions]::PreservePixelFormat,[Windows.Media.Imaging.BitmapCacheOption]::OnLoad)
-    $sizes = @($decoder.Frames | ForEach-Object { $_.PixelWidth } | Sort-Object -Unique)
-    if (($sizes -join ',') -ne '16,24,32,48,64,128,256') { throw 'WPF icon is missing expected display/DPI sizes.' }
-} finally { $stream.Dispose() }
-Write-Output 'PASS embedded WPF window/taskbar icon decodes all seven sizes and matches the native EXE artwork'
+Write-Output 'PASS the standalone EXE stores the multi-size launcher icon only as native PE resources'
 [xml]$form = Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\FormMain.xaml') -Raw -Encoding UTF8
-if ($form.DocumentElement.GetAttribute('Icon') -cne '/BRCL;component/Images/icon.ico') { throw 'Main window does not use the embedded launcher icon.' }
-Write-Output 'PASS main window uses the embedded BRCL icon URI'
+if ($form.DocumentElement.HasAttribute('Icon')) { throw 'The launcher window overrides the executable icon.' }
+Write-Output 'PASS the WPF main window inherits the executable artwork'
+if ($WindowHandle -ne [IntPtr]::Zero) {
+    [BrclStandaloneIconChecks]::CheckWindow($WindowHandle, $IconPath)
+    Write-Output 'PASS the live launcher window displays the same small and large native icons'
+}

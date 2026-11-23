@@ -73,6 +73,21 @@ Check ($tokens[1] -eq 'previous-refresh') 'refresh response without rotated refr
 foreach ($text in @('{}','{"access_token":""}','{"access_token":"fake","refresh_token":null}','{"access_token":"fake","refresh_token":""}')) {
     Check (Rejected { $type::ReadTokens((Json $text),$null) }) 'incomplete token result rejected'
 }
+$needsAuthorization = $type.GetMethod('RequiresNewAuthorization',[Reflection.BindingFlags]'NonPublic,Static')
+Check ($needsAuthorization.Invoke($null,[object[]]@('{"error":"invalid_grant"}'))) 'revoked Microsoft refresh grant requests new authorization'
+Check (-not $needsAuthorization.Invoke($null,[object[]]@('{"error":"server_error","error_description":"invalid_grant upstream"}'))) 'transient Microsoft service errors do not discard authorization'
+Check (-not $needsAuthorization.Invoke($null,[object[]]@('<html>gateway connection expired</html>'))) 'gateway timeout does not open an unnecessary authorization dialog'
+$cacheCheck = $assembly.GetType('BRCL.ModLaunch',$true).GetMethod('CanReuseMicrosoftLogin',[Reflection.BindingFlags]'NonPublic,Static')
+$profileId = '12f36facfa9a40c69dd36b187deed134'
+$now = [long]1800000000
+function Can-ReuseCache($requested,$cached,$access,$uuid,[long]$seconds) {
+    return [bool]$cacheCheck.Invoke($null,[object[]]@($requested,$cached,$access,$uuid,($now+$seconds),$now))
+}
+Check (Can-ReuseCache 'Player' 'Player' 'fixture-access' $profileId 121) 'complete Microsoft cache beyond the renewal window is reused'
+Check (-not (Can-ReuseCache 'Player' 'Player' 'fixture-access' $profileId 120)) 'Microsoft cache renews before the access token expires'
+Check (-not (Can-ReuseCache 'Other' 'Player' 'fixture-access' $profileId 600)) 'a different account never reuses the Microsoft cache'
+Check (-not (Can-ReuseCache 'Player' 'Player' '' $profileId 600)) 'partial Microsoft cache without an access token is refreshed'
+Check (-not (Can-ReuseCache 'Player' 'Player' 'fixture-access' 'invalid' 600)) 'partial Microsoft cache without a valid profile ID is refreshed'
 $converterType = $assembly.GetType('BRCL.ModMain+MyMsgBoxConverter',$true)
 $controlType = $assembly.GetType('BRCL.MyMsgLogin',$true)
 function New-Dialog($data) {
