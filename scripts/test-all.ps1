@@ -43,6 +43,7 @@ $cases = @(
     @{Name='webview-bundle'; File='test-webview-bundle.ps1'; Args=@()},
     @{Name='webview-lifecycle'; File='test-webview-lifecycle.ps1'; Args=@()},
     @{Name='assets'; File='test-industrial-assets.ps1'; Args=@()},
+    @{Name='asset-budget'; File='test-asset-budget.ps1'; Args=@()},
     @{Name='oauth-config'; File='test-ms-client-id.ps1'; Args=@()},
     @{Name='oauth-flow'; File='test-microsoft-login.ps1'; Args=@()},
     @{Name='oauth-performance'; File='test-ms-login-performance.ps1'; Args=@()},
