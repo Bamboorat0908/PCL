@@ -28,6 +28,7 @@ $cases = @(
     @{Name='home-calendar'; File='test-home-calendar.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'home-calendar'))},
     @{Name='daily-fortune'; File='test-daily-fortune.ps1'; Args=@('-OutputDirectory',(Join-Path $OutputDirectory 'daily-fortune'))},
     @{Name='bank-page'; File='test-bank-page.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'bank'))},
+    @{Name='bank-address'; File='test-bank-address.ps1'; Args=@()},
     @{Name='sponsor-dialog'; File='test-sponsor-dialog.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'sponsor-dialog'))},
     @{Name='pack-layout'; File='test-brs-pack-layout.ps1'; Args=@('-OutputDirectory',(Join-Path $OutputDirectory 'pack-previews'))},
     @{Name='brs-launch-selection'; File='test-brs-launch-selection.ps1'; Args=@()},
@@ -61,6 +62,7 @@ $cases = @(
     @{Name='ui-polish'; File='test-ui-polish.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'ui-polish'))},
     @{Name='dialog-layout'; File='test-dialog-layout.ps1'; Args=@()},
     @{Name='update-rollback'; File='test-update.ps1'; Args=@()},
+    @{Name='update-housekeeping'; File='test-update-housekeeping.ps1'; Args=@()},
     @{Name='icon-theme'; File='test-icon-theme.ps1'; Args=@()},
     @{Name='exe-icon'; File='test-single-exe-icon.ps1'; Args=@('-ExePath',$exe)},
     @{Name='stock-resource'; File='test-stock-resource.ps1'; Args=@()}
