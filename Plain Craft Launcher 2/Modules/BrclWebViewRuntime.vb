@@ -27,18 +27,20 @@ Friend Module BrclWebViewRuntime
         End SyncLock
     End Function
 
-    ''' <summary>
-    ''' Keeps an embedded page on its own site. A top-level navigation (link, script, redirect) to any
-    ''' other origin is cancelled and, when it is an ordinary web address, opened in the system browser
-    ''' instead, so a compromised or intercepted page cannot present a look-alike login inside the launcher.
-    ''' Returns True when the navigation was taken out of the embedded view.
-    ''' </summary>
+    ' A redirect keeps the original user-gesture flag. Require a direct user navigation
+    ' before launching a separate browser, and never pass non-web schemes to the shell.
+    Friend Function TryGetExternalWebAddress(Address As String, UserInitiated As Boolean, Redirected As Boolean, ByRef Target As Uri) As Boolean
+        Target = Nothing
+        Return UserInitiated AndAlso Not Redirected AndAlso Uri.TryCreate(Address, UriKind.Absolute, Target) AndAlso
+            (Target.Scheme = Uri.UriSchemeHttps OrElse Target.Scheme = Uri.UriSchemeHttp)
+    End Function
+
     Public Function RedirectForeignNavigation(e As CoreWebView2NavigationStartingEventArgs, IsAllowed As Func(Of String, Boolean), Context As String) As Boolean
         If IsAllowed(e.Uri) Then Return False
         e.Cancel = True
         Dim Target As Uri = Nothing
-        If Not Uri.TryCreate(e.Uri, UriKind.Absolute, Target) OrElse (Target.Scheme <> Uri.UriSchemeHttps AndAlso Target.Scheme <> Uri.UriSchemeHttp) Then
-            Logger.Warn($"{Context}：已阻止非网页导航（{If(Target?.Scheme, "无效地址")}）")
+        If Not TryGetExternalWebAddress(e.Uri, e.IsUserInitiated, e.IsRedirected, Target) Then
+            Logger.Info($"{Context}：已阻止自动或不受支持的外部导航")
             Return True
         End If
         Logger.Info($"{Context}：外部链接改用浏览器打开（{Target.Host}）")

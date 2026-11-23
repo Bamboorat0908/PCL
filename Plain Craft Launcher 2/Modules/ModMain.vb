@@ -796,7 +796,8 @@ NextFile:
             Logger.Error(ex, "设置窗口置顶失败", LogBehavior.Toast)
         End Try
     End Sub
-    Public Declare Function FindWindow Lib "user32" Alias "FindWindowA" (ClassName As String, WindowName As String) As IntPtr
+    '窗口标题含全角空格（U+3000），ANSI 版本在 Windows-1252 等代码页下无法表示该字符，必须使用 Unicode 版本。
+    Public Declare Unicode Function FindWindow Lib "user32" Alias "FindWindowW" (ClassName As String, WindowName As String) As IntPtr
     Public Declare Function SetForegroundWindow Lib "user32" (hWnd As IntPtr) As Integer
     Private Declare Function PostMessage Lib "user32" Alias "PostMessageA" (hWnd As IntPtr, msg As UInteger, wParam As Long, lParam As Long) As Boolean
 

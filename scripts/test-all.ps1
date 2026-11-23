@@ -29,6 +29,7 @@ $cases = @(
     @{Name='daily-fortune'; File='test-daily-fortune.ps1'; Args=@('-OutputDirectory',(Join-Path $OutputDirectory 'daily-fortune'))},
     @{Name='bank-page'; File='test-bank-page.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'bank'))},
     @{Name='bank-address'; File='test-bank-address.ps1'; Args=@()},
+    @{Name='bank-session'; File='test-bank-session.ps1'; Args=@()},
     @{Name='sponsor-dialog'; File='test-sponsor-dialog.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'sponsor-dialog'))},
     @{Name='pack-layout'; File='test-brs-pack-layout.ps1'; Args=@('-OutputDirectory',(Join-Path $OutputDirectory 'pack-previews'))},
     @{Name='brs-launch-selection'; File='test-brs-launch-selection.ps1'; Args=@()},
@@ -73,6 +74,8 @@ $cases = @(
     @{Name='startup-updates'; File='test-startup-updates.ps1'; Args=@()}
     @{Name='startup-navigation'; File='test-startup-navigation.ps1'; Args=@()}
     @{Name='startup-arguments'; File='test-startup-arguments.ps1'; Args=@()}
+    @{Name='native-text-apis'; File='test-native-text-apis.ps1'; Args=@()}
+    @{Name='single-instance'; File='test-single-instance.ps1'; Args=@()}
     @{Name='title-navigation'; File='test-title-navigation.ps1'; Args=@('-OutputDirectory','bin','-PreviewDirectory',(Join-Path $OutputDirectory 'title-previews'))}
     @{Name='page-cache-performance'; File='test-page-cache-performance.ps1'; Args=@()}
     @{Name='window-maximize'; File='test-window-maximize.ps1'; Args=@()}

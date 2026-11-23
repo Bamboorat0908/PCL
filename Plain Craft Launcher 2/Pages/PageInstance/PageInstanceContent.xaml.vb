@@ -85,16 +85,24 @@ Public Class PageInstanceContent
     End Sub
 
     Private Async Sub ImportFile() Handles BtnImport.Click
-        Dim Extensions = If(Kind = InstanceContentKind.Schematics, {"nbt"}, If(Kind = InstanceContentKind.Screenshots, {"png", "jpg", "jpeg", "webp"}, {"zip"}))
-        Dim Source = Dialogs.SelectFile("导入" & InstanceContentStore.Title(Kind), False, filter:={(Extensions, "支持的文件")}).FirstOrDefault()
-        If String.IsNullOrEmpty(Source) Then Return
-        Await ImportSource(Source)
+        Try
+            Dim Extensions = If(Kind = InstanceContentKind.Schematics, {"nbt"}, If(Kind = InstanceContentKind.Screenshots, {"png", "jpg", "jpeg", "webp"}, {"zip"}))
+            Dim Source = Dialogs.SelectFile("导入" & InstanceContentStore.Title(Kind), False, filter:={(Extensions, "支持的文件")}).FirstOrDefault()
+            If String.IsNullOrEmpty(Source) Then Return
+            Await ImportSource(Source)
+        Catch ex As Exception
+            Logger.Error(ex, "选择要导入的文件失败", LogBehavior.Alert)
+        End Try
     End Sub
 
     Private Async Sub ImportFolder() Handles BtnImportFolder.Click
-        Dim Source = Dialogs.SelectFolder("选择要导入的文件夹", False).FirstOrDefault()
-        If String.IsNullOrEmpty(Source) Then Return
-        Await ImportSource(Source)
+        Try
+            Dim Source = Dialogs.SelectFolder("选择要导入的文件夹", False).FirstOrDefault()
+            If String.IsNullOrEmpty(Source) Then Return
+            Await ImportSource(Source)
+        Catch ex As Exception
+            Logger.Error(ex, "选择要导入的文件夹失败", LogBehavior.Alert)
+        End Try
     End Sub
 
     Private Async Function ImportSource(Source As String) As Task
@@ -114,11 +122,11 @@ Public Class PageInstanceContent
     Private Async Sub ExportSelected() Handles BtnExport.Click
         Dim Item = TryCast(EntryList.SelectedItem, InstanceContentEntry)
         If Item Is Nothing Then Return
-        Dim Destination = Dialogs.SelectFolder("选择导出 / 备份目录", False).FirstOrDefault()
-        If String.IsNullOrEmpty(Destination) Then Return
-        Dim Root = ContentRoot
-        SetBusy(True)
         Try
+            Dim Destination = Dialogs.SelectFolder("选择导出 / 备份目录", False).FirstOrDefault()
+            If String.IsNullOrEmpty(Destination) Then Return
+            Dim Root = ContentRoot
+            SetBusy(True)
             Await Task.Run(Sub()
                                InstanceContentStore.ValidateChild(Root, Item.FullPath)
                                If Item.IsFolder Then

@@ -37,8 +37,8 @@ Public Class PageMap
         IsInitializing = True
         ConnectionVersion += 1
         Dim Version = ConnectionVersion
-        ShowLoading()
         Try
+            ShowLoading()
             If ViewMap.CoreWebView2 Is Nothing Then
                 If Not Await BrclWebViewRuntime.WaitForPageTransitionAsync(Me) Then
                     HasStarted = False
@@ -106,8 +106,7 @@ Public Class PageMap
     Private Sub NewWindowRequested(sender As Object, e As CoreWebView2NewWindowRequestedEventArgs)
         e.Handled = True
         Dim Target As Uri = Nothing
-        If Not Uri.TryCreate(e.Uri, UriKind.Absolute, Target) Then Return
-        If Target.Scheme <> Uri.UriSchemeHttp AndAlso Target.Scheme <> Uri.UriSchemeHttps Then Return
+        If Not BrclWebViewRuntime.TryGetExternalWebAddress(e.Uri, e.IsUserInitiated, False, Target) Then Return
         Try
             OpenWebsite(Target.AbsoluteUri)
         Catch ex As Exception

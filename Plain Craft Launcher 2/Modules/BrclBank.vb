@@ -148,8 +148,21 @@ Public Module BrclBank
         Implements IDisposable
         Private ReadOnly Http As HttpClient
         Private ReadOnly BaseAddress As Uri
-        Private Session As String = ""
-        Private ExpiresAt As DateTimeOffset = DateTimeOffset.MinValue
+        Private ReadOnly SessionGate As New SemaphoreSlim(1, 1)
+        Private Session As BankSession
+
+        Private NotInheritable Class BankSession
+            Public ReadOnly Credential As String
+            Public ReadOnly PlayerId As String
+            Public ReadOnly ExpiresAt As DateTimeOffset
+
+            Public Sub New(Credential As String, PlayerId As String, ExpiresAt As DateTimeOffset)
+                Me.Credential = Credential
+                Me.PlayerId = PlayerId
+                Me.ExpiresAt = ExpiresAt
+            End Sub
+        End Class
+
         Public Sub New(Address As Uri)
             BaseAddress = ValidateBankAddress(Address.AbsoluteUri)
             Http = New HttpClient(New HttpClientHandler With {.AllowAutoRedirect = False}) With {.Timeout = TimeSpan.FromSeconds(15), .MaxResponseContentBufferSize = 2097152}
@@ -166,7 +179,7 @@ Public Module BrclBank
                     If Not Response.IsSuccessStatusCode Then
                         'Never log bodies, credentials, or redirect locations from an authentication response.
                         Select Case CInt(Response.StatusCode)
-                            Case 401 : Session = "" : Throw New BankServiceException("unauthorized")
+                            Case 401 : Throw New BankServiceException("unauthorized")
                             Case 403, 404 : Throw New BankServiceException("account_unavailable")
                             Case 429 : Throw New BankServiceException("rate_limited")
                             Case Else : Throw New BankServiceException("service_unavailable")
@@ -179,27 +192,61 @@ Public Module BrclBank
             End Using
         End Function
 
-        Public Async Function GetAccounts(MinecraftToken As String, PlayerId As String, Cancel As CancellationToken) As Task(Of BankAccounts)
-            If Session.Length = 0 OrElse ExpiresAt <= DateTimeOffset.UtcNow.AddSeconds(30) Then
+        Private Async Function EnsureSession(MinecraftToken As String, PlayerId As String, Cancel As CancellationToken) As Task(Of (Value As BankSession, Issued As Boolean))
+            Await SessionGate.WaitAsync(Cancel).ConfigureAwait(False)
+            Try
+                Dim Cached = Volatile.Read(Session)
+                If Cached IsNot Nothing AndAlso Cached.PlayerId = PlayerId AndAlso Cached.ExpiresAt > DateTimeOffset.UtcNow.AddSeconds(30) Then
+                    Return (Cached, False)
+                End If
                 Dim Auth = Await Request(HttpMethod.Post, "session", MinecraftToken, Cancel).ConfigureAwait(False)
-                If BankUuid(CStr(Auth("player")("uuid"))) <> BankUuid(PlayerId) Then Throw New BankServiceException("identity_mismatch")
+                If BankUuid(CStr(Auth("player")("uuid"))) <> PlayerId Then Throw New BankServiceException("identity_mismatch")
                 Dim Credential = CStr(Auth("token"))
                 If Credential Is Nothing OrElse Not Regex.IsMatch(Credential, "\A[A-Za-z0-9_-]{32,256}\z") Then Throw New FormatException("Invalid bank session")
                 Dim Expiry = DateTimeOffset.FromUnixTimeMilliseconds(BankTime(Auth("expiresAt")))
                 If Expiry <= DateTimeOffset.UtcNow Then Throw New BankServiceException("unauthorized")
-                Session = Credential
-                ExpiresAt = Expiry
-            End If
-            Return ParseBankAccounts(Await Request(HttpMethod.Get, "accounts", Session, Cancel).ConfigureAwait(False), PlayerId)
+                Dim Issued As New BankSession(Credential, PlayerId, Expiry)
+                Volatile.Write(Session, Issued)
+                Return (Issued, True)
+            Finally
+                SessionGate.Release()
+            End Try
         End Function
 
-        Public Async Function GetHistory(AccountId As String, Days As Integer, Cancel As CancellationToken) As Task(Of List(Of BankPoint))
-            Return ParseBankHistory(Await Request(HttpMethod.Get, "accounts/" & BankUuid(AccountId) & "/history?days=" & Days.ToString(CultureInfo.InvariantCulture), Session, Cancel).ConfigureAwait(False), AccountId)
+        Private Async Function WithSession(Of T)(MinecraftToken As String, PlayerId As String, Cancel As CancellationToken, Read As Func(Of String, Task(Of T))) As Task(Of T)
+            Dim NormalizedPlayer = BankUuid(PlayerId)
+            Dim Current = Await EnsureSession(MinecraftToken, NormalizedPlayer, Cancel).ConfigureAwait(False)
+            'A late 401 may only invalidate the session that was used for that request.
+            Try
+                Return Await Read(Current.Value.Credential).ConfigureAwait(False)
+            Catch ex As BankServiceException When ex.Code = "unauthorized"
+                Interlocked.CompareExchange(Session, Nothing, Current.Value)
+                If Current.Issued Then Throw
+            End Try
+
+            Current = Await EnsureSession(MinecraftToken, NormalizedPlayer, Cancel).ConfigureAwait(False)
+            Try
+                Return Await Read(Current.Value.Credential).ConfigureAwait(False)
+            Catch ex As BankServiceException When ex.Code = "unauthorized"
+                Interlocked.CompareExchange(Session, Nothing, Current.Value)
+                Throw
+            End Try
+        End Function
+
+        Public Function GetAccounts(MinecraftToken As String, PlayerId As String, Cancel As CancellationToken) As Task(Of BankAccounts)
+            Return WithSession(Of BankAccounts)(MinecraftToken, PlayerId, Cancel,
+                Async Function(Credential As String) ParseBankAccounts(Await Request(HttpMethod.Get, "accounts", Credential, Cancel).ConfigureAwait(False), PlayerId))
+        End Function
+
+        Public Function GetHistory(MinecraftToken As String, PlayerId As String, AccountId As String, Days As Integer, Cancel As CancellationToken) As Task(Of List(Of BankPoint))
+            Dim Route = "accounts/" & BankUuid(AccountId) & "/history?days=" & Days.ToString(CultureInfo.InvariantCulture)
+            Return WithSession(Of List(Of BankPoint))(MinecraftToken, PlayerId, Cancel,
+                Async Function(Credential As String) ParseBankHistory(Await Request(HttpMethod.Get, Route, Credential, Cancel).ConfigureAwait(False), AccountId))
         End Function
 
         Public Sub Dispose() Implements IDisposable.Dispose
-            Session = ""
             Http.Dispose()
+            Interlocked.Exchange(Session, Nothing)
         End Sub
     End Class
 End Module

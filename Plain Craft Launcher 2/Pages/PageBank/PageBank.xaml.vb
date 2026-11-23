@@ -133,7 +133,6 @@ Public Class PageBank
             LabSync.Text = "账号已识别 · 等待银行服务开放"
             Return
         End If
-        If Client Is Nothing Then Client = New BrclBank.BankClient(Address)
         Dim Version = Generation
         Dim Player = Settings.Get(Of String)("CacheMsV2Uuid")
         Dim Token = Settings.Get(Of String)("CacheMsV2Access")
@@ -143,6 +142,7 @@ Public Class PageBank
         SetBusy(True)
         LabSync.Text = "正在同步账户"
         Try
+            If Client Is Nothing Then Client = New BrclBank.BankClient(Address)
             Dim Data = Await Client.GetAccounts(Token, Player, Cancel)
             If Cancel.IsCancellationRequested OrElse Version <> Generation OrElse CurrentIdentity() <> Current Then Return
             ApplyAccounts(Data)
@@ -333,7 +333,8 @@ Public Class PageBank
         If Account Is Nothing OrElse Client Is Nothing Then Return
         LabHistoryStatus.Text = "正在同步已记录的余额…"
         Try
-            Dim Data = Await Client.GetHistory(Account.Id, SelectedDays, Cancel)
+            'The bank session may need renewing (30-minute lifetime); the history read renews it with the same login.
+            Dim Data = Await Client.GetHistory(Settings.Get(Of String)("CacheMsV2Access"), Settings.Get(Of String)("CacheMsV2Uuid"), Account.Id, SelectedDays, Cancel)
             If Version <> HistoryVersion OrElse CurrentIdentity() <> Identity Then Return
             Points = Data
         Catch ex As OperationCanceledException

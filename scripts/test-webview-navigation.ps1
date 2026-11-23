@@ -58,4 +58,14 @@ foreach ($page in @(@{ Type = $stockType; Handler = 'OnNavigationStarting' }, @{
     Require ($calls.Contains('BrclWebViewRuntime.RedirectForeignNavigation')) "$($page.Type.Name).$($page.Handler) does not apply the navigation guard"
 }
 Write-Output 'PASS both embedded views route navigations through the shared guard'
-Write-Output '4 embedded navigation checks passed.'
+$external = $runtime.GetMethod('TryGetExternalWebAddress', $flags)
+Require ([bool]$external.Invoke($null, @('https://example.com/', $true, $false, $null))) 'A direct user link was blocked.'
+Require (-not [bool]$external.Invoke($null, @('https://example.com/', $false, $false, $null))) 'Programmatic navigation would open a browser.'
+Require (-not [bool]$external.Invoke($null, @('https://example.com/', $true, $true, $null))) 'A redirect would open a browser.'
+Require (-not [bool]$external.Invoke($null, @('file:///C:/test.txt', $true, $false, $null))) 'A non-web address reached the external browser policy.'
+foreach ($page in @(@{ Type = $stockType; Handler = 'OnNewWindowRequested' }, @{ Type = $mapType; Handler = 'NewWindowRequested' })) {
+    $calls = Get-CalledMethods $page.Type.GetMethod($page.Handler, $flags)
+    Require ($calls.Contains('BrclWebViewRuntime.TryGetExternalWebAddress')) "$($page.Type.Name) does not check popup navigation"
+}
+Write-Output 'PASS external browser only opens direct user-initiated web links'
+Write-Output '5 embedded navigation checks passed.'
