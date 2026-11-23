@@ -648,14 +648,15 @@ Public Class FormMain
                                 Picture = CType(Bitmap, ImageSource)
                             End Using
                         End Try
-                        Dim Brush As New ImageBrush(Picture)
-                        Brush.Freeze()
+                        'Only the frozen bitmap crosses threads. The brush is created on the UI thread and
+                        'stays modifiable, because UpdateBackgroundAndTitleBar sets its stretch and tiling.
                         Dispatcher.BeginInvoke(Threading.DispatcherPriority.Background, New Action(
                             Sub()
                                 If WindowClosing OrElse ImgBack.Background IsNot OriginalBackground Then Return
-                                ImgBack.Background = Brush
+                                ImgBack.Background = New ImageBrush(Picture)
                                 ImgBack.Visibility = Visibility.Visible
                                 UpdateBackgroundAndTitleBar()
+                                Logger.Info($"已应用背景图片：{Picture.Width:0} x {Picture.Height:0}")
                                 If FrmSetupUI IsNot Nothing Then FrmSetupUI.BackgroundRefreshUI(True, Pictures.Count)
                             End Sub))
                     End If
@@ -1354,8 +1355,13 @@ Public Class FormMain
         ImgBack.Margin = New Thickness(-BlurRadius / 1.8)
         '背景图片适应方式
         Dim BackgroundType As Integer = Settings.Get(Of Integer)("UiBackgroundSuit")
-        If ImgBack.Background IsNot Nothing Then
-            Dim Brush As ImageBrush = CType(ImgBack.Background, ImageBrush)
+        Dim Brush = TryCast(ImgBack.Background, ImageBrush)
+        If Brush IsNot Nothing AndAlso Brush.IsFrozen Then
+            'A frozen brush cannot take the stretch/tiling below; work on a modifiable copy.
+            Brush = Brush.CloneCurrentValue()
+            ImgBack.Background = Brush
+        End If
+        If Brush IsNot Nothing Then
             If BackgroundType = 0 Then
                 '智能：当图片较小时平铺，较大时适应
                 If Brush.ImageSource.Width < PanMain.ActualWidth / 2 AndAlso Brush.ImageSource.Height < PanMain.ActualHeight / 2 Then

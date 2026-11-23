@@ -37,6 +37,7 @@ $cases = @(
     @{Name='brs-page'; File='test-brs-page.ps1'; Args=@()},
     @{Name='news-page'; File='test-news-page.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'news-previews'))},
     @{Name='global-backdrops'; File='test-global-backdrops.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'backdrops'))},
+    @{Name='background-picture'; File='test-background-picture.ps1'; Args=@()},
     @{Name='sponsors'; File='test-sponsors.ps1'; Args=@()},
     @{Name='errors'; File='test-brcl-errors.ps1'; Args=@('-OutputDirectory','bin')},
     @{Name='credential-redaction'; File='test-credential-redaction.ps1'; Args=@()},
