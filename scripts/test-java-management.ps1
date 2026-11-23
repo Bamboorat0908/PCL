@@ -282,3 +282,25 @@ try {
     Assert-Throws $orderSources $orderArguments ([ArgumentException]) 'Empty source selection'
 } finally { $cancel.Dispose() }
 Write-Output 'PASS manual source choice is preserved and cancellation or invalid requests stop before network access'
+
+$parseTemurin = $sources.GetMethod('ParseTemurinJavaArchive', [Reflection.BindingFlags]'NonPublic,Static')
+$binary = [Newtonsoft.Json.Linq.JObject]::Parse('{"architecture":"x64","os":"windows","image_type":"jre","jvm_impl":"hotspot","package":{"name":"","link":"","checksum":"","size":60000000}}')
+$binary['package']['name'] = [Newtonsoft.Json.Linq.JValue]::new($zipName)
+$binary['package']['link'] = [Newtonsoft.Json.Linq.JValue]::new($temurinUrl)
+$binary['package']['checksum'] = [Newtonsoft.Json.Linq.JValue]::new(('ab' * 32))
+$goodVersion = [Newtonsoft.Json.Linq.JObject]::Parse('{"major":21,"minor":0,"security":9}')
+$parsed = $parseTemurin.Invoke($null, [object[]]@($binary, $goodVersion, 21, $java21, 3, [Threading.CancellationToken]::None))
+if ($null -eq $parsed -or $parsed.JavaVersion -ne [version]'21.0.9.0' -or $parsed.Urls.Count -ne 1 -or $parsed.Sha256 -cne ('ab' * 32)) {
+    throw 'Compatible Temurin metadata did not retain the selected mirror and verification data.'
+}
+foreach ($bad in @('{}','{"major":21,"minor":0,"security":-1}','{"major":21,"minor":0,"security":2147483648}','{"major":22,"minor":0,"security":1}')) {
+    $version = [Newtonsoft.Json.Linq.JObject]::Parse($bad)
+    if ($null -ne $parseTemurin.Invoke($null, [object[]]@($binary, $version, 21, $java21, 3, [Threading.CancellationToken]::None))) {
+        throw "Accepted incompatible or malformed Temurin version data: $bad"
+    }
+}
+$binary['package']['checksum'] = [Newtonsoft.Json.Linq.JValue]::new('incomplete')
+if ($null -ne $parseTemurin.Invoke($null, [object[]]@($binary, $goodVersion, 21, $java21, 3, [Threading.CancellationToken]::None))) {
+    throw 'An unverifiable Temurin archive was returned to the downloader.'
+}
+Write-Output 'PASS Java archive selection skips malformed and unverifiable metadata while preserving a valid selected mirror'

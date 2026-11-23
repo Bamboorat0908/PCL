@@ -83,6 +83,14 @@ Public NotInheritable Class MicrosoftDeviceLogin
         Return ""
     End Function
 
+    Friend Shared Function RequiresNewAuthorization(Response As String) As Boolean
+        Dim Code = ErrorCode(Response)
+        If Code <> "" Then Return Code = "invalid_grant" OrElse Code = "interaction_required"
+        Dim Text = If(Response, "")
+        Return Text.ContainsIgnoreCase("must sign in again") OrElse Text.ContainsIgnoreCase("password expired") OrElse
+            (Text.Contains("refresh_token") AndAlso Text.ContainsIgnoreCase("is not valid"))
+    End Function
+
     Public Shared Function ReadTokens(Data As JObject, Optional PreviousRefreshToken As String = Nothing) As String()
         Dim Access = RequiredString(Data, "access_token")
         Dim Refresh = Data?("refresh_token")

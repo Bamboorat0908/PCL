@@ -93,7 +93,14 @@ Public Class MyImage
                         embedded.Freeze()
                         Bitmap = embedded
                     Else
-                        Bitmap = New MyBitmap(value)
+                        'MyBitmap decodes through GDI+; the WPF copy is independent, so release the
+                        'native bitmap now instead of holding it until a finalizer runs (lists show many icons).
+                        Dim Decoded As New MyBitmap(value)
+                        Try
+                            Bitmap = Decoded
+                        Finally
+                            If IO.File.Exists(value) Then Decoded.Pic?.Dispose()
+                        End Try
                     End If
                 End If
                 RunInUi(Sub() MyBase.Source = Bitmap)

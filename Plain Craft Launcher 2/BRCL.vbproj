@@ -867,7 +867,6 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\icon.ico" />
     <Resource Include="Images\TitleLogo.png" />
     <EmbeddedResource Include="Pages\PageStock\StockEmbedded.js">
       <LogicalName>BRCL.StockEmbedded.js</LogicalName>

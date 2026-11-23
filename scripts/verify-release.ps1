@@ -37,7 +37,7 @@ try {
     if ($packed.Entries.Count -ne 1 -or $packed.Entries[0].FullName -cne 'BRCL.exe') { throw 'Expected one file in the ZIP.' }
     $stream = $packed.Entries[0].Open()
     $sha = [Security.Cryptography.SHA256]::Create()
-    try { $insideHash = [Convert]::ToHexString($sha.ComputeHash($stream)) } finally { $stream.Dispose(); $sha.Dispose() }
+    try { $insideHash = [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '') } finally { $stream.Dispose(); $sha.Dispose() }
 } finally { $packed.Dispose() }
 $exeHash = (Get-FileHash -LiteralPath (Join-Path $payload 'BRCL.exe')).Hash
 if ($insideHash -ine $exeHash) { throw 'Packed EXE differs from the tested build.' }

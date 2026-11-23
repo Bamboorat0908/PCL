@@ -34,10 +34,10 @@ function Wait-Fortune($target) {
         $timer.Stop()
     }
 }
-function Wait-FortuneStage([scriptblock]$condition, [string]$label) {
+function Wait-UiStage([scriptblock]$condition, [string]$label) {
     $watch = [Diagnostics.Stopwatch]::StartNew()
     while (-not (& $condition)) {
-        if ($watch.ElapsedMilliseconds -gt 5000) { throw "Fortune stage timed out: $label" }
+        if ($watch.ElapsedMilliseconds -gt 5000) { throw "Home UI stage timed out: $label" }
         $frame = [Windows.Threading.DispatcherFrame]::new()
         $timer = [Windows.Threading.DispatcherTimer]::new()
         $timer.Interval = [TimeSpan]::FromMilliseconds(10)
@@ -90,15 +90,15 @@ $page.FindName('BtnDrawFortune').RaiseEvent([Windows.RoutedEventArgs]::new([Wind
 $page.FindName('BtnDrawFortune').RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
 if ($page.FindName('PanFortuneDrawing').Visibility -ne 'Visible' -or $page.FindName('PanFortuneResult').Visibility -ne 'Collapsed' -or $page.FindName('LabCalendarHint').Visibility -ne 'Hidden') { throw 'Shake phase exposed the grade or blessing early' }
 if (-not $page.FindName('FortuneShakeTransform').HasAnimatedProperties -or -not $page.FindName('FortuneStickRise').HasAnimatedProperties) { throw 'Draw has no active shaker/stick animation' }
-Wait-FortuneStage { Test-Path -LiteralPath $fortuneFixture } 'save before reveal'
+Wait-UiStage { Test-Path -LiteralPath $fortuneFixture } 'save before reveal'
 if ($page.FindName('PanFortuneDrawing').Visibility -ne 'Visible') { throw 'Saved result skipped the shaking ceremony' }
 Save-FortuneStage 'fortune-1-shaking'
-Wait-FortuneStage { $page.FindName('PanFortuneResult').Visibility -eq 'Visible' } 'grade reveal'
+Wait-UiStage { $page.FindName('PanFortuneResult').Visibility -eq 'Visible' } 'grade reveal'
 if ($page.FindName('LabCalendarHint').Visibility -ne 'Hidden' -or $drawClock.ElapsedMilliseconds -lt 1100) { throw 'Blessing appeared before the grade reveal pause' }
-Wait-FortuneStage { $page.FindName('PanFortuneResult').Opacity -ge 0.8 } 'grade fade in'
+Wait-UiStage { $page.FindName('PanFortuneResult').Opacity -ge 0.8 } 'grade fade in'
 if ($page.FindName('LabCalendarHint').Visibility -ne 'Hidden') { throw 'Blessing did not leave time to read the grade first' }
 Save-FortuneStage 'fortune-2-grade-reveal'
-Wait-FortuneStage { $page.FindName('LabCalendarHint').Visibility -eq 'Visible' } 'blessing reveal'
+Wait-UiStage { $page.FindName('LabCalendarHint').Visibility -eq 'Visible' } 'blessing reveal'
 if ($page.FindName('PanFortuneResult').Visibility -ne 'Visible' -or $drawClock.ElapsedMilliseconds -lt 1550) { throw 'Blessing did not follow the revealed grade' }
 Wait-Fortune $page
 if ($page.FindName('FortuneShakeTransform').HasAnimatedProperties -or $page.FindName('LabCalendarHint').HasAnimatedProperties) { throw 'Completed draw left animation clocks running' }
@@ -218,6 +218,10 @@ foreach ($theme in @('dark', 'light')) {
         if ($width -ge 620 -and [Windows.Controls.Grid]::GetColumn($page.FindName('CalendarIdea')) -ne 3) { throw 'Regular-width calendar did not use three columns' }
         if ($width -lt 620 -and [Windows.Controls.Grid]::GetRow($page.FindName('CalendarIdea')) -ne 2) { throw 'Narrow calendar did not reflow' }
         if ($width -ge 620 -and $page.FindName('PanCalendarWeek').ActualWidth -gt 260.5) { throw 'Week dates stretched too far' }
+        Wait-UiStage {
+            $image = $page.FindName('HeroImage')
+            $image.Source -and -not $pageType.GetField('HeroDecodeRunning', $flags).GetValue($page)
+        } 'home artwork ready for layout preview'
         $bitmap = [Windows.Media.Imaging.RenderTargetBitmap]::new($width, $height, 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
         $bitmap.Render($hostBorder)
         $encoder = [Windows.Media.Imaging.PngBitmapEncoder]::new()
@@ -233,11 +237,23 @@ foreach ($theme in @('dark', 'light')) {
 $hero = $page.FindName('HeroImage')
 $setHeroDpi = $pageType.GetMethod('UpdateHeroImage', $flags, $null, [type[]]@([Windows.DpiScale]), $null)
 [void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(1, 1)))
+Wait-UiStage { -not $pageType.GetField('HeroDecodeRunning', $flags).GetValue($page) } 'standard-DPI artwork'
 $standard = $hero.Source
 if ($null -eq $standard -or $standard.PixelWidth -ge 1672 -or $standard.PixelWidth -lt $hero.ActualWidth) { throw 'Standard-DPI home did not decode to a suitable smaller size.' }
 [void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(1, 1)))
 if (-not [object]::ReferenceEquals($standard, $hero.Source)) { throw 'Unchanged home dimensions decoded the hero again.' }
 [void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(3, 3)))
+Wait-UiStage { -not $pageType.GetField('HeroDecodeRunning', $flags).GetValue($page) } 'full-size artwork'
 if ($hero.Source.PixelWidth -ne 1672 -or $hero.Source.PixelHeight -ne 941) { throw 'High-DPI home did not retain the native artwork dimensions.' }
 Write-Output 'PASS homepage decodes at the displayed DPI, reuses the selected size and retains the full-size artwork'
+
+# Queue more than one change before the Dispatcher can apply a decoded frame.
+$fullSize = $hero.Source
+[void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(1, 1)))
+[void]$setHeroDpi.Invoke($page, [object[]]@([Windows.DpiScale]::new(3, 3)))
+Wait-UiStage { -not $pageType.GetField('HeroDecodeRunning', $flags).GetValue($page) } 'coalesced artwork resize'
+if (-not [object]::ReferenceEquals($fullSize, $hero.Source) -or -not $hero.Source.IsFrozen) {
+    throw 'A stale decode replaced the current frozen hero image.'
+}
+Write-Output 'PASS rapid DPI changes retain the latest artwork without replacing it with a stale decode'
 $app.Shutdown()

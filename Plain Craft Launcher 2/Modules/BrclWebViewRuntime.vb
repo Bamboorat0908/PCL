@@ -27,6 +27,31 @@ Friend Module BrclWebViewRuntime
         End SyncLock
     End Function
 
+    ' A redirect keeps the original user-gesture flag. Require a direct user navigation
+    ' before launching a separate browser, and never pass non-web schemes to the shell.
+    Friend Function TryGetExternalWebAddress(Address As String, UserInitiated As Boolean, Redirected As Boolean, ByRef Target As Uri) As Boolean
+        Target = Nothing
+        Return UserInitiated AndAlso Not Redirected AndAlso Uri.TryCreate(Address, UriKind.Absolute, Target) AndAlso
+            (Target.Scheme = Uri.UriSchemeHttps OrElse Target.Scheme = Uri.UriSchemeHttp)
+    End Function
+
+    Public Function RedirectForeignNavigation(e As CoreWebView2NavigationStartingEventArgs, IsAllowed As Func(Of String, Boolean), Context As String) As Boolean
+        If IsAllowed(e.Uri) Then Return False
+        e.Cancel = True
+        Dim Target As Uri = Nothing
+        If Not TryGetExternalWebAddress(e.Uri, e.IsUserInitiated, e.IsRedirected, Target) Then
+            Logger.Info($"{Context}：已阻止自动或不受支持的外部导航")
+            Return True
+        End If
+        Logger.Info($"{Context}：外部链接改用浏览器打开（{Target.Host}）")
+        Try
+            OpenWebsite(Target.AbsoluteUri)
+        Catch ex As Exception
+            Logger.Warn(ex, $"{Context}：打开外部链接失败")
+        End Try
+        Return True
+    End Function
+
     Public Async Function WaitForPageTransitionAsync(Page As MyPageRight) As Task(Of Boolean)
         'WebView2's first COM/controller initialization has a synchronous prefix.
         'Present the native loading card and finish the transition before it runs.

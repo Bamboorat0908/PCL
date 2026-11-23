@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Exe,[Parameter(Mandatory)][string]$Stage,[Parameter(Mandatory)][string]$Label,[int]$Seconds=15,[switch]$WakeProbe)
+﻿param([Parameter(Mandatory)][string]$Exe,[Parameter(Mandatory)][string]$Stage,[Parameter(Mandatory)][string]$Label,[int]$Seconds=15,[switch]$WakeProbe)
 $ErrorActionPreference='Stop'
 if(Get-Process BRCL -ErrorAction SilentlyContinue){throw 'Close the launcher before benchmarking.'}
 $stagePath=(New-Item -ItemType Directory -Force $Stage).FullName
@@ -18,7 +18,7 @@ public static class IdleWindow {
     delegate bool Visit(IntPtr window,IntPtr arg);
     [DllImport("user32.dll")] static extern bool EnumWindows(Visit visit,IntPtr arg);
     [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr window,System.Text.StringBuilder text,int capacity);
-    public static IntPtr Main(int id){
+    public static IntPtr FindMain(int id){
         IntPtr result=IntPtr.Zero;
         EnumWindows(delegate(IntPtr window,IntPtr arg){
             uint owner; Owner(window,out owner); if(owner!=id || !IsWindowVisible(window))return true;
@@ -91,7 +91,7 @@ try{
         if($marker){$ready=$started.Date+[TimeSpan]::Parse($marker.Substring(0,12)); if($ready -lt $started){$marker=$null}}
     }until($marker)
     $process.Refresh()
-    $window=[IdleWindow]::Main($process.Id)
+    $window=[IdleWindow]::FindMain($process.Id)
     if(!$window.ToInt64()){throw 'Missing main window.'}
     [void][IdleWindow]::ShowWindowAsync($window,9)
     Start-Sleep -Seconds 12

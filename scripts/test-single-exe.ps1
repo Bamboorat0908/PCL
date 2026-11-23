@@ -7,6 +7,10 @@ New-Item -ItemType Directory -Path $stage | Out-Null
 $exe=Join-Path $stage 'BRCL.exe'
 Copy-Item -LiteralPath $ExePath -Destination $exe
 if (@(Get-ChildItem -LiteralPath $stage -File).Count -ne 1) { throw 'Single EXE fixture has extra files.' }
+# Keep a small budget for code growth without allowing the duplicate icon to return.
+$exeSize = (Get-Item -LiteralPath $exe).Length
+if ($exeSize -gt 5300000) { throw "Standalone EXE is $exeSize bytes; budget is 5300000." }
+Write-Output "PASS standalone EXE stays within its 5300000-byte budget ($exeSize bytes)"
 $assembly=[Reflection.Assembly]::LoadFrom($exe)
 [Windows.Application]::ResourceAssembly=$assembly
 $appType=$assembly.GetType('BRCL.Application',$true)

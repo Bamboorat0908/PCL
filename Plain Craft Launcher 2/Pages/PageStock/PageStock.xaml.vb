@@ -121,6 +121,8 @@ Public Class PageStock
     End Sub
 
     Private Sub OnNavigationStarting(sender As Object, e As CoreWebView2NavigationStartingEventArgs)
+        '站内页面（行情、账户、登录等）均在 /stock/ 下；其他地址交给系统浏览器，当前页面保持不变。
+        If BrclWebViewRuntime.RedirectForeignNavigation(e, AddressOf IsStockSource, "交易所") Then Return
         ActiveNavigationId = e.NavigationId
         HasReadyNavigation = False
         NavigationVersion += 1
@@ -135,8 +137,7 @@ Public Class PageStock
     Private Sub OnNewWindowRequested(sender As Object, e As CoreWebView2NewWindowRequestedEventArgs)
         e.Handled = True
         Dim Target As Uri = Nothing
-        If Not Uri.TryCreate(e.Uri, UriKind.Absolute, Target) Then Return
-        If Target.Scheme <> Uri.UriSchemeHttps AndAlso Target.Scheme <> Uri.UriSchemeHttp Then Return
+        If Not BrclWebViewRuntime.TryGetExternalWebAddress(e.Uri, e.IsUserInitiated, False, Target) Then Return
         Try
             OpenWebsite(Target.AbsoluteUri)
         Catch ex As Exception
@@ -198,12 +199,13 @@ Public Class PageStock
     End Sub
 
     ''' <summary>跟随主题：只切换 color-scheme，让站点用自己的深色样式，避免强行改色导致半深半浅。</summary>
-    Private Sub InjectPageTheme()
+    Private Async Sub InjectPageTheme()
         Try
             If ViewWeb.CoreWebView2 Is Nothing OrElse Not IsStockSource(ViewWeb.CoreWebView2.Source) Then Return
             Dim IsLight As Boolean = (Settings.Get(Of Integer)("UiThemeMode") = 1)
-            ViewWeb.CoreWebView2.ExecuteScriptAsync("document.documentElement.style.colorScheme='" & If(IsLight, "light", "dark") & "'")
+            Await ViewWeb.CoreWebView2.ExecuteScriptAsync("document.documentElement.style.colorScheme='" & If(IsLight, "light", "dark") & "'")
         Catch ex As Exception
+            Logger.Warn(ex, "应用交易所网页配色失败")
         End Try
     End Sub
 
@@ -273,14 +275,10 @@ try {
         IsSyncingTheme = True
         Try
             If ViewWeb.CoreWebView2 Is Nothing Then Return
-            Dim Src As String = ""
-            Try
-                Src = ViewWeb.CoreWebView2.Source
-            Catch ex As Exception
-            End Try
-            If Not IsStockSource(Src) Then Return
+            If Not IsStockSource(ViewWeb.CoreWebView2.Source) Then Return
             Await ViewWeb.CoreWebView2.ExecuteScriptAsync(BuildThemeSyncScript())
         Catch ex As Exception
+            Logger.Warn(ex, "同步交易所明暗主题失败")
         Finally
             IsSyncingTheme = False
             If SyncPending Then
@@ -301,7 +299,8 @@ try {
                 Case "brcl-theme:unavailable"
                     Logger.Info("交易所明暗同步：unavailable")
             End Select
-        Catch ex As Exception
+        Catch ex As ArgumentException
+            'The site can send non-string messages; only string theme statuses are used.
         End Try
     End Sub
 
@@ -350,11 +349,8 @@ try {
     End Sub
 
     Private Sub StopTimeout()
-        Try
-            TimeoutTimer?.Stop()
-            TimeoutTimer = Nothing
-        Catch ex As Exception
-        End Try
+        TimeoutTimer?.Stop()
+        TimeoutTimer = Nothing
     End Sub
 
     Private Sub ShowFail(Message As String)
@@ -363,7 +359,8 @@ try {
         NavigationVersion += 1
         Try
             ViewWeb.CoreWebView2?.Stop()
-        Catch
+        Catch ex As Exception
+            Logger.Warn(ex, "停止交易所页面加载失败")
         End Try
         PanCover.Visibility = Visibility.Visible
         SetBrowserVisibility(Visibility.Hidden)

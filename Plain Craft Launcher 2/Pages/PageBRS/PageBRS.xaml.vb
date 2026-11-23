@@ -229,6 +229,7 @@ Public Class PageBRS
             BtnRefresh.IsEnabled = False
             If LabUpdated.Text = "尚未刷新" Then LabUpdated.Text = "正在刷新…"
         Catch ex As Exception
+            Logger.Warn(ex, "更新 BRS 刷新状态失败")
         End Try
         RunInNewThread(
         Sub()
@@ -248,6 +249,7 @@ Public Class PageBRS
                         File.Move(PendingPath, CachePath)
                     End If
                 Catch ex As Exception
+                    Logger.Warn(ex, "保存 BRS 状态缓存失败")
                 End Try
             Catch ex As Exception
                 Result = Nothing
@@ -260,6 +262,7 @@ Public Class PageBRS
                 Try
                     BtnRefresh.IsEnabled = True
                 Catch ex As Exception
+                    Logger.Warn(ex, "恢复 BRS 刷新按钮失败")
                 End Try
                 If Result Is Nothing Then
                     If PageActive Then ApplyError([Error])

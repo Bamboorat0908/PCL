@@ -37,8 +37,8 @@ Public Class PageMap
         IsInitializing = True
         ConnectionVersion += 1
         Dim Version = ConnectionVersion
-        ShowLoading()
         Try
+            ShowLoading()
             If ViewMap.CoreWebView2 Is Nothing Then
                 If Not Await BrclWebViewRuntime.WaitForPageTransitionAsync(Me) Then
                     HasStarted = False
@@ -71,7 +71,15 @@ Public Class PageMap
         End Try
     End Sub
 
+    Private Shared Function IsMapSource(Source As String) As Boolean
+        '地图服务只提供 HTTP；限定同一来源（协议、主机、端口），避免被劫持的页面在启动器内跳往其他站点。
+        Dim Target As Uri = Nothing, Home As New Uri(MapUrl)
+        Return Uri.TryCreate(Source, UriKind.Absolute, Target) AndAlso
+            Uri.Compare(Target, Home, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) = 0
+    End Function
+
     Private Sub NavigationStarting(sender As Object, e As CoreWebView2NavigationStartingEventArgs)
+        If BrclWebViewRuntime.RedirectForeignNavigation(e, AddressOf IsMapSource, "卫星地图") Then Return
         ActiveNavigationId = e.NavigationId
         ShowLoading()
     End Sub
@@ -98,8 +106,7 @@ Public Class PageMap
     Private Sub NewWindowRequested(sender As Object, e As CoreWebView2NewWindowRequestedEventArgs)
         e.Handled = True
         Dim Target As Uri = Nothing
-        If Not Uri.TryCreate(e.Uri, UriKind.Absolute, Target) Then Return
-        If Target.Scheme <> Uri.UriSchemeHttp AndAlso Target.Scheme <> Uri.UriSchemeHttps Then Return
+        If Not BrclWebViewRuntime.TryGetExternalWebAddress(e.Uri, e.IsUserInitiated, False, Target) Then Return
         Try
             OpenWebsite(Target.AbsoluteUri)
         Catch ex As Exception

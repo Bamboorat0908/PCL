@@ -28,6 +28,8 @@ $cases = @(
     @{Name='home-calendar'; File='test-home-calendar.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'home-calendar'))},
     @{Name='daily-fortune'; File='test-daily-fortune.ps1'; Args=@('-OutputDirectory',(Join-Path $OutputDirectory 'daily-fortune'))},
     @{Name='bank-page'; File='test-bank-page.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'bank'))},
+    @{Name='bank-address'; File='test-bank-address.ps1'; Args=@()},
+    @{Name='bank-session'; File='test-bank-session.ps1'; Args=@()},
     @{Name='sponsor-dialog'; File='test-sponsor-dialog.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'sponsor-dialog'))},
     @{Name='pack-layout'; File='test-brs-pack-layout.ps1'; Args=@('-OutputDirectory',(Join-Path $OutputDirectory 'pack-previews'))},
     @{Name='brs-launch-selection'; File='test-brs-launch-selection.ps1'; Args=@()},
@@ -36,13 +38,16 @@ $cases = @(
     @{Name='brs-page'; File='test-brs-page.ps1'; Args=@()},
     @{Name='news-page'; File='test-news-page.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'news-previews'))},
     @{Name='global-backdrops'; File='test-global-backdrops.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'backdrops'))},
+    @{Name='background-picture'; File='test-background-picture.ps1'; Args=@()},
     @{Name='sponsors'; File='test-sponsors.ps1'; Args=@()},
     @{Name='errors'; File='test-brcl-errors.ps1'; Args=@('-OutputDirectory','bin')},
     @{Name='credential-redaction'; File='test-credential-redaction.ps1'; Args=@()},
     @{Name='privacy-offline'; File='test-crash-reports.ps1'; Args=@()},
     @{Name='webview-bundle'; File='test-webview-bundle.ps1'; Args=@()},
     @{Name='webview-lifecycle'; File='test-webview-lifecycle.ps1'; Args=@()},
+    @{Name='webview-navigation'; File='test-webview-navigation.ps1'; Args=@()},
     @{Name='assets'; File='test-industrial-assets.ps1'; Args=@()},
+    @{Name='asset-budget'; File='test-asset-budget.ps1'; Args=@()},
     @{Name='oauth-config'; File='test-ms-client-id.ps1'; Args=@()},
     @{Name='oauth-flow'; File='test-microsoft-login.ps1'; Args=@()},
     @{Name='oauth-performance'; File='test-ms-login-performance.ps1'; Args=@()},
@@ -60,6 +65,7 @@ $cases = @(
     @{Name='ui-polish'; File='test-ui-polish.ps1'; Args=@('-PreviewDirectory',(Join-Path $OutputDirectory 'ui-polish'))},
     @{Name='dialog-layout'; File='test-dialog-layout.ps1'; Args=@()},
     @{Name='update-rollback'; File='test-update.ps1'; Args=@()},
+    @{Name='update-housekeeping'; File='test-update-housekeeping.ps1'; Args=@()},
     @{Name='icon-theme'; File='test-icon-theme.ps1'; Args=@()},
     @{Name='exe-icon'; File='test-single-exe-icon.ps1'; Args=@('-ExePath',$exe)},
     @{Name='stock-resource'; File='test-stock-resource.ps1'; Args=@()}
@@ -68,6 +74,8 @@ $cases = @(
     @{Name='startup-updates'; File='test-startup-updates.ps1'; Args=@()}
     @{Name='startup-navigation'; File='test-startup-navigation.ps1'; Args=@()}
     @{Name='startup-arguments'; File='test-startup-arguments.ps1'; Args=@()}
+    @{Name='native-text-apis'; File='test-native-text-apis.ps1'; Args=@()}
+    @{Name='single-instance'; File='test-single-instance.ps1'; Args=@()}
     @{Name='title-navigation'; File='test-title-navigation.ps1'; Args=@('-OutputDirectory','bin','-PreviewDirectory',(Join-Path $OutputDirectory 'title-previews'))}
     @{Name='page-cache-performance'; File='test-page-cache-performance.ps1'; Args=@()}
     @{Name='window-maximize'; File='test-window-maximize.ps1'; Args=@()}

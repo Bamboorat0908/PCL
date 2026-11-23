@@ -23,7 +23,7 @@ python bank_service.py
 
 生产环境在现有 HTTPS 反向代理增加 `/bank/v1/` 路由，并原样转发完整路径。不要公开 TRM 管理接口。反向代理应限制请求体大小和请求频率，并覆盖 `X-Real-IP`，不能透传调用者提交的该请求头。此头只用于来源地址限流，不用于认证或账户关联。
 
-启动器默认使用已部署的 `https://zhushu.homes/bank/v1`。可在程序旁的 `BRCL/BankServiceUrl.txt` 填写其他完整服务前缀；也可通过 `BRCL_BANK_SERVICE_URL` 覆盖。仅本地联调允许 `http://127.0.0.1:8786/bank/v1`。地址文件只保存地址，不保存任何 Token。修改配置后重新进入银行页。
+启动器默认使用已部署的 `https://zhushu.homes/bank/v1`。可在程序旁的 `BRCL/BankServiceUrl.txt` 填写其他完整服务前缀；也可通过 `BRCL_BANK_SERVICE_URL` 覆盖。由于该地址会收到玩家的 Minecraft 访问令牌，覆盖值只接受官方主机 `zhushu.homes` 的 HTTPS 默认端口（路径可变），或本机回环地址（本地联调如 `http://127.0.0.1:8786/bank/v1`）；其他主机会被拒绝并在银行页提示配置需要更新。地址文件只保存地址，不保存任何 Token。修改配置后重新进入银行页。
 
 ## 当前生产部署
 

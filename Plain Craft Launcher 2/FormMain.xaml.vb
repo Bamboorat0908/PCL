@@ -608,11 +608,52 @@ Public Class FormMain
         Logger.Info($"启动首帧呈现：{StartupClock.ElapsedMilliseconds} ms")
     End Sub
 
+    ''' <summary>
+    ''' 解码背景图片：只解码窗口实际需要的像素宽度，避免保留大尺寸壁纸的完整分辨率。
+    ''' WPF 无法解码的格式（WebP 等）回退到 MyBitmap，并立即释放其 GDI 位图。
+    ''' </summary>
+    Friend Shared Function LoadBackgroundImage(Address As String, DecodeWidth As Integer) As ImageSource
+        Try
+            Dim Bitmap As New Global.System.Windows.Media.Imaging.BitmapImage
+            Using Input = IO.File.OpenRead(Address)
+                Dim Decoder = Global.System.Windows.Media.Imaging.BitmapDecoder.Create(Input, Global.System.Windows.Media.Imaging.BitmapCreateOptions.DelayCreation, Global.System.Windows.Media.Imaging.BitmapCacheOption.None)
+                Dim Frame = Decoder.Frames(0)
+                Const MaxDecodeHeight As Integer = 3840
+                Dim Width = Math.Min(DecodeWidth, Frame.PixelWidth)
+                Dim Height = Math.Min(MaxDecodeHeight, Frame.PixelHeight)
+                Input.Position = 0
+                Bitmap.BeginInit()
+                Bitmap.CacheOption = Global.System.Windows.Media.Imaging.BitmapCacheOption.OnLoad
+                'Setting both dimensions would stretch the bitmap. Use the tighter bound.
+                If CLng(Width) * Frame.PixelHeight <= CLng(Height) * Frame.PixelWidth Then
+                    Bitmap.DecodePixelWidth = Width
+                Else
+                    Bitmap.DecodePixelHeight = Height
+                End If
+                Bitmap.StreamSource = Input
+                Bitmap.EndInit()
+            End Using
+            Bitmap.Freeze()
+            Return Bitmap
+        Catch
+            'Keep support for WebP and the legacy image formats.
+            Dim Fallback As New MyBitmap(Address)
+            Using NativeBitmap As System.Drawing.Bitmap = Fallback.Pic
+                Return CType(Fallback, ImageSource)
+            End Using
+        End Try
+    End Function
+
+    ''' <summary>背景图片的目标解码宽度：窗口物理像素宽度，限制在 1280 至 3840 之间。</summary>
+    Friend Function BackgroundDecodeWidth() As Integer
+        Return CInt(Math.Min(3840, Math.Max(1280, ActualWidth * VisualTreeHelper.GetDpi(Me).DpiScaleX)))
+    End Function
+
     Private Sub StartDeferredStartup()
         If DeferredStartupStarted OrElse WindowClosing Then Return
         DeferredStartupStarted = True
         Dim OriginalBackground = ImgBack.Background
-        Dim DecodeWidth = CInt(Math.Min(3840, Math.Max(1280, ActualWidth * VisualTreeHelper.GetDpi(Me).DpiScaleX)))
+        Dim DecodeWidth = BackgroundDecodeWidth()
         RunInNewThread(
             Sub()
                 Try
@@ -624,38 +665,17 @@ Public Class FormMain
                         Where(Function(File) Not {"ini", "db"}.Contains(PathUtils.GetExtension(File))).ToList()
                     If Pictures.Count > 0 Then
                         Dim Address = RandomOne(Pictures)
-                        Dim Picture As ImageSource
-                        Try
-                            'Decode only enough pixels for the launcher, rather than
-                            'retaining the full resolution of a large wallpaper.
-                            Dim Bitmap As New Global.System.Windows.Media.Imaging.BitmapImage
-                            Using Input = IO.File.OpenRead(Address)
-                                Dim Decoder = Global.System.Windows.Media.Imaging.BitmapDecoder.Create(Input, Global.System.Windows.Media.Imaging.BitmapCreateOptions.DelayCreation, Global.System.Windows.Media.Imaging.BitmapCacheOption.None)
-                                Dim PixelWidth = Decoder.Frames(0).PixelWidth
-                                Input.Position = 0
-                                Bitmap.BeginInit()
-                                Bitmap.CacheOption = Global.System.Windows.Media.Imaging.BitmapCacheOption.OnLoad
-                                Bitmap.DecodePixelWidth = Math.Min(DecodeWidth, PixelWidth)
-                                Bitmap.StreamSource = Input
-                                Bitmap.EndInit()
-                            End Using
-                            Bitmap.Freeze()
-                            Picture = Bitmap
-                        Catch
-                            'Keep support for WebP and the legacy image formats.
-                            Dim Bitmap As New MyBitmap(Address)
-                            Using NativeBitmap As System.Drawing.Bitmap = Bitmap.Pic
-                                Picture = CType(Bitmap, ImageSource)
-                            End Using
-                        End Try
-                        Dim Brush As New ImageBrush(Picture)
-                        Brush.Freeze()
+                        'Only the frozen bitmap crosses threads. The brush is created on the UI thread and
+                        'stays modifiable, because UpdateBackgroundAndTitleBar sets its stretch and tiling.
+                        Dim Picture = LoadBackgroundImage(Address, DecodeWidth)
                         Dispatcher.BeginInvoke(Threading.DispatcherPriority.Background, New Action(
                             Sub()
                                 If WindowClosing OrElse ImgBack.Background IsNot OriginalBackground Then Return
-                                ImgBack.Background = Brush
+                                ImgBack.Background = New ImageBrush(Picture)
                                 ImgBack.Visibility = Visibility.Visible
                                 UpdateBackgroundAndTitleBar()
+                                Dim PixelImage = DirectCast(Picture, Global.System.Windows.Media.Imaging.BitmapSource)
+                                Logger.Info($"已应用背景图片：{PixelImage.PixelWidth} x {PixelImage.PixelHeight}")
                                 If FrmSetupUI IsNot Nothing Then FrmSetupUI.BackgroundRefreshUI(True, Pictures.Count)
                             End Sub))
                     End If
@@ -1354,8 +1374,13 @@ Public Class FormMain
         ImgBack.Margin = New Thickness(-BlurRadius / 1.8)
         '背景图片适应方式
         Dim BackgroundType As Integer = Settings.Get(Of Integer)("UiBackgroundSuit")
-        If ImgBack.Background IsNot Nothing Then
-            Dim Brush As ImageBrush = CType(ImgBack.Background, ImageBrush)
+        Dim Brush = TryCast(ImgBack.Background, ImageBrush)
+        If Brush IsNot Nothing AndAlso Brush.IsFrozen Then
+            'A frozen brush cannot take the stretch/tiling below; work on a modifiable copy.
+            Brush = Brush.CloneCurrentValue()
+            ImgBack.Background = Brush
+        End If
+        If Brush IsNot Nothing Then
             If BackgroundType = 0 Then
                 '智能：当图片较小时平铺，较大时适应
                 If Brush.ImageSource.Width < PanMain.ActualWidth / 2 AndAlso Brush.ImageSource.Height < PanMain.ActualHeight / 2 Then

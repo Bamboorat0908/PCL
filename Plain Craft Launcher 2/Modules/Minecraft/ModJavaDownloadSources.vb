@@ -84,7 +84,9 @@ Public Module ModJavaDownloadSources
         Dim ApiUrl = $"https://api.adoptium.net/v3/assets/latest/{Major}/hotspot?architecture=x64&image_type=jre&os=windows&vendor=eclipse"
         Dim Response = JArray.Parse(ReadJavaSourceText(ApiUrl, c))
         For Each Entry In Response
-            Dim Candidate = ParseTemurinJavaArchive(Entry("binary"), Entry("version"), Major, Range, SourceId, c)
+            Dim Metadata = TryCast(Entry, JObject)
+            If Metadata Is Nothing Then Continue For
+            Dim Candidate = ParseTemurinJavaArchive(Metadata("binary"), Metadata("version"), Major, Range, SourceId, c)
             If Candidate IsNot Nothing Then Return Candidate
         Next
         '旧 Forge 等可能限制补丁上界。查官方历史 GA 元数据，不能只在最新版与 Mojang 8u51 中二选一。
@@ -96,8 +98,11 @@ Public Module ModJavaDownloadSources
         ApiUrl = $"https://api.adoptium.net/v3/assets/version/{ApiRange}?architecture=x64&image_type=jre&os=windows&vendor=eclipse&jvm_impl=hotspot&release_type=ga&sort_order=DESC&page_size=20"
         Response = JArray.Parse(ReadJavaSourceText(ApiUrl, c))
         For Each Entry In Response
-            For Each Binary In CType(Entry("binaries"), JArray)
-                Dim Candidate = ParseTemurinJavaArchive(Binary, Entry("version_data"), Major, Range, SourceId, c)
+            Dim Metadata = TryCast(Entry, JObject)
+            Dim Binaries = TryCast(Metadata?("binaries"), JArray)
+            If Binaries Is Nothing Then Continue For
+            For Each Binary In Binaries
+                Dim Candidate = ParseTemurinJavaArchive(Binary, Metadata("version_data"), Major, Range, SourceId, c)
                 If Candidate IsNot Nothing Then Return Candidate
             Next
         Next
@@ -107,20 +112,35 @@ Public Module ModJavaDownloadSources
     Private Function ParseTemurinJavaArchive(Binary As JToken, VersionInfo As JToken, Major As Integer,
                                              Range As ValueRange(Of Version), SourceId As Integer, c As CancellationToken) As JavaArchiveDownloadInfo
         c.ThrowIfCancellationRequested()
-        If Binary?("architecture")?.ToString() <> "x64" OrElse Binary?("os")?.ToString() <> "windows" OrElse
-            Binary?("image_type")?.ToString() <> "jre" OrElse Binary?("jvm_impl")?.ToString() <> "hotspot" Then Return Nothing
-        Dim JavaVersion As New Version(CInt(VersionInfo("major")), CInt(VersionInfo("minor")), CInt(VersionInfo("security")), CInt(If(VersionInfo("patch"), 0)))
+        Dim Runtime = TryCast(Binary, JObject)
+        Dim VersionObject = TryCast(VersionInfo, JObject)
+        If Runtime Is Nothing OrElse VersionObject Is Nothing OrElse Runtime("architecture")?.ToString() <> "x64" OrElse
+            Runtime("os")?.ToString() <> "windows" OrElse Runtime("image_type")?.ToString() <> "jre" OrElse
+            Runtime("jvm_impl")?.ToString() <> "hotspot" Then Return Nothing
+
+        Dim Parts(3) As Integer
+        Dim Names = {"major", "minor", "security", "patch"}
+        For i = 0 To Names.Length - 1
+            Dim Part = VersionObject(Names(i))
+            If i = 3 AndAlso (Part Is Nothing OrElse Part.Type = JTokenType.Null) Then Exit For
+            If Part Is Nothing OrElse Part.Type <> JTokenType.Integer OrElse Not Integer.TryParse(Part.ToString(), Parts(i)) OrElse Parts(i) < 0 Then Return Nothing
+        Next
+        Dim JavaVersion As New Version(Parts(0), Parts(1), Parts(2), Parts(3))
         If JavaVersion.Major <> Major OrElse Not Range.Contains(JavaVersion) Then Return Nothing
-        Dim Package = Binary("package")
-        Dim OfficialUrl = Package("link").ToString()
-        Dim FileName = Package("name").ToString()
-        Dim Hash = Package("checksum").ToString()
-        Dim Size = CLng(Package("size"))
-        MapTemurinJavaUrl(OfficialUrl, Major, 1)
-        If FileName <> Path.GetFileName(New Uri(OfficialUrl).AbsolutePath) OrElse
-            Not Regex.IsMatch(Hash, "\A[0-9a-fA-F]{64}\z") OrElse Size < 1024 * 1024 OrElse Size > 1024L * 1024 * 1024 Then
-            Throw New InvalidDataException("Adoptium Java 安装包元数据不完整，无法验证下载。")
-        End If
+
+        Dim Package = TryCast(Runtime("package"), JObject)
+        Dim OfficialUrl = Package?("link")?.ToString()
+        Dim FileName = Package?("name")?.ToString()
+        Dim Hash = Package?("checksum")?.ToString()
+        Dim Size As Long
+        If Not Long.TryParse(Package?("size")?.ToString(), Size) OrElse Size < 1024 * 1024 OrElse Size > 1024L * 1024 * 1024 OrElse
+            String.IsNullOrEmpty(FileName) OrElse Not Regex.IsMatch(If(Hash, ""), "\A[0-9a-fA-F]{64}\z") Then Return Nothing
+        Try
+            MapTemurinJavaUrl(OfficialUrl, Major, 1)
+        Catch ex As ArgumentException
+            Return Nothing
+        End Try
+        If FileName <> Path.GetFileName(New Uri(OfficialUrl).AbsolutePath) Then Return Nothing
         Dim SourceIds = If(SourceId = 0, New Integer() {1, 3, 4}, New Integer() {SourceId})
         Dim Urls = SourceIds.Select(Function(Id) MapTemurinJavaUrl(OfficialUrl, Major, Id)).ToArray()
         Return New JavaArchiveDownloadInfo With {
