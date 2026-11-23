@@ -121,6 +121,8 @@ Public Class PageStock
     End Sub
 
     Private Sub OnNavigationStarting(sender As Object, e As CoreWebView2NavigationStartingEventArgs)
+        '站内页面（行情、账户、登录等）均在 /stock/ 下；其他地址交给系统浏览器，当前页面保持不变。
+        If BrclWebViewRuntime.RedirectForeignNavigation(e, AddressOf IsStockSource, "交易所") Then Return
         ActiveNavigationId = e.NavigationId
         HasReadyNavigation = False
         NavigationVersion += 1

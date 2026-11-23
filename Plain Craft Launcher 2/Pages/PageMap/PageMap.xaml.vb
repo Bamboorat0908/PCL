@@ -71,7 +71,15 @@ Public Class PageMap
         End Try
     End Sub
 
+    Private Shared Function IsMapSource(Source As String) As Boolean
+        '地图服务只提供 HTTP；限定同一来源（协议、主机、端口），避免被劫持的页面在启动器内跳往其他站点。
+        Dim Target As Uri = Nothing, Home As New Uri(MapUrl)
+        Return Uri.TryCreate(Source, UriKind.Absolute, Target) AndAlso
+            Uri.Compare(Target, Home, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) = 0
+    End Function
+
     Private Sub NavigationStarting(sender As Object, e As CoreWebView2NavigationStartingEventArgs)
+        If BrclWebViewRuntime.RedirectForeignNavigation(e, AddressOf IsMapSource, "卫星地图") Then Return
         ActiveNavigationId = e.NavigationId
         ShowLoading()
     End Sub

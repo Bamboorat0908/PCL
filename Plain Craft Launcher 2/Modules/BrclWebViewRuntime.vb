@@ -27,6 +27,29 @@ Friend Module BrclWebViewRuntime
         End SyncLock
     End Function
 
+    ''' <summary>
+    ''' Keeps an embedded page on its own site. A top-level navigation (link, script, redirect) to any
+    ''' other origin is cancelled and, when it is an ordinary web address, opened in the system browser
+    ''' instead, so a compromised or intercepted page cannot present a look-alike login inside the launcher.
+    ''' Returns True when the navigation was taken out of the embedded view.
+    ''' </summary>
+    Public Function RedirectForeignNavigation(e As CoreWebView2NavigationStartingEventArgs, IsAllowed As Func(Of String, Boolean), Context As String) As Boolean
+        If IsAllowed(e.Uri) Then Return False
+        e.Cancel = True
+        Dim Target As Uri = Nothing
+        If Not Uri.TryCreate(e.Uri, UriKind.Absolute, Target) OrElse (Target.Scheme <> Uri.UriSchemeHttps AndAlso Target.Scheme <> Uri.UriSchemeHttp) Then
+            Logger.Warn($"{Context}：已阻止非网页导航（{If(Target?.Scheme, "无效地址")}）")
+            Return True
+        End If
+        Logger.Info($"{Context}：外部链接改用浏览器打开（{Target.Host}）")
+        Try
+            OpenWebsite(Target.AbsoluteUri)
+        Catch ex As Exception
+            Logger.Warn(ex, $"{Context}：打开外部链接失败")
+        End Try
+        Return True
+    End Function
+
     Public Async Function WaitForPageTransitionAsync(Page As MyPageRight) As Task(Of Boolean)
         'WebView2's first COM/controller initialization has a synchronous prefix.
         'Present the native loading card and finish the transition before it runs.
