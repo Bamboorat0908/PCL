@@ -16,8 +16,8 @@ Public Class Application
                 Return
             End If
             If Not ConfigureBundledNetworkSettings() Then Logger.Warn("未能应用内置网络兼容设置")
-            '提升主线程优先级
-            Thread.CurrentThread.Priority = ThreadPriority.Highest
+            '主线程使用普通优先级，与其它启动任务共享调度
+            Thread.CurrentThread.Priority = ThreadPriority.Normal
             '执行开发版测试
             If BuildType = BuildTypes.Debug Then
                 Try
