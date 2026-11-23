@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Exe,[Parameter(Mandatory)][string]$Stage,[Parameter(Mandatory)][string]$Label,[int]$Seconds=15,[switch]$WakeProbe)
+﻿param([Parameter(Mandatory)][string]$Exe,[Parameter(Mandatory)][string]$Stage,[Parameter(Mandatory)][string]$Label,[int]$Seconds=15,[switch]$WakeProbe)
 $ErrorActionPreference='Stop'
 if(Get-Process BRCL -ErrorAction SilentlyContinue){throw 'Close the launcher before benchmarking.'}
 $stagePath=(New-Item -ItemType Directory -Force $Stage).FullName
