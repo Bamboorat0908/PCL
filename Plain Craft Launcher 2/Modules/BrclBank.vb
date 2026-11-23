@@ -34,25 +34,46 @@ Public Module BrclBank
     Public Class BankServiceException
         Inherits Exception
         Public ReadOnly Code As String
-        Public Sub New(Value As String)
-            MyBase.New("Bank service: " & Value)
+        Public Sub New(Value As String, Optional Detail As String = Nothing)
+            MyBase.New("Bank service: " & Value & If(String.IsNullOrEmpty(Detail), "", " (" & Detail & ")"))
             Code = Value
         End Sub
     End Class
 
+    Public Const OfficialBankHost As String = "zhushu.homes"
+
+    ''' <summary>
+    ''' The bank service receives the player's Minecraft access token. An override written next to the
+    ''' launcher (for example inside a shared modpack folder) must therefore never redirect it to a
+    ''' third-party host: only the official HTTPS host or a service on this computer is accepted.
+    ''' </summary>
+    Public Function IsTrustedBankAddress(Target As Uri) As Boolean
+        If Target Is Nothing Then Return False
+        If Target.IsLoopback Then Return Target.Scheme = Uri.UriSchemeHttps OrElse Target.Scheme = Uri.UriSchemeHttp
+        Return Target.Scheme = Uri.UriSchemeHttps AndAlso Target.IsDefaultPort AndAlso
+            String.Equals(Target.IdnHost, OfficialBankHost, StringComparison.OrdinalIgnoreCase)
+    End Function
+
     Public Function BankServiceAddress() As Uri
         Dim Value = Environment.GetEnvironmentVariable("BRCL_BANK_SERVICE_URL")
+        Dim Source = "BRCL_BANK_SERVICE_URL"
         If String.IsNullOrWhiteSpace(Value) Then
             Dim Config = IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "BRCL", "BankServiceUrl.txt")
             If IO.File.Exists(Config) Then
                 If New IO.FileInfo(Config).Length > 2048 Then Throw New BankServiceException("invalid_service_address")
                 Value = IO.File.ReadAllText(Config, Encoding.UTF8).Trim()
+                Source = "BRCL\BankServiceUrl.txt"
             Else
                 Value = "https://zhushu.homes/bank/v1"
             End If
         End If
         If String.IsNullOrWhiteSpace(Value) Then Return Nothing
-        Return ValidateBankAddress(Value)
+        Dim Target = ValidateBankAddress(Value)
+        If Not IsTrustedBankAddress(Target) Then
+            'The caller logs the code; the host is enough to diagnose a misconfiguration.
+            Throw New BankServiceException("untrusted_service_address", $"{Source} → {Target.Host}")
+        End If
+        Return Target
     End Function
 
     Public Function ValidateBankAddress(Value As String) As Uri

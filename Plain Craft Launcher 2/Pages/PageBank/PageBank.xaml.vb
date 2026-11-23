@@ -121,6 +121,7 @@ Public Class PageBank
         Try
             Address = BrclBank.BankServiceAddress()
         Catch ex As Exception
+            Logger.Warn(ex, "银行服务地址不可用")
             ResetConnection()
             ClearData()
             ShowNotice("银行连接配置需要更新", "银行服务地址不可用，请联系服务器管理员更新启动器配置。", False)
