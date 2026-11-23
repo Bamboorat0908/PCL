@@ -1,7 +1,7 @@
 param(
     [string]$ExePath = (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\bin\BRCL.exe'),
     [string]$IconPath = (Join-Path $PSScriptRoot '..\Plain Craft Launcher 2\Images\icon.ico'),
-    [IntPtr]$WindowHandle
+    [IntPtr]$WindowHandle = [IntPtr]::Zero
 )
 $ErrorActionPreference = 'Stop'
 $ExePath = [IO.Path]::GetFullPath($ExePath)
