@@ -133,7 +133,7 @@
                     Dim Address As String = RandomOne(Pic)
                     Try
                         Logger.Info($"加载背景图片：{Address}")
-                        FrmMain.ImgBack.Background = New MyBitmap(Address)
+                        FrmMain.ImgBack.Background = New ImageBrush(FormMain.LoadBackgroundImage(Address, FrmMain.BackgroundDecodeWidth()))
                         FrmMain.ImgBack.Visibility = Visibility.Visible
                         FrmMain.UpdateBackgroundAndTitleBar()
                         If IsHint Then Hint("背景图片已刷新：" & PathUtils.GetLastPart(Address), HintType.Green, False)
