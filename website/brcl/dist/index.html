@@ -115,16 +115,42 @@
       <div class="wrap download-layout">
         <div class="download-intro"><h2 id="download-title">下载 BRCL</h2><p>双击 BRCL.exe 打开启动器，再选择已有游戏实例或安装 TRM。</p><span class="download-outline" aria-hidden="true">BRCL</span></div>
         <div class="download-panel">
-          <div class="download-panel-head"><svg class="icon windows-mark" aria-hidden="true"><use href="#i-windows"/></svg><div><h3>BRCL for Windows</h3><p id="release-label">1.1.6 · 官网构建 2026.11.23</p></div><span class="file-label technical">.EXE</span></div>
+          <div class="download-panel-head"><svg class="icon windows-mark" aria-hidden="true"><use href="#i-windows"/></svg><div><h3>BRCL for Windows</h3><p id="release-label">1.1.7 · 官网构建 2026.11.24</p></div><span class="file-label technical">.EXE</span></div>
           <a class="button button-dark download-file" href="/BRCL/download/BRCL.exe" data-download download="BRCL.exe"><span>下载 BRCL.exe</span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></a>
-          <dl class="release-meta"><div><dt>版本</dt><dd id="release-version">1.1.6</dd></div><div><dt>文件大小</dt><dd id="release-size">6.14 MiB</dd></div><div><dt>系统</dt><dd>Windows 10 / 11</dd></div><div><dt>基础环境</dt><dd>.NET Framework 4.8</dd></div></dl>
+          <dl class="release-meta"><div><dt>版本</dt><dd id="release-version">1.1.7</dd></div><div><dt>文件大小</dt><dd id="release-size">4.99 MiB</dd></div><div><dt>系统</dt><dd>Windows 10 / 11</dd></div><div><dt>基础环境</dt><dd>.NET Framework 4.8</dd></div></dl>
           <p class="download-status" id="release-status" role="status">下载后直接运行，无需配套 DLL 或配置文件。</p>
-          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">9855D4394CC779C015BDD67F02673B914A6776C2DC0AB9E64C4465366C16991A</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
+          <details class="checksum"><summary>校验下载文件<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><div><p>可使用 SHA-256 核对文件是否下载完整。</p><code id="release-sha" tabindex="0">9E95D55696E1CFD4968E5019A68007F6AA00EF977106C28485A4AC1E9CA72488</code><button id="copy-sha" type="button">复制 SHA-256</button><span class="copy-status" id="copy-status" role="status"></span></div></details>
           <details class="release-notes" open>
             <summary>本次更新<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
             <!-- release-current:start -->
 <section class="release-note-version" id="release-current">
-<h4 class="release-note-heading"><span>1.1.6</span><time datetime="2026-11-23">2026-11-23</time></h4>
+<h4 class="release-note-heading"><span>1.1.7</span><time datetime="2026-11-24">2026-11-24</time></h4>
+<div class="release-note-group"><h5>体积与响应</h5><ul>
+<li><strong>缩小单文件启动器和更新包</strong>。重新优化首页和品牌图片，合并重复打包的图标，保留原有图标尺寸和高 DPI 显示。</li>
+<li><strong>减少首页加载时的阻塞</strong>。将首页大图解码移到后台，合并快速缩放时的重复解码，并避免启动时重复扫描 Minecraft 文件夹。</li>
+</ul></div>
+<div class="release-note-group"><h5>Java 下载与实例启动</h5><ul>
+<li><strong>提高 Java 下载候选的可靠性</strong>。跳过无效、版本不匹配或缺少校验信息的 Temurin 下载记录，保留所选下载源及安装包校验。</li>
+<li><strong>修复实例识别和启动参数</strong>。识别启动器目录下含 versions 的独立游戏文件夹，正确处理带空格、制表符和末尾反斜杠的启动参数。多个游戏实例同时运行时，窗口监控和自定义标题按所属进程处理。</li>
+<li><strong>修复重复打开启动器时窗口无法恢复</strong>。再次打开 BRCL 时可以恢复已最小化的窗口，并正确处理全角字符和中文游戏标题。</li>
+</ul></div>
+<div class="release-note-group"><h5>微软登录与团队银行</h5><ul>
+<li><strong>提高微软登录缓存和授权恢复的可靠性</strong>。缓存缺少令牌或有效角色标识时会重新验证。临时网关错误不会误触发重新授权，取消后的迟到响应不会覆盖结果。启动诊断会隐藏凭据。</li>
+<li><strong>银行查询自动恢复失效会话</strong>。银行会话到期或服务重启后自动续期一次，避免旧请求影响已经续期的会话。银行服务地址仅接受官方 HTTPS 服务或本机回环地址。</li>
+</ul></div>
+<div class="release-note-group"><h5>界面与更新</h5><ul>
+<li><strong>修复自定义背景导致的启动错误</strong>。修复了应用背景时的只读画刷错误，限制过高壁纸的解码尺寸并保持比例。</li>
+<li><strong>约束交易所和地图的内嵌导航</strong>。两个页面各自保留站内导航。由用户直接点击的外部网页使用系统浏览器打开。</li>
+<li><strong>改进更新安装与回滚</strong>。支持含中文的安装目录和文件名。成功后清理暂存文件并保留最新五份备份，回滚出错时提供恢复结果。</li>
+</ul></div>
+</section>
+<!-- release-current:end -->
+          </details>
+          <details class="release-notes" id="changelog">
+            <summary>往期更新日志<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
+            <!-- release-history:start -->
+<details class="release-history-version" id="version-1.1.6">
+<summary><span>1.1.6</span><time datetime="2026-11-23">2026-11-23</time></summary>
 <div class="release-note-group"><h5>Java 下载进度</h5><ul>
 <li><strong>启动时单独显示 Java 下载进度</strong>。自动下载 Java 时显示已下载比例、实时速度和当前下载源。切换备用源后，已保留的下载进度继续计算，源名和速度会随之更新。</li>
 <li><strong>区分 Java 下载和安装阶段</strong>。下载完成后显示校验和安装状态，返回启动页后会清除下载面板。</li>
@@ -137,12 +163,7 @@
 <div class="release-note-group"><h5>启动与响应</h5><ul>
 <li><strong>减少启动时的后台检查</strong>。接受协议后才启动自动更新检查。减少实例设置的重复磁盘检查，以及 Java 下载进度的重复刷新。</li>
 </ul></div>
-</section>
-<!-- release-current:end -->
-          </details>
-          <details class="release-notes" id="changelog">
-            <summary>往期更新日志<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary>
-            <!-- release-history:start -->
+</details>
 <details class="release-history-version" id="version-1.1.5">
 <summary><span>1.1.5</span><time datetime="2026-11-23">2026-11-23</time></summary>
 <div class="release-note-group"><h5>体积与响应</h5><ul>
